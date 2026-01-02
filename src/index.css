@@ -1,0 +1,484 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+@import 'tailwindcss';
+
+@font-face {
+  font-family: 'Gridular';
+  src: url('./assets/fonts/Gridular-Regular.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --bg-primary: 0, 0, 0;
+    --bg-secondary: #e8e1d9;
+    --sidebar: rgba(248, 245, 242, 0.95);
+    --text-primary: 255, 255, 255;
+    --text-secondary: #5f6c7d;
+
+    --accent-primary: #a78a7f;
+    --accent-secondary: #d4b483;
+    --accent-hover: #c7a27c;
+    --color-border: rgba(255, 255, 255, 0.3);
+
+    /* Shadows: Subtle and warm */
+    --shadow: 0 0 10px rgba(167, 138, 127, 0.1);
+    --glow: 0 0 8px rgba(212, 180, 131, 0.2);
+    --neon-pulse: 0 0 5px rgba(167, 138, 127, 0.3);
+
+    /* Buttons: Natural gradient */
+    --button-bg: linear-gradient(45deg, #a78a7f, #d4b483);
+    --button-hover: linear-gradient(45deg, #d4b483, #c7a27c);
+  }
+}
+
+@utility container {
+  @apply mx-auto max-w-[1920px] px-4 md:px-8 lg:px-20 xl:px-28;
+}
+@utility hero-section {
+  @apply bg-bgPrimary text-textPrimary relative h-screen min-h-screen w-full pt-28 pb-20;
+}
+@utility main-section {
+  @apply bg-bgPrimary text-textPrimary h-screen min-h-screen w-full pt-28;
+}
+
+@theme {
+  --font-sans: 'Space Mono', monospace;
+  --font-grid: 'Gridular', sans-serif;
+
+  --color-bgPrimary: rgb(var(--bg-primary));
+  --color-bgSecondary: var(--bg-secondary);
+  --color-buttonHover: var(--button-hover);
+  --color-accentPrimary: var(--accent-primary);
+  --color-accentSecondary: var(--accent-secondary);
+  --color-accentHover: var(--accent-hover);
+  --color-sidebar: var(--sidebar);
+  --color-textPrimary: rgb(var(--text-primary));
+  --color-textSecondary: var(--text-secondary);
+  --color-border: var(--border);
+
+  --shadow-shadowPrimary: var(--shadow);
+  --shadow-shadowGlow: var(--glow);
+  --shadow-shadowNeon: var(--neon-pulse);
+}
+
+@layer components {
+  .text-primary {
+    @apply text-textPrimary;
+  }
+  .main-section {
+    @apply flex h-full w-full grow flex-col items-center gap-5 px-5 pb-5;
+  }
+  .hero-section {
+    @apply flex h-full w-full grow flex-col items-center gap-5 px-5 pb-5;
+
+    h2 {
+      @apply text-[clamp(3.125rem,-1.1607rem+6.6964vw,6.875rem)] leading-none whitespace-nowrap;
+    }
+    p {
+      @apply text-textPrimary font-sans lg:text-xs xl:text-sm;
+    }
+    .container {
+      @apply h-full;
+    }
+  }
+
+  .button-gradient {
+    @apply bg-linear-45 from-(--button-primary) to-(--button-secondary);
+  }
+
+  .button-hover {
+    @apply bg-linear-45 from-(--button-secondary) to-(--button-hover);
+  }
+
+  .text-body {
+    @apply text-gray-500 dark:text-gray-300;
+  }
+
+  .gray-hover {
+    @apply hover:bg-gray-200/30 dark:hover:bg-gray-600/40;
+  }
+  .gray-button {
+    @apply cursor-pointer bg-gray-300 px-4 py-2 text-gray-700 opacity-90 hover:opacity-100 dark:bg-gray-600 dark:text-gray-200;
+  }
+
+  .h1 {
+    @apply text-textPrimary text-2xl font-bold sm:text-3xl;
+  }
+  .h2 {
+    @apply text-lg font-bold sm:text-xl;
+  }
+  .h3 {
+    @apply text-sm sm:text-lg;
+  }
+  .h4 {
+    @apply text-xs sm:text-sm;
+  }
+  .trans-colors {
+    @apply transition-colors duration-300;
+  }
+}
+
+body {
+  background-color: #000;
+  width: 100%;
+}
+
+/* ===== BUTTONS ===== */
+.btn-neon {
+  background: var(--button-bg);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 999px;
+  font-family: var(--font-tech);
+  letter-spacing: 1px;
+  box-shadow: var(--shadow), var(--glow);
+  transition: all 0.3s ease;
+}
+
+.btn-neon:hover {
+  background: var(--button-hover);
+  box-shadow: 0 0 25px var(--glow);
+  transform: translateY(-2px);
+}
+
+.main-body {
+  background-image: linear-gradient(
+    160deg,
+    var(--bg-primary),
+    var(--bg-secondary)
+  );
+  position: relative;
+  overflow: hidden;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-100px) rotate(180deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(0) rotate(360deg);
+    opacity: 0.5;
+  }
+}
+
+/* Fade-in animation for stars appearing */
+@keyframes star-fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Diving into space starfield effect - slow, continuous movement, staying around center */
+@keyframes dive-into-space {
+  0% {
+    /* Start at initial position (around center), visible size - appears earlier */
+    transform: translate(-50%, -50%) scale(1);
+  }
+  25% {
+    /* Slowly moving outward, gradually growing */
+    transform: translate(-50%, -50%)
+      translate(
+        calc(var(--star-dir-x, 0) * 25vw),
+        calc(var(--star-dir-y, 0) * 25vh)
+      )
+      scale(1.5);
+  }
+  50% {
+    /* Further out, larger - moving towards edges */
+    transform: translate(-50%, -50%)
+      translate(
+        calc(var(--star-dir-x, 0) * 50vw),
+        calc(var(--star-dir-y, 0) * 50vh)
+      )
+      scale(2.5);
+  }
+  75% {
+    /* Near edge, larger - approaching viewport boundary */
+    transform: translate(-50%, -50%)
+      translate(
+        calc(var(--star-dir-x, 0) * 75vw),
+        calc(var(--star-dir-y, 0) * 75vh)
+      )
+      scale(3.5);
+  }
+  100% {
+    /* Move completely outside viewport - stars continue until off-screen */
+    transform: translate(-50%, -50%)
+      translate(
+        calc(var(--star-dir-x, 0) * 100vw),
+        calc(var(--star-dir-y, 0) * 100vh)
+      )
+      scale(4);
+  }
+}
+
+.star-diving {
+  position: absolute;
+  width: var(--star-initial-size, 1px);
+  height: var(--star-initial-size, 1px);
+  background: white;
+  border-radius: 50%;
+  box-shadow:
+    0 0 calc(2px * var(--star-brightness, 1))
+      rgba(255, 255, 255, calc(0.9 * var(--star-brightness, 1))),
+    0 0 calc(4px * var(--star-brightness, 1))
+      rgba(255, 255, 255, calc(0.6 * var(--star-brightness, 1))),
+    0 0 calc(6px * var(--star-brightness, 1))
+      rgba(255, 255, 255, calc(0.3 * var(--star-brightness, 1)));
+  animation:
+    star-fade-in 0.8s ease-in forwards,
+    dive-into-space var(--star-speed, 12s) linear forwards;
+  animation-fill-mode: both;
+  will-change: transform, opacity;
+  transform-origin: center center;
+  filter: brightness(var(--star-brightness, 1));
+  opacity: 0; /* Start invisible, fade-in animation will make it visible */
+}
+
+/* ===== CUSTOM CURSOR ===== */
+html,
+body,
+* {
+  cursor: none !important;
+}
+
+.custom-cursor {
+  position: fixed;
+  pointer-events: none;
+  z-index: 999999;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease-in-out;
+  will-change: transform;
+}
+body:active .custom-cursor,
+html:active .custom-cursor {
+  transform: scale(0.95);
+}
+.cursor-outer {
+  width: 24px;
+  height: 24px;
+  border: 2px solid white;
+  background: transparent;
+  position: absolute;
+  animation: cursor-rotate 2s linear infinite;
+}
+
+.cursor-inner {
+  width: 8px;
+  height: 8px;
+  background: white;
+  position: absolute;
+}
+
+@keyframes cursor-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Shadow pulsing animation - expands and contracts smoothly */
+@keyframes shadow-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 5px 2px rgba(255, 255, 255, 0.5) inset,
+      0 0 10px 12px rgba(255, 255, 255, 0.3) inset,
+      0 0 8px 6px rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 10px 4px rgba(255, 255, 255, 0.6) inset,
+      0 0 20px 20px rgba(255, 255, 255, 0.4) inset,
+      0 0 8px 6px rgba(255, 255, 255, 0.2);
+  }
+}
+
+.shadow-btn {
+  animation: shadow-pulse 6s ease-in-out infinite;
+  box-shadow:
+    0 0 5px 2px rgba(255, 255, 255, 0.5) inset,
+    0 0 10px 15px rgba(255, 255, 255, 0.3) inset,
+    0 0 8px 6px rgba(255, 255, 255, 0.2);
+  transition: box-shadow 0.3s ease-in-out;
+}
+.shadow-btn:hover {
+  box-shadow: 0 0 8px 6px rgba(255, 255, 255, 0.2);
+}
+
+/* ===== TEXT ANIMATIONS ===== */
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animated-text-flip,
+  .animated-text-slide {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Flip animation container - needs perspective for 3D rotation */
+.animated-text-flip {
+  display: inline-block;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+.animated-text-flip span {
+  display: inline-block;
+  transform-origin: top;
+}
+
+/* Slide animation container - needs overflow hidden */
+.animated-text-slide {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+.animated-text-slide span {
+  display: inline-block;
+  will-change: transform;
+}
+
+/* Flickering animation */
+@keyframes flicker {
+  0%,
+  100% {
+    opacity: 0.3;
+    filter: brightness(0.95);
+  }
+  20% {
+    opacity: 0.5;
+    filter: brightness(0.97);
+  }
+  40% {
+    opacity: 0.2;
+    filter: brightness(0.93);
+  }
+  60% {
+    opacity: 0.4;
+    filter: brightness(0.96);
+  }
+  80% {
+    opacity: 0.25;
+    filter: brightness(0.94);
+  }
+}
+
+/* Moving noise animation */
+@keyframes noise-move {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 20px 100px;
+  }
+}
+@keyframes noise-move-slow {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 100px 100px;
+  }
+}
+
+@keyframes noise-gradient-move {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 300px 300px;
+  }
+}
+
+.flicker-animation {
+  animation: flicker 2s infinite;
+}
+
+.noise-move-slow-animation {
+  animation: noise-move-slow 5s linear infinite;
+  background-repeat: repeat;
+}
+.noise-move-animation {
+  animation: noise-move 5s linear infinite;
+  background-repeat: repeat;
+}
+
+.noise-gradient-move-animation {
+  animation: noise-gradient-move 20s linear infinite;
+  background-repeat: repeat;
+}
+
+/* Scrolling text animation - starts from translateX(-100%) to left: 100% */
+@keyframes scroll-text {
+  0% {
+    transform: translateX(-100%);
+    left: 0;
+  }
+  100% {
+    transform: translateX(0);
+    left: 100%;
+  }
+}
+
+.scroll-text-animation {
+  position: absolute;
+  animation: scroll-text 16s linear infinite;
+  white-space: nowrap;
+}
+
+/* Hot temperature text - lightweight */
+.hot-temperature-text {
+  color: #ff0000;
+  font-weight: bold;
+  display: inline;
+  font-size: 0.9em;
+}
+
+.thermometer-icon-inline {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 2px;
+}
+
+/* Scroll progress leaf transitions */
+.leaf-transition {
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
+  transition: all 0.3s ease-out;
+}
+
+.leaf-transition.leaf-filled {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.leaf-transition.leaf-empty {
+  opacity: 0.4;
+  transform: scale(0.9);
+}
+
+/* Hero image 3D transform support */
+#hero-image {
+  transform-style: preserve-3d;
+}

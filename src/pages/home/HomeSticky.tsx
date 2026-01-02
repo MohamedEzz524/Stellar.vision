@@ -1,0 +1,337 @@
+import { useMediaQuery } from 'react-responsive';
+import cornerSvg from '../../assets/corner.svg';
+import logoImg from '../../assets/images/logo.png';
+import noiseImg from '../../assets/images/noise.webp';
+import globalImage from '../../assets/images/global.webp';
+import ScrollProgress from '../../components/ScrollProgress';
+
+const HomeSticky = () => {
+  const borderWidth = 30; // Width for left/right, height for top
+  const borderSize = 3; // Border thickness in pixels
+  const bottomHeight = 80; // Larger height for bottom
+
+  // Responsive fade distance: 90px for xl screens (≥1280px), 70px for lg screens (≥1024px)
+  const isXl = useMediaQuery({ minWidth: 1280 }); // Tailwind xl breakpoint
+  const isLg = useMediaQuery({ minWidth: 1024 }); // Tailwind lg breakpoint
+  const fadeDistance = isXl ? 90 : isLg ? 70 : 40; // 100 for xl, 70 for lg and 40 for below
+
+  // Calculate positions: top/bottom start after left/right borders, left/right extend 1px into top/bottom (0.5px each side)
+  const topLeft = borderWidth; // Start after left border
+  const topRight = borderWidth; // End before right border
+  const leftTop = borderWidth - 1.5; // Start 1.5px before top border ends (extends 0.5px into top)
+  const leftBottom = bottomHeight - 1.5; // End 1.5px before bottom border starts (extends 0.5px into bottom)
+
+  return (
+    <section className="pointer-events-none fixed top-0 left-0 z-[9999] h-screen w-full">
+      {/* Top border container - fills corner, inner div has border */}
+      <div
+        className="bg-bgPrimary absolute top-0 right-0 left-0"
+        style={{ height: `${borderWidth}px` }}
+      >
+        <div
+          className="absolute top-0 h-full"
+          style={{
+            left: `${topLeft}px`,
+            right: `${topRight}px`,
+            borderBottom: `${borderSize}px solid #fff`,
+          }}
+        />
+      </div>
+
+      {/* Right border container - fills corner, inner div has border */}
+      <div
+        className="bg-bgPrimary absolute top-0 right-0 bottom-0"
+        style={{ width: `${borderWidth}px` }}
+      >
+        <div
+          className="absolute right-0 w-full"
+          style={{
+            top: `${leftTop}px`,
+            bottom: `${leftBottom}px`,
+            borderLeft: `${borderSize}px solid #fff`,
+          }}
+        />
+      </div>
+
+      {/* Bottom border container - fills corner, inner div has border */}
+      <div
+        className="bg-bgPrimary absolute right-0 bottom-0 left-0 grid grid-cols-3 px-8 py-2.5"
+        style={{ height: `${bottomHeight}px` }}
+      >
+        <div
+          className="absolute bottom-0 h-full"
+          style={{
+            left: `${topLeft}px`,
+            right: `${topRight - 1.5}px`,
+            borderTop: `${borderSize}px solid #fff`,
+          }}
+        />
+
+        {/* BOTTOM - LEFT SIDE CONTENT */}
+        <div
+          id="home-sticky-bottom-left"
+          className="flex h-full items-center gap-4"
+        >
+          {/* GLOBAL IMAGE */}
+          <div className="border-textPrimary relative w-14 overflow-hidden rounded-md border-3 p-1">
+            <div className="flicker-animation relative h-full w-full">
+              <img src={globalImage} alt="Global" className="block" />
+              <div
+                className="noise-move-animation absolute inset-0 z-0"
+                style={{
+                  backgroundImage: `url(${noiseImg})`,
+                  backgroundRepeat: 'repeat',
+                  backgroundSize: '100px 100px',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* AUTO ROTATE TEXT */}
+          <div className="border-textPrimary relative h-full w-[16vw] overflow-hidden rounded-md border-3">
+            <div className="relative h-full w-full">
+              <div
+                className="noise-move-slow-animation absolute inset-0 z-0"
+                style={{
+                  backgroundImage: `url(${noiseImg})`,
+                  backgroundRepeat: 'repeat',
+                  backgroundSize: '100px 100px',
+                }}
+              />
+              {/* AUTO ROTATE TEXT ANIMATION */}
+              <div className="font-grid absolute inset-0 z-0 overflow-hidden text-4xl">
+                <div className="scroll-text-animation left-1/2 flex h-full flex-row items-center gap-[16vw]">
+                  <div className="text-textPrimary whitespace-nowrap">
+                    AUTO ROTATE TEXT
+                  </div>
+                  <div className="text-textPrimary whitespace-nowrap">
+                    SECOND TEXT
+                  </div>
+                  <div className="text-textPrimary whitespace-nowrap">
+                    THIRD TEXT
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* BOTTOM - CENTER CONTENT */}
+        <div></div>
+
+        {/* BOTTOM - RIGHT SIDE CONTENT */}
+        <div id="home-sticky-bottom-right">
+          <ScrollProgress totalLeaves={16} />
+        </div>
+      </div>
+
+      {/* Left border container - fills corner, inner div has border */}
+      <div
+        className="bg-bgPrimary absolute top-0 bottom-0 left-0"
+        style={{ width: `${borderWidth}px` }}
+      >
+        <div
+          className="absolute left-0 w-full"
+          style={{
+            top: `${leftTop}px`,
+            bottom: `${leftBottom}px`,
+            borderRight: `${borderSize}px solid #fff`,
+          }}
+        />
+      </div>
+
+      {/* Noise background - fills space between borders with gradient fade to transparent center */}
+      <div
+        id="home-sticky-noise"
+        className="noise-gradient-move-animation pointer-events-none absolute"
+        style={
+          {
+            left: `${topLeft}px`,
+            right: `${topRight}px`,
+            top: `${leftTop}px`,
+            bottom: `${leftBottom}px`,
+            backgroundImage: `url(${noiseImg})`,
+            backgroundRepeat: 'repeat',
+            backgroundSize: 'auto',
+            '--fade-px': `${fadeDistance}px`,
+            maskImage: `
+            linear-gradient(to bottom, 
+              rgba(255, 255, 255, 0.5) 0, 
+              rgba(255, 255, 255, 0.1) calc(var(--fade-px) * 0.7), 
+              rgba(255, 255, 255, 0) calc(var(--fade-px) * 1.125), 
+              transparent calc(var(--fade-px) * 1.25), 
+              transparent calc(100% - var(--fade-px) * 1.25), 
+              rgba(255, 255, 255, 0) calc(100% - var(--fade-px) * 1.125), 
+              rgba(255, 255, 255, 0.1) calc(100% - var(--fade-px) * 0.7), 
+              rgba(255, 255, 255, 0.5) 100%
+            ),
+            linear-gradient(to right, 
+              rgba(255, 255, 255, 0.5) 0, 
+              rgba(255, 255, 255, 0.1) calc(var(--fade-px) * 0.7), 
+              rgba(255, 255, 255, 0) calc(var(--fade-px) * 1.125), 
+              transparent calc(var(--fade-px) * 1.25), 
+              transparent calc(100% - var(--fade-px) * 1.25), 
+              rgba(255, 255, 255, 0) calc(100% - var(--fade-px) * 1.125), 
+              rgba(255, 255, 255, 0.1) calc(100% - var(--fade-px) * 0.7), 
+              rgba(255, 255, 255, 0.5) 100%
+            )
+          `,
+            WebkitMaskImage: `
+            linear-gradient(to bottom, 
+              rgba(255, 255, 255, 0.4) 0, 
+              rgba(255, 255, 255, 0.25) calc(var(--fade-px) * 0.5), 
+              rgba(255, 255, 255, 0.1) calc(var(--fade-px) * 1.125), 
+              transparent calc(var(--fade-px) * 1.25), 
+              transparent calc(100% - var(--fade-px) * 1.25), 
+              rgba(255, 255, 255, 0.1) calc(100% - var(--fade-px) * 1.125), 
+              rgba(255, 255, 255, 0.25) calc(100% - var(--fade-px) * 0.5), 
+              rgba(255, 255, 255, 0.4) 100%
+            ),
+            linear-gradient(to right, 
+              rgba(255, 255, 255, 0.4) 0, 
+              rgba(255, 255, 255, 0.25) calc(var(--fade-px) * 0.5), 
+              rgba(255, 255, 255, 0.1) calc(var(--fade-px) * 1.125), 
+              transparent calc(var(--fade-px) * 1.25), 
+              transparent calc(100% - var(--fade-px) * 1.25), 
+              rgba(255, 255, 255, 0.1) calc(100% - var(--fade-px) * 1.125), 
+              rgba(255, 255, 255, 0.25) calc(100% - var(--fade-px) * 0.5), 
+              rgba(255, 255, 255, 0.4) 100%
+            )
+          `,
+            maskComposite: 'add',
+            WebkitMaskComposite: 'add',
+          } as React.CSSProperties
+        }
+      />
+
+      {/* Corner SVGs at each intersection where borders connect - positioned more inside */}
+      {/* Top-left corner - faces outward from top-left */}
+      <img
+        src={cornerSvg}
+        alt=""
+        className="absolute"
+        style={{
+          left: `${topLeft - borderWidth / 20}px`,
+          top: `${leftTop - borderWidth / 80}px`,
+          width: `${borderWidth}px`,
+          height: `${borderWidth}px`,
+          transform: 'rotate(180deg)',
+        }}
+      />
+
+      {/* Top-right corner - faces outward from top-right */}
+      <img
+        src={cornerSvg}
+        alt=""
+        className="absolute"
+        style={{
+          right: `${topRight - borderWidth / 20}px`,
+          top: `${leftTop - borderWidth / 80}px`,
+          width: `${borderWidth}px`,
+          height: `${borderWidth}px`,
+          transform: 'rotate(-90deg)',
+        }}
+      />
+
+      {/* Bottom-left corner - faces outward from bottom-left */}
+      <img
+        src={cornerSvg}
+        alt=""
+        className="absolute"
+        style={{
+          left: `${topLeft - borderWidth / 20}px`,
+          bottom: `${leftBottom - borderWidth / 150}px`,
+          width: `${borderWidth}px`,
+          height: `${borderWidth}px`,
+          transform: 'rotate(90deg)',
+        }}
+      />
+
+      {/* Bottom-right corner - faces outward from bottom-right */}
+      <img
+        src={cornerSvg}
+        alt=""
+        className="absolute"
+        style={{
+          right: `${topRight - borderWidth / 20}px`,
+          bottom: `${leftBottom - borderWidth / 150}px`,
+          width: `${borderWidth}px`,
+          height: `${borderWidth}px`,
+          transform: 'rotate(0deg)',
+        }}
+      />
+
+      {/* Logo at top center */}
+      <div
+        className="bg-bgPrimary absolute left-1/2 z-3 flex w-48 -translate-x-1/2 items-center justify-center border-[3px] border-t-0 border-white"
+        style={{ top: `${borderWidth - borderSize + 1.5}px` }}
+      >
+        <img
+          id="home-sticky-logo"
+          src={logoImg}
+          alt="Logo"
+          className="-mt-4 mb-2 block h-full max-h-9/10 w-full max-w-34 object-contain"
+        />
+
+        {/* Corner SVGs at all corners of logo container */}
+        {/* Top-left corner */}
+        <img
+          src={cornerSvg}
+          alt=""
+          className="absolute"
+          style={{
+            left: `${-borderWidth + 1}px`,
+            top: `${-borderWidth / 80}px`,
+            width: `${borderWidth}px`,
+            height: `${borderWidth}px`,
+            transform: 'rotate(-90deg)',
+          }}
+        />
+
+        {/* Top-right corner */}
+        <img
+          src={cornerSvg}
+          alt=""
+          className="absolute"
+          style={{
+            right: `${-borderWidth + 1}px`,
+            top: `${-borderWidth / 80}px`,
+            width: `${borderWidth}px`,
+            height: `${borderWidth}px`,
+            transform: 'rotate(-180deg)',
+          }}
+        />
+
+        {/* Bottom-left corner */}
+        <img
+          src={cornerSvg}
+          alt=""
+          className="absolute"
+          style={{
+            left: `${-borderWidth / 13}px`,
+            bottom: `${-borderWidth / 20}px`,
+            width: `${borderWidth}px`,
+            height: `${borderWidth}px`,
+            transform: 'rotate(90deg)',
+          }}
+        />
+
+        {/* Bottom-right corner */}
+        <img
+          src={cornerSvg}
+          alt=""
+          className="absolute"
+          style={{
+            right: `${-borderWidth / 20}px`,
+            bottom: `${-borderWidth / 13}px`,
+            width: `${borderWidth}px`,
+            height: `${borderWidth}px`,
+            transform: 'rotate(0deg)',
+          }}
+        />
+      </div>
+    </section>
+  );
+};
+
+export default HomeSticky;
