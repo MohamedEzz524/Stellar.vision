@@ -6,14 +6,14 @@ import globalImage from '../../assets/images/global.webp';
 import ScrollProgress from '../../components/ScrollProgress';
 
 const HomeSticky = () => {
-  const borderWidth = 30; // Width for left/right, height for top
-  const borderSize = 3; // Border thickness in pixels
-  const bottomHeight = 80; // Larger height for bottom
-
   // Responsive fade distance: 90px for xl screens (≥1280px), 70px for lg screens (≥1024px)
   const isXl = useMediaQuery({ minWidth: 1280 }); // Tailwind xl breakpoint
   const isLg = useMediaQuery({ minWidth: 1024 }); // Tailwind lg breakpoint
   const fadeDistance = isXl ? 90 : isLg ? 70 : 40; // 100 for xl, 70 for lg and 40 for below
+
+  const borderWidth = isLg ? 30 : 5; // Width for left/right, height for top
+  const borderSize = isLg ? 3 : 1; // Border thickness in pixels
+  const bottomHeight = 80; // Larger height for bottom
 
   // Calculate positions: top/bottom start after left/right borders, left/right extend 1px into top/bottom (0.5px each side)
   const topLeft = borderWidth; // Start after left border
@@ -68,61 +68,65 @@ const HomeSticky = () => {
         />
 
         {/* BOTTOM - LEFT SIDE CONTENT */}
-        <div
-          id="home-sticky-bottom-left"
-          className="flex h-full items-center gap-4"
-        >
-          {/* GLOBAL IMAGE */}
-          <div className="border-textPrimary relative w-14 overflow-hidden rounded-md border-3 p-1">
-            <div className="flicker-animation relative h-full w-full">
-              <img src={globalImage} alt="Global" className="block" />
-              <div
-                className="noise-move-animation absolute inset-0 z-0"
-                style={{
-                  backgroundImage: `url(${noiseImg})`,
-                  backgroundRepeat: 'repeat',
-                  backgroundSize: '100px 100px',
-                }}
-              />
+        {isLg && (
+          <div
+            id="home-sticky-bottom-left"
+            className="flex h-full items-center gap-4"
+          >
+            {/* GLOBAL IMAGE */}
+            <div className="border-textPrimary relative w-14 overflow-hidden rounded-md border-3 p-1">
+              <div className="flicker-animation relative h-full w-full">
+                <img src={globalImage} alt="Global" className="block" />
+                <div
+                  className="noise-move-animation absolute inset-0 z-0"
+                  style={{
+                    backgroundImage: `url(${noiseImg})`,
+                    backgroundRepeat: 'repeat',
+                    backgroundSize: '100px 100px',
+                  }}
+                />
+              </div>
             </div>
-          </div>
 
-          {/* AUTO ROTATE TEXT */}
-          <div className="border-textPrimary relative h-full w-[16vw] overflow-hidden rounded-md border-3">
-            <div className="relative h-full w-full">
-              <div
-                className="noise-move-slow-animation absolute inset-0 z-0"
-                style={{
-                  backgroundImage: `url(${noiseImg})`,
-                  backgroundRepeat: 'repeat',
-                  backgroundSize: '100px 100px',
-                }}
-              />
-              {/* AUTO ROTATE TEXT ANIMATION */}
-              <div className="font-grid absolute inset-0 z-0 overflow-hidden text-4xl">
-                <div className="scroll-text-animation left-1/2 flex h-full flex-row items-center gap-[16vw]">
-                  <div className="text-textPrimary whitespace-nowrap">
-                    AUTO ROTATE TEXT
-                  </div>
-                  <div className="text-textPrimary whitespace-nowrap">
-                    SECOND TEXT
-                  </div>
-                  <div className="text-textPrimary whitespace-nowrap">
-                    THIRD TEXT
+            {/* AUTO ROTATE TEXT */}
+            <div className="border-textPrimary relative h-full w-[16vw] overflow-hidden rounded-md border-3">
+              <div className="relative h-full w-full">
+                <div
+                  className="noise-move-slow-animation absolute inset-0 z-0"
+                  style={{
+                    backgroundImage: `url(${noiseImg})`,
+                    backgroundRepeat: 'repeat',
+                    backgroundSize: '100px 100px',
+                  }}
+                />
+                {/* AUTO ROTATE TEXT ANIMATION */}
+                <div className="font-grid absolute inset-0 z-0 overflow-hidden text-4xl">
+                  <div className="scroll-text-animation left-1/2 flex h-full flex-row items-center gap-[16vw]">
+                    <div className="text-textPrimary whitespace-nowrap">
+                      AUTO ROTATE TEXT
+                    </div>
+                    <div className="text-textPrimary whitespace-nowrap">
+                      SECOND TEXT
+                    </div>
+                    <div className="text-textPrimary whitespace-nowrap">
+                      THIRD TEXT
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* BOTTOM - CENTER CONTENT */}
         <div></div>
 
         {/* BOTTOM - RIGHT SIDE CONTENT */}
-        <div id="home-sticky-bottom-right">
-          <ScrollProgress totalLeaves={16} />
-        </div>
+        {isLg && (
+          <div id="home-sticky-bottom-right">
+            <ScrollProgress totalLeaves={16} />
+          </div>
+        )}
       </div>
 
       {/* Left border container - fills corner, inner div has border */}
@@ -209,12 +213,12 @@ const HomeSticky = () => {
       <img
         src={cornerSvg}
         alt=""
-        className="absolute"
+        className="absolute max-lg:z-10"
         style={{
-          left: `${topLeft - borderWidth / 20}px`,
-          top: `${leftTop - borderWidth / 80}px`,
-          width: `${borderWidth}px`,
-          height: `${borderWidth}px`,
+          left: `${isLg ? topLeft - borderWidth / 20 : topLeft - borderWidth / 3}px`,
+          top: `${isLg ? leftTop - borderWidth / 80 : leftTop - borderWidth + 67.5}px`,
+          width: `${isLg ? borderWidth : borderWidth + 24}px`,
+          height: `${isLg ? borderWidth : borderWidth + 24}px`,
           transform: 'rotate(180deg)',
         }}
       />
@@ -225,10 +229,10 @@ const HomeSticky = () => {
         alt=""
         className="absolute"
         style={{
-          right: `${topRight - borderWidth / 20}px`,
+          right: `${isLg ? topRight - borderWidth / 20 : topRight - borderWidth / 4}px`,
           top: `${leftTop - borderWidth / 80}px`,
-          width: `${borderWidth}px`,
-          height: `${borderWidth}px`,
+          width: `${isLg ? borderWidth : borderWidth + 26}px`,
+          height: `${isLg ? borderWidth : borderWidth + 26}px`,
           transform: 'rotate(-90deg)',
         }}
       />
@@ -239,10 +243,10 @@ const HomeSticky = () => {
         alt=""
         className="absolute"
         style={{
-          left: `${topLeft - borderWidth / 20}px`,
-          bottom: `${leftBottom - borderWidth / 150}px`,
-          width: `${borderWidth}px`,
-          height: `${borderWidth}px`,
+          left: `${isLg ? topLeft - borderWidth / 20 : topLeft - borderWidth / 3}px`,
+          bottom: `${isLg ? leftBottom - borderWidth / 150 : leftBottom - borderWidth / 7 + 1}px`,
+          width: `${isLg ? borderWidth : borderWidth + 26}px`,
+          height: `${isLg ? borderWidth : borderWidth + 26}px`,
           transform: 'rotate(90deg)',
         }}
       />
@@ -253,24 +257,26 @@ const HomeSticky = () => {
         alt=""
         className="absolute"
         style={{
-          right: `${topRight - borderWidth / 20}px`,
-          bottom: `${leftBottom - borderWidth / 150}px`,
-          width: `${borderWidth}px`,
-          height: `${borderWidth}px`,
+          right: `${isLg ? topRight - borderWidth / 20 : topRight - borderWidth / 4}px`,
+          bottom: `${isLg ? leftBottom - borderWidth / 150 : leftBottom - borderWidth / 7 + 1}px`,
+          width: `${isLg ? borderWidth : borderWidth + 26}px`,
+          height: `${isLg ? borderWidth : borderWidth + 26}px`,
           transform: 'rotate(0deg)',
         }}
       />
 
       {/* Logo at top center */}
       <div
-        className="bg-bgPrimary absolute left-1/2 z-3 flex w-48 -translate-x-1/2 items-center justify-center border-[3px] border-t-0 border-white"
-        style={{ top: `${borderWidth - borderSize + 1.5}px` }}
+        className="bg-bgPrimary absolute left-0 z-3 flex w-38 translate-x-[4px] items-center justify-center border-1 border-white border-t-transparent max-lg:border-l-0 lg:left-1/2 lg:w-48 lg:-translate-x-1/2 lg:border-[3px]"
+        style={{
+          top: `${isLg ? borderWidth - borderSize - 1 : borderWidth - borderSize}px`,
+        }}
       >
         <img
           id="home-sticky-logo"
           src={logoImg}
           alt="Logo"
-          className="-mt-4 mb-2 block h-full max-h-9/10 w-full max-w-34 object-contain"
+          className="mt-1 mb-2 block h-full max-h-9/10 w-full max-w-8/10 object-contain lg:-mt-4 lg:max-w-34"
         />
 
         {/* Corner SVGs at all corners of logo container */}
@@ -278,7 +284,7 @@ const HomeSticky = () => {
         <img
           src={cornerSvg}
           alt=""
-          className="absolute"
+          className="absolute hidden lg:block"
           style={{
             left: `${-borderWidth + 1}px`,
             top: `${-borderWidth / 80}px`,
@@ -294,10 +300,10 @@ const HomeSticky = () => {
           alt=""
           className="absolute"
           style={{
-            right: `${-borderWidth + 1}px`,
-            top: `${-borderWidth / 80}px`,
-            width: `${borderWidth}px`,
-            height: `${borderWidth}px`,
+            right: `${-borderWidth + 1 + (isLg ? 0 : -26)}px`,
+            top: `${-borderWidth / 80 + (isLg ? 0 : -1)}px`,
+            width: `${isLg ? borderWidth : borderWidth + 26}px`,
+            height: `${isLg ? borderWidth : borderWidth + 26}px`,
             transform: 'rotate(-180deg)',
           }}
         />
@@ -306,7 +312,7 @@ const HomeSticky = () => {
         <img
           src={cornerSvg}
           alt=""
-          className="absolute"
+          className="absolute hidden lg:block"
           style={{
             left: `${-borderWidth / 13}px`,
             bottom: `${-borderWidth / 20}px`,
@@ -320,12 +326,12 @@ const HomeSticky = () => {
         <img
           src={cornerSvg}
           alt=""
-          className="absolute"
+          className="absolute -z-2"
           style={{
-            right: `${-borderWidth / 20}px`,
-            bottom: `${-borderWidth / 13}px`,
-            width: `${borderWidth}px`,
-            height: `${borderWidth}px`,
+            right: `${-borderWidth / 20 + (isLg ? 0 : -1.1)}px`,
+            bottom: `${-borderWidth / 13 + (isLg ? 0 : -0.8)}px`,
+            width: `${borderWidth + (isLg ? 0 : 26)}px`,
+            height: `${borderWidth + (isLg ? 0 : 26)}px`,
             transform: 'rotate(0deg)',
           }}
         />

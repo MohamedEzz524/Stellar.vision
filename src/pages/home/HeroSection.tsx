@@ -1,7 +1,8 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { animateTextRandomization } from '../../utils/textSplitting';
 import heroImage from '../../assets/images/hero.webp';
-import HeroImageMouseTracker from '../../components/HeroImageMouseTracker';
+import HeroImageDistortion from '../../components/HeroImageDistortion';
+import { useMediaQuery } from 'react-responsive';
 
 // Move utility functions outside component to avoid recreation
 const getOrdinalSuffix = (day: number): string => {
@@ -67,6 +68,8 @@ const ThermometerIcon = () => (
 const HeroSection = () => {
   const cleanupFunctionsRef = useRef<Array<() => void>>([]);
   const currentDate = useMemo(() => formatDate(), []);
+  // Only enable distortion on desktop/tablet (>= 1024px), disable on mobile
+  const isDesktop = useMediaQuery({ minWidth: 1024 });
 
   useEffect(() => {
     const h2Elements = document.querySelectorAll<HTMLElement>('h2');
@@ -93,14 +96,33 @@ const HeroSection = () => {
 
   return (
     <section id="hero-section" className="hero-section overflow-hidden">
+      <div className="absolute top-1 right-1 z-1 flex h-16 w-[calc(100%-150px)] items-center bg-gradient-to-b from-white to-transparent to-40% pl-4 text-base text-white lg:hidden">
+        <div className="relative h-full w-full">
+          {/* AUTO ROTATE TEXT ANIMATION */}
+          <div className="font-grid absolute inset-0 z-0 overflow-hidden text-lg">
+            <div className="scroll-text-animation left-1/2 flex h-full w-fit flex-row items-center gap-[calc(99vw-150px)]">
+              <div className="text-textPrimary whitespace-nowrap">
+                AUTO ROTATE TEXT
+              </div>
+              <div className="text-textPrimary whitespace-nowrap">
+                SECOND TEXT
+              </div>
+              <div className="text-textPrimary whitespace-nowrap">
+                THIRD TEXT
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="container">
         {/* row-1 */}
         <div className="font-grid -mt-8 flex h-full flex-col justify-center gap-4">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="hidden grid-cols-1 gap-2 lg:grid lg:grid-cols-2">
             <div className="overflow-hidden">
               <h2>THE BEST</h2>
             </div>
-            <div className="ml-auto flex max-w-96 flex-col font-sans leading-relaxed uppercase">
+            <div className="ml-auto hidden max-w-96 flex-col font-sans leading-relaxed uppercase lg:flex">
               <div className="overflow-hidden">
                 <p>Time: {currentDate}</p>
               </div>
@@ -120,7 +142,7 @@ const HeroSection = () => {
             </div>
           </div>
           {/* row-2 */}
-          <div className="flex justify-end overflow-hidden">
+          <div className="flex overflow-hidden lg:justify-end">
             <h2>WEB DESIGN</h2>
           </div>
           {/* row-3 */}
@@ -128,15 +150,23 @@ const HeroSection = () => {
             <h2>STUDIO</h2>
           </div>
           {/* row-4 */}
-          <div className="flex justify-end overflow-hidden">
+          <div className="flex overflow-hidden lg:justify-end">
             <h2>IN</h2>
           </div>
+          {/* row-1-mobile */}
+          <div className="flex justify-end overflow-hidden lg:hidden">
+            <h2>THE</h2>
+          </div>
+          {/* row-2-mobile */}
+          <div className="flex justify-end overflow-hidden lg:hidden">
+            <h2>WHOLE</h2>
+          </div>
           {/* row-5 */}
-          <div className="mt-8 flex justify-between gap-4">
-            <div className="relative h-fit overflow-hidden pl-10 leading-snug uppercase">
+          <div className="flex flex-col-reverse justify-between gap-4 lg:mt-8 lg:flex-row">
+            <div className="relative h-fit overflow-hidden pl-6 leading-tight uppercase lg:pl-10 lg:leading-snug">
               <span
                 id="hero-vertical-bar"
-                className="bg-textPrimary absolute top-0 left-4 h-full w-2 origin-bottom"
+                className="bg-textPrimary absolute top-0 left-2 h-full w-1 origin-bottom lg:left-4 lg:w-2"
               />
               <p className="max-w-[480px]">
                 Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et
@@ -145,7 +175,7 @@ const HeroSection = () => {
                 Maecenas vitae mattis tellus..
               </p>
             </div>
-            <div className="overflow-hidden">
+            <div className="mb-12 flex justify-end overflow-hidden lg:mb-0 lg:justify-start">
               <h2>MENA REGION</h2>
             </div>
           </div>
@@ -155,7 +185,7 @@ const HeroSection = () => {
       {/* HERO IMAGE */}
       <div
         id="hero-image"
-        className="absolute top-1/2 left-1/2 z-2 w-[10%] -translate-x-1/2 -translate-y-1/2"
+        className="absolute top-1/2 left-1/2 z-2 w-[10%] max-w-[500px] -translate-y-[43vw] lg:max-w-full lg:-translate-y-1/2"
       >
         <img
           src={heroImage}
@@ -164,8 +194,8 @@ const HeroSection = () => {
         />
       </div>
 
-      {/* Mouse tracker overlay for hero image rotation */}
-      <HeroImageMouseTracker />
+      {/* Fluid distortion effect overlay - only on desktop/tablet */}
+      {isDesktop && <HeroImageDistortion />}
     </section>
   );
 };

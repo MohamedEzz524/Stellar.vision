@@ -18,6 +18,7 @@ gsap.registerPlugin(SplitText);
  */
 export const playRevealAnimation = (): (() => void) => {
   const tl = gsap.timeline();
+  const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
 
   // Get elements by ID
   const logo = document.getElementById('home-sticky-logo');
@@ -53,7 +54,11 @@ export const playRevealAnimation = (): (() => void) => {
     gsap.set(bottomRight, { x: '100%' });
   }
   if (heroImage) {
-    gsap.set(heroImage, { rotation: 0, width: '10%' });
+    gsap.set(heroImage, {
+      rotation: 0,
+      width: isDesktop ? '10%' : '10vw',
+      x: '-50%',
+    });
   }
 
   // Set initial states for h2 elements - they're in overflow-hidden containers
@@ -165,8 +170,8 @@ export const playRevealAnimation = (): (() => void) => {
     tl.to(
       heroImage,
       {
-        width: '75%',
-        rotation: -6,
+        width: isDesktop ? '75%' : '120%',
+        rotation: isDesktop ? -6 : -30,
         duration: 0.8,
         ease: 'power2.out',
       },
