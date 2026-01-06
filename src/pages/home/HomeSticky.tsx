@@ -4,6 +4,7 @@ import logoImg from '../../assets/images/logo.png';
 import noiseImg from '../../assets/images/noise.webp';
 import globalImage from '../../assets/images/global.webp';
 import ScrollProgress from '../../components/ScrollProgress';
+import Calendar from '../../components/Calendar';
 
 const HomeSticky = () => {
   // Responsive fade distance: 90px for xl screens (≥1280px), 70px for lg screens (≥1024px)
@@ -71,7 +72,7 @@ const HomeSticky = () => {
         {isLg && (
           <div
             id="home-sticky-bottom-left"
-            className="flex h-full items-center gap-4"
+            className="relative flex h-full items-center gap-4"
           >
             {/* GLOBAL IMAGE */}
             <div className="border-textPrimary relative w-14 overflow-hidden rounded-md border-3 p-1">
@@ -336,6 +337,8 @@ const HomeSticky = () => {
           }}
         />
       </div>
+
+      <Calendar />
     </section>
   );
 };

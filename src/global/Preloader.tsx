@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { gsap } from 'gsap';
-import { playRevealAnimation } from '../utils/revealAnimation';
+import { playRevealAnimation, waitForModel3D } from '../utils/revealAnimation';
 
 // Animation timing constants
 const TIMINGS = {
@@ -230,11 +230,14 @@ const Preloader = () => {
                 firstPreloaderVisible: false,
               });
             })
-            // Start reveal animation immediately
+            // Wait for 3D model to be ready, then start reveal animation
             .call(() => {
               updateState({ isRevealing: true });
-              // Trigger reveal animation for hero section
-              revealAnimationCleanupRef.current = playRevealAnimation();
+              // Wait for 3D model to be loaded before starting reveal animation
+              waitForModel3D(() => {
+                // Trigger reveal animation for hero section
+                revealAnimationCleanupRef.current = playRevealAnimation();
+              });
             })
             // Hide preloader after reveal animation
             .to({}, { duration: TIMINGS.REVEAL_ANIMATION })
@@ -253,8 +256,11 @@ const Preloader = () => {
             .to({}, { duration: TIMINGS.REVEAL_DELAY })
             .call(() => {
               updateState({ isRevealing: true });
-              // Trigger reveal animation for hero section
-              revealAnimationCleanupRef.current = playRevealAnimation();
+              // Wait for 3D model to be loaded before starting reveal animation
+              waitForModel3D(() => {
+                // Trigger reveal animation for hero section
+                revealAnimationCleanupRef.current = playRevealAnimation();
+              });
             })
             .to({}, { duration: TIMINGS.REVEAL_ANIMATION })
             .call(() => {

@@ -1,8 +1,6 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { animateTextRandomization } from '../../utils/textSplitting';
-import heroImage from '../../assets/images/hero.webp';
-import HeroImageDistortion from '../../components/HeroImageDistortion';
-import { useMediaQuery } from 'react-responsive';
+import Hero3DModel from '../../components/Hero3DModel';
 
 // Move utility functions outside component to avoid recreation
 const getOrdinalSuffix = (day: number): string => {
@@ -68,8 +66,6 @@ const ThermometerIcon = () => (
 const HeroSection = () => {
   const cleanupFunctionsRef = useRef<Array<() => void>>([]);
   const currentDate = useMemo(() => formatDate(), []);
-  // Only enable distortion on desktop/tablet (>= 1024px), disable on mobile
-  const isDesktop = useMediaQuery({ minWidth: 1024 });
 
   useEffect(() => {
     const h2Elements = document.querySelectorAll<HTMLElement>('h2');
@@ -182,20 +178,11 @@ const HeroSection = () => {
         </div>
       </div>
 
-      {/* HERO IMAGE */}
-      <div
-        id="hero-image"
-        className="absolute top-1/2 left-1/2 z-2 w-[10%] max-w-[500px] -translate-y-[43vw] lg:max-w-full lg:-translate-y-1/2"
-      >
-        <img
-          src={heroImage}
-          alt="pic hero"
-          className="h-full w-full object-contain"
-        />
-      </div>
+      {/* HERO 3D MODEL */}
+      <Hero3DModel />
 
-      {/* Fluid distortion effect overlay - only on desktop/tablet */}
-      {isDesktop && <HeroImageDistortion />}
+      {/* Fluid distortion effect overlay - disabled for 3D model */}
+      {/* {isDesktop && <HeroImageDistortion />} */}
     </section>
   );
 };
