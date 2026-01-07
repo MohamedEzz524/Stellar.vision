@@ -200,7 +200,7 @@
   left: 0;
 }
 
-.corner.forth {
+.corner.fourth {
   bottom: 0;
   right: 0;
 }
@@ -229,7 +229,7 @@
   transform: translate(-25px, 25px); /* Bottom-left: expand down and left */
 }
 
-.case:hover .corner.forth {
+.case:hover .corner.fourth {
   opacity: 1;
   transform: translate(25px, 25px); /* Bottom-right: expand down and right */
 }
@@ -291,7 +291,7 @@
   .case:hover .corner.first,
   .case:hover .corner.second,
   .case:hover .corner.third,
-  .case:hover .corner.forth {
+  .case:hover .corner.fourth {
     opacity: 0;
     transform: none;
   }

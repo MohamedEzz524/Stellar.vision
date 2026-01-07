@@ -11,6 +11,7 @@ const Home = () => {
       <HeroSection />
       <HomeHeader />
       <ProjectsSection projects={ExampleProjects} sectionId="works" />
+      <div className="h-screen bg-blue-950"></div>
     </div>
   );
 };

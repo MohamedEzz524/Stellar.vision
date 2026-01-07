@@ -35,7 +35,8 @@ const AnimatedTextRotation = ({
       isNext: boolean = false,
     ): { element: HTMLDivElement; split: SplitText } => {
       const div = document.createElement('div');
-      div.className = 'absolute inset-0 text-right text-nowrap';
+      div.className =
+        'absolute inset-0 justify-end text-nowrap flex items-center';
       div.style.visibility = isNext ? 'hidden' : 'visible';
       div.setAttribute('aria-label', text);
       div.textContent = text;
