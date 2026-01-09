@@ -49,7 +49,7 @@ const CornerSVG = ({
       className={className}
     >
       <g filter={`url(#${filterId})`}>
-        <path d={path} stroke="currentColor" strokeWidth="1.5" />
+        <path d={path} stroke="#fff" strokeWidth="1.5" />
       </g>
       <defs>
         <filter
@@ -156,7 +156,7 @@ const ProjectsSectionDesktop = ({
     // Calculate track height dynamically
     const baseHeightPerProject = 37.5; // 412.5vh / 11 projects
     const trackHeight = projects.length * baseHeightPerProject;
-    track.style.height = `${trackHeight}vh`;
+    track.style.height = `${trackHeight + 75}vh`;
 
     // Calculate scroll distance in pixels (track height in vh converted to px)
     const scrollDistance = (trackHeight * window.innerHeight) / 100;
@@ -360,7 +360,10 @@ const ProjectsSectionDesktop = ({
                       uniqueId={project.id}
                     />
                     <CornerSVG className="corner third" uniqueId={project.id} />
-                    <CornerSVG className="corner fourth" uniqueId={project.id} />
+                    <CornerSVG
+                      className="corner fourth"
+                      uniqueId={project.id}
+                    />
                   </div>
                 );
               })}
