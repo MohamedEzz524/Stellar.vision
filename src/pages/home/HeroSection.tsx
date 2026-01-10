@@ -1,6 +1,7 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { animateTextRandomization } from '../../utils/textSplitting';
 import Hero3DModel from '../../components/Hero3DModel';
+import { autoRotateTexts } from '../../constants';
 
 // Move utility functions outside component to avoid recreation
 const getOrdinalSuffix = (day: number): string => {
@@ -97,15 +98,14 @@ const HeroSection = () => {
           {/* AUTO ROTATE TEXT ANIMATION */}
           <div className="font-grid absolute inset-0 z-0 overflow-hidden text-lg">
             <div className="scroll-text-animation left-1/2 flex h-full w-fit flex-row items-center gap-[calc(99vw-150px)]">
-              <div className="text-textPrimary whitespace-nowrap">
-                AUTO ROTATE TEXT
-              </div>
-              <div className="text-textPrimary whitespace-nowrap">
-                SECOND TEXT
-              </div>
-              <div className="text-textPrimary whitespace-nowrap">
-                THIRD TEXT
-              </div>
+              {autoRotateTexts.map((text: string, index: number) => (
+                <div
+                  key={text.slice(0, 5) + index}
+                  className="text-textPrimary whitespace-nowrap"
+                >
+                  {text}
+                </div>
+              ))}
             </div>
           </div>
         </div>

@@ -5,6 +5,7 @@ import noiseImg from '../../assets/images/noise.webp';
 import globalImage from '../../assets/images/global.webp';
 import ScrollProgress from '../../components/ScrollProgress';
 import Calendar from '../../components/Calendar';
+import { autoRotateTexts } from '../../constants';
 
 const HomeSticky = () => {
   // Responsive fade distance: 90px for xl screens (≥1280px), 70px for lg screens (≥1024px)
@@ -103,15 +104,14 @@ const HomeSticky = () => {
                 {/* AUTO ROTATE TEXT ANIMATION */}
                 <div className="font-grid absolute inset-0 z-0 overflow-hidden text-4xl">
                   <div className="scroll-text-animation left-1/2 flex h-full flex-row items-center gap-[16vw]">
-                    <div className="text-textPrimary whitespace-nowrap">
-                      AUTO ROTATE TEXT
-                    </div>
-                    <div className="text-textPrimary whitespace-nowrap">
-                      SECOND TEXT
-                    </div>
-                    <div className="text-textPrimary whitespace-nowrap">
-                      THIRD TEXT
-                    </div>
+                    {autoRotateTexts.map((text: string, index: number) => (
+                      <div
+                        key={text.slice(0, 5) + index}
+                        className="text-textPrimary whitespace-nowrap"
+                      >
+                        {text}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

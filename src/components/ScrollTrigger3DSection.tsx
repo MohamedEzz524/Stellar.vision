@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Canvas, useLoader } from '@react-three/fiber';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { Mesh, Group } from 'three';
@@ -80,6 +80,7 @@ const ScrollTrigger3DSection = ({
   const splitInstancesRef = useRef<SplitText[]>([]);
   const textElementsRef = useRef<HTMLElement[]>([]);
   const lineElementsRef = useRef<HTMLElement[]>([]);
+  const [isLazyLoaded, setIsLazyLoaded] = useState(false);
 
   // Initialize refs for 4 objects
   for (let i = 0; i < 4; i++) {
@@ -89,7 +90,47 @@ const ScrollTrigger3DSection = ({
     objectContainerRefs.current[i] = null;
   }
 
+  // Lazy load: Intersection Observer to detect when section is approaching viewport
   useEffect(() => {
+    if (!sectionRef.current || isLazyLoaded) return;
+
+    // Convert 200vh to pixels (2x viewport height = 200vh)
+    const rootMarginTop = window.innerHeight * 2;
+    const rootMargin = `${rootMarginTop}px 0px`;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting || entry.intersectionRatio > 0) {
+            setIsLazyLoaded(true);
+            observer.disconnect();
+          }
+        });
+      },
+      {
+        rootMargin, // Start loading 200vh (2 viewport heights) before section enters viewport
+        threshold: 0,
+      },
+    );
+
+    observer.observe(sectionRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isLazyLoaded]);
+
+  // Main effect: Only run when lazy loaded
+  useEffect(() => {
+    if (!isLazyLoaded) return;
+
+    if (
+      !sectionRef.current ||
+      !textTrackRef.current ||
+      !textContainerRef.current
+    ) {
+      return;
+    }
     if (
       !sectionRef.current ||
       !textTrackRef.current ||
@@ -422,7 +463,7 @@ const ScrollTrigger3DSection = ({
         }
       });
     };
-  }, [texts, objectAnimationStartVh]);
+  }, [texts, objectAnimationStartVh, isLazyLoaded]);
 
   return (
     <section
@@ -430,6 +471,8 @@ const ScrollTrigger3DSection = ({
       className="relative h-screen w-full overflow-hidden border-t-[40px] border-red-700"
     >
       {/* 3D Objects Container - Outside text track, relative to section */}
+      {/* Only render 3D elements when lazy loaded */}
+      {isLazyLoaded && (
       <div className="pointer-events-none absolute inset-0 z-10">
         {/* Container with same max-width as text track for alignment */}
         <div className="relative mx-auto h-full max-w-[344px] lg:max-w-[1000px]">
@@ -544,6 +587,7 @@ const ScrollTrigger3DSection = ({
           </div>
         </div>
       </div>
+      )}
 
       {/* Text Wrapper Track */}
       <div

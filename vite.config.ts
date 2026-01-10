@@ -6,4 +6,14 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   base: '/Stellar.vision/',
   plugins: [react(), tailwindcss()],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://calender-stellervision-production.up.railway.app',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api'),
+      },
+    },
+  },
 });

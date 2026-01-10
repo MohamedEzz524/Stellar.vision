@@ -1,96 +1,164 @@
-import { useRef, useEffect, useState } from 'react';
-import { Canvas, useLoader } from '@react-three/fiber';
+import { useRef, useEffect, useState, useMemo } from 'react';
+import { Canvas, useLoader, useThree } from '@react-three/fiber';
+import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-import { Mesh, Group } from 'three';
+import { FlakesTexture } from '../assets/js/FlakesTexture';
 import { gsap } from 'gsap';
 import { registerModel3DRef, getModel3DRef } from '../utils/revealAnimation';
 import starModelUrl from '../assets/models/star.obj?url';
+import hdrTextureUrl from '../assets/texture/hdr.jpeg?url';
 
 interface Hero3DModelProps {
-  onModelReady?: (modelRef: React.RefObject<Group | null>) => void;
+  onModelReady?: (modelRef: React.RefObject<THREE.Group | null>) => void;
 }
 
 const StarModel = ({
   onModelReady,
 }: {
-  onModelReady?: (modelRef: React.RefObject<Group | null>) => void;
+  onModelReady?: (modelRef: React.RefObject<THREE.Group | null>) => void;
 }) => {
-  const groupRef = useRef<Group>(null);
-  const meshRef = useRef<Mesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
+  const meshRef = useRef<THREE.Mesh>(null);
   const obj = useLoader(OBJLoader, starModelUrl);
+  const { gl, scene } = useThree();
+  const [envMap, setEnvMap] = useState<THREE.Texture | null>(null);
+  const [materialReady, setMaterialReady] = useState(false);
 
+  // Load HDR texture and set as scene environment for IBL lighting
   useEffect(() => {
-    if (obj && groupRef.current) {
-      // Clone the object to avoid modifying the original
+    const loader = new THREE.TextureLoader();
+
+    loader.load(
+      hdrTextureUrl,
+      (texture: THREE.Texture) => {
+        texture.mapping = THREE.EquirectangularReflectionMapping;
+        texture.flipY = false;
+
+        try {
+          // Convert to PMREM for optimized IBL
+          const pmremGenerator = new THREE.PMREMGenerator(gl);
+          const envMapResult = pmremGenerator.fromEquirectangular(texture);
+          const envMapTexture = envMapResult.texture;
+
+          // Set as scene environment - provides IBL lighting to all materials
+          scene.environment = envMapTexture;
+
+          envMapResult.dispose();
+          pmremGenerator.dispose();
+          texture.dispose();
+
+          setEnvMap(envMapTexture);
+        } catch (pmremError) {
+          console.warn(
+            'PMREM conversion failed, using texture directly:',
+            pmremError,
+          );
+          scene.environment = texture;
+          setEnvMap(texture);
+        }
+      },
+      undefined,
+      (error: unknown) => {
+        console.error('Error loading HDR texture:', error);
+      },
+    );
+  }, [gl, scene]);
+
+  // Cleanup: clear scene environment and dispose textures
+  useEffect(() => {
+    return () => {
+      if (scene.environment === envMap) {
+        scene.environment = null;
+      }
+      if (envMap) {
+        envMap.dispose();
+      }
+    };
+  }, [envMap, scene]);
+
+  // Generate flakes texture for material normal map
+  const flakesTexture = useMemo(() => {
+    const canvas = new FlakesTexture(512, 512);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(10, 6);
+    return texture;
+  }, []);
+
+  // Apply metallic material to mesh when model and envMap are ready
+  useEffect(() => {
+    if (obj && groupRef.current && envMap && !materialReady) {
       const clonedObj = obj.clone();
 
-      // Find the mesh in the object (for reference, but rotation will be on group)
       clonedObj.traverse((child) => {
-        if (child instanceof Mesh) {
+        if (child instanceof THREE.Mesh) {
           meshRef.current = child;
+
+          // Metallic material: uses scene.environment for IBL automatically
+          const ballMaterial = new THREE.MeshPhysicalMaterial({
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.0,
+            metalness: 1.0,
+            roughness: 0.15, // Allows IBL diffuse to show light/shadow variations
+            color: 0xffffff,
+            normalMap: flakesTexture,
+            normalScale: new THREE.Vector2(0.15, 0.15),
+            envMapIntensity: 25.0,
+          });
+
+          ballMaterial.needsUpdate = true;
+
+          (child as THREE.Mesh).material = ballMaterial;
         }
       });
 
-      // Clear existing children and add cloned object
       groupRef.current.clear();
       groupRef.current.add(clonedObj);
+      // Rotate to stand upright (initial state for GSAP animation)
+      groupRef.current.rotation.set(-Math.PI / 2, 0, 0);
+      groupRef.current.scale.set(0.2, 0.2, 0.5);
 
-      // Set initial rotation on the group to stand on ground (rotate 90 degrees on X axis)
-      // The star is lying flat, so we rotate it to stand upright
-      // state1 - Initial state (will be animated by GSAP)
-      groupRef.current.rotation.x = -Math.PI / 2; // -90 degrees to stand on ground
-      groupRef.current.rotation.y = 0;
-      groupRef.current.rotation.z = 0;
-      groupRef.current.scale.set(0.2, 0.2, 0.5); // state1 scale
-
-      // Register ref for reveal animation
+      setMaterialReady(true);
       registerModel3DRef(groupRef);
-
-      // Dispatch event that model is ready
       window.dispatchEvent(new CustomEvent('model3DReady'));
 
-      // Notify parent that model is ready
       if (onModelReady) {
         onModelReady(groupRef);
       }
     }
 
     return () => {
-      // Cleanup: unregister ref when component unmounts
-      registerModel3DRef(undefined);
+      if (materialReady) {
+        registerModel3DRef(undefined);
+      }
+      flakesTexture.dispose();
     };
-  }, [obj, onModelReady]);
+  }, [obj, envMap, materialReady, flakesTexture, onModelReady, scene]);
 
   return <group ref={groupRef} />;
 };
 
 const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const groupRef = useRef<Group>(null);
+  const groupRef = useRef<THREE.Group>(null);
   const [shouldRenderCanvas, setShouldRenderCanvas] = useState(false);
 
-  // Render Canvas when button is clicked (before reveal starts)
-  // This gives time for model to load before playRevealAnimation is called
+  // Render Canvas when preloader button is clicked (gives time for model to load)
   useEffect(() => {
-    // Check if preloader exists
     const preloader = document.querySelector('.preloader-container');
     if (!preloader) {
-      // No preloader, render immediately
       setShouldRenderCanvas(true);
       return;
     }
 
-    // Listen for button click - render Canvas then to start loading model
     const handleButtonClick = () => {
       setShouldRenderCanvas(true);
     };
 
-    // Watch for button click by observing when button becomes hidden
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (mutation.type === 'attributes') {
           const target = mutation.target as HTMLElement;
-          // Check if button is being hidden (clicked)
           if (
             target.getAttribute('style')?.includes('opacity: 0') ||
             target.classList.contains('opacity-0')
@@ -103,7 +171,6 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
       }
     });
 
-    // Also listen for click events on the button
     const button = document.querySelector(
       '[data-v-a05bfe24] button, .preloader button',
     );
@@ -111,14 +178,12 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
       button.addEventListener('click', handleButtonClick, { once: true });
     }
 
-    // Observe preloader for button state changes
     observer.observe(preloader, {
       attributes: true,
       attributeFilter: ['style', 'class'],
       subtree: true,
     });
 
-    // Fallback: render after a delay if preloader takes too long
     const fallbackTimer = setTimeout(() => {
       setShouldRenderCanvas(true);
       observer.disconnect();
@@ -133,9 +198,8 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
     };
   }, []);
 
-  // Mouse interaction for 3D model (desktop only)
+  // Mouse interaction: rotate model based on cursor position (desktop only)
   useEffect(() => {
-    // Only enable on desktop
     const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
 
     let mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
@@ -145,12 +209,10 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
     let targetRotationX = -Math.PI / 2;
     let targetRotationY = -7 * (Math.PI / 180);
 
-    // Lerp function for smooth interpolation
     const lerp = (start: number, end: number, factor: number): number => {
       return start + (end - start) * factor;
     };
 
-    // Wait for reveal animation to complete before enabling mouse interaction
     const handleRevealComplete = () => {
       if (!isDesktop()) {
         return;
@@ -163,25 +225,18 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
         return;
       }
 
-      // Initial rotation values (from reveal animation final state)
-      const baseRotationY = -7 * (Math.PI / 180); // -7 degrees in radians (desktop)
-      const maxRotationY = 30 * (Math.PI / 180); // ±30 degrees for more visible effect
-      const maxRotationX = 20 * (Math.PI / 180); // ±20 degrees for more visible effect
-
-      // Lerp factor (0-1) - lower value = smoother but slower
+      const baseRotationY = -7 * (Math.PI / 180);
+      const maxRotationY = 30 * (Math.PI / 180);
+      const maxRotationX = 20 * (Math.PI / 180);
       const lerpFactor = 0.05;
 
-      // Initialize target rotations
       targetRotationX = -Math.PI / 2;
       targetRotationY = baseRotationY;
 
-      // Animation loop using requestAnimationFrame
       const animate = () => {
         if (!modelRef?.current || !isDesktop()) {
           return;
         }
-
-        // Lerp current rotation towards target
         modelRef.current.rotation.x = lerp(
           modelRef.current.rotation.x,
           targetRotationX,
@@ -192,11 +247,9 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
           targetRotationY,
           lerpFactor,
         );
-
         animationFrameId = requestAnimationFrame(animate);
       };
 
-      // Start animation loop
       animate();
 
       mouseMoveHandler = (e: MouseEvent) => {
@@ -205,22 +258,20 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
         }
 
         const rect = heroSection.getBoundingClientRect();
-        // Calculate center of hero section
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        
-        // Calculate offset from center to cursor
         const offsetX = e.clientX - centerX;
         const offsetY = e.clientY - centerY;
-        
-        // Normalize to -1 to 1 range based on distance from center
-        const normalizedX = Math.max(-1, Math.min(1, (offsetX / (rect.width / 2))));
-        const normalizedY = Math.max(-1, Math.min(1, (offsetY / (rect.height / 2))));
+        const normalizedX = Math.max(
+          -1,
+          Math.min(1, offsetX / (rect.width / 2)),
+        );
+        const normalizedY = Math.max(
+          -1,
+          Math.min(1, offsetY / (rect.height / 2)),
+        );
 
-        // Calculate target rotations - model looks at cursor
-        // Y rotation: left/right looking (horizontal angle)
         targetRotationY = baseRotationY + normalizedX * maxRotationY;
-        // X rotation: up/down looking (vertical angle) - inverted Y
         targetRotationX = -Math.PI / 2 - normalizedY * maxRotationX;
       };
 
@@ -228,8 +279,6 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
         if (!modelRef?.current) {
           return;
         }
-
-        // Return to base rotation (lerp will handle the smooth transition)
         targetRotationX = -Math.PI / 2;
         targetRotationY = baseRotationY;
       };
@@ -238,12 +287,13 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
       heroSection.addEventListener('mouseleave', mouseLeaveHandler);
     };
 
-    window.addEventListener('revealAnimationComplete', handleRevealComplete as EventListener);
+    window.addEventListener(
+      'revealAnimationComplete',
+      handleRevealComplete as EventListener,
+    );
 
-    // Handle resize to mobile - cleanup if switching to mobile
     const handleResize = () => {
       if (!isDesktop() && mouseMoveHandler && heroSection) {
-        // Stop animation loop
         if (animationFrameId !== null) {
           cancelAnimationFrame(animationFrameId);
           animationFrameId = null;
@@ -256,10 +306,9 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
         mouseMoveHandler = null;
         mouseLeaveHandler = null;
 
-        // Reset rotation when switching to mobile
         const modelRef = getModel3DRef();
         if (modelRef?.current) {
-          const baseRotationY = -20 * (Math.PI / 180); // Mobile base rotation
+          const baseRotationY = -20 * (Math.PI / 180);
           gsap.to(modelRef.current.rotation, {
             x: -Math.PI / 2,
             y: baseRotationY,
@@ -273,16 +322,16 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
     window.addEventListener('resize', handleResize);
 
     return () => {
-      window.removeEventListener('revealAnimationComplete', handleRevealComplete as EventListener);
+      window.removeEventListener(
+        'revealAnimationComplete',
+        handleRevealComplete as EventListener,
+      );
       window.removeEventListener('resize', handleResize);
 
-      // Stop animation loop
       if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
         animationFrameId = null;
       }
-
-      // Cleanup mouse handlers if they exist
       if (heroSection && mouseMoveHandler) {
         heroSection.removeEventListener('mousemove', mouseMoveHandler);
       }
@@ -292,11 +341,22 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
     };
   }, []);
 
+  // Configure renderer: tone mapping and color encoding
+  const RendererConfig = () => {
+    const { gl } = useThree();
+    useEffect(() => {
+      // @ts-expect-error - outputEncoding exists in this version of Three.js
+      gl.outputEncoding = THREE.sRGBEncoding;
+      gl.toneMapping = THREE.ACESFilmicToneMapping;
+      gl.toneMappingExposure = 5.0;
+    }, [gl]);
+    return null;
+  };
+
   return (
     <div
-      ref={containerRef}
       id="hero-image"
-      className="absolute top-1/2 left-1/2 z-10 lg:h-[100%] flex items-center justify-center h-[150px] max-h-[500px] max-w-[390px] w-[120%] lg:w-[80%] -translate-x-1/2 -translate-y-[10rem] lg:max-h-full lg:max-w-full lg:-translate-y-1/2"
+      className="absolute top-1/2 left-1/2 z-10 flex h-[150px] max-h-[500px] w-[120%] max-w-[390px] -translate-x-1/2 -translate-y-[10rem] items-center justify-center lg:h-[100%] lg:max-h-full lg:w-[80%] lg:max-w-full lg:-translate-y-1/2"
     >
       {shouldRenderCanvas && (
         <Canvas
@@ -304,9 +364,12 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
           gl={{ antialias: true, alpha: true }}
           style={{ width: '100%', height: '100%', maxHeight: '100%' }}
         >
-          <ambientLight intensity={0.5} />
-          <directionalLight position={[5, 5, 5]} intensity={1} />
-          <pointLight position={[-5, -5, -5]} intensity={0.5} />
+          <RendererConfig />
+          {/* Supplemental lighting - HDR provides main IBL via scene.environment */}
+          <ambientLight intensity={0.3} />
+          <directionalLight position={[5, 5, 5]} intensity={2.0} />
+          <directionalLight position={[-5, -5, -5]} intensity={1.0} />
+          <directionalLight position={[0, 10, 0]} intensity={1.5} />
           <StarModel
             onModelReady={(ref) => {
               groupRef.current = ref.current;

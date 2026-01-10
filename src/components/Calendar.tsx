@@ -1,8 +1,10 @@
-import React, { useReducer, useRef, useEffect } from 'react';
+import React, { useReducer, useRef, useEffect, useState } from 'react';
 import { gsap } from 'gsap';
 import { motion, AnimatePresence } from 'framer-motion';
 import arrowRightIcon from '../assets/arrow-right.svg';
 import timeSvg from '../assets/time.svg';
+import { autoRotateTexts } from '../constants';
+import noiseImg from '../assets/images/noise.webp';
 
 type ViewState = 0 | 1 | 2 | 3 | 4;
 
@@ -12,13 +14,24 @@ interface SelectedDate {
   year: number;
   time?: string;
   startTime?: string;
-  endTime?: string;
 }
 
 interface AvailableDaysData {
   year: number;
   month: string;
   availableDays: number[];
+}
+
+interface TimeSlot {
+  start_time: string;
+  end_time: string;
+  status: 'available' | 'unavailable';
+}
+
+interface DayAvailabilityResponse {
+  date: string;
+  timezone: string;
+  slots: TimeSlot[];
 }
 
 interface CalendarState {
@@ -29,12 +42,10 @@ interface CalendarState {
   selectedTime: string | null;
   timezone: string;
   formData: {
-    summary: string;
     name: string;
     email: string;
     description: string;
     startTime: string;
-    endTime: string;
     timezone: string;
   };
 }
@@ -104,10 +115,8 @@ const initialState: CalendarState = {
   formData: {
     name: 'Hazem Gad',
     email: 'hazemhgad22@gmail.com',
-    summary: 'Web design consultation',
     description: 'Web design consultation',
     startTime: '',
-    endTime: '',
     timezone: 'Africa/Cairo',
   },
 };
@@ -155,26 +164,42 @@ const calendarReducer = (
       // otherwise use selectedTime (assumes it's already in base timezone)
       const timeToUse = action.baseTimezoneTime || state.selectedTime;
 
-      // Calculate end time (15 minutes later) using the base timezone time
-      const [time, period] = timeToUse.split(' ');
-      const [hours, minutes] = time.split(':');
-      let hour24 = parseInt(hours);
-      if (period === 'PM' && hour24 !== 12) hour24 += 12;
-      if (period === 'AM' && hour24 === 12) hour24 = 0;
-      const startDate = new Date(
-        state.selectedDate.year,
-        state.selectedDate.month,
-        state.selectedDate.day,
-        hour24,
-        parseInt(minutes),
-      );
-      const endDate = new Date(startDate.getTime() + 15 * 60000);
+      let startDate: Date;
+      let startTimeRFC3339: string;
+      let finalTimezone: string;
 
-      // Format dates to RFC3339 with timezone offset in BASE_TIMEZONE (Africa/Cairo)
-      // Format: "2026-01-10T11:00:00+02:00"
-      const BASE_TIMEZONE = 'Africa/Cairo';
-      const startTimeRFC3339 = formatDateToRFC3339(startDate, BASE_TIMEZONE);
-      const endTimeRFC3339 = formatDateToRFC3339(endDate, BASE_TIMEZONE);
+      // Check if timeToUse is in RFC3339 format (from slots API)
+      if (
+        timeToUse.includes('T') &&
+        (timeToUse.includes('+') || timeToUse.includes('-'))
+      ) {
+        // If already in RFC3339 format from API, use it directly to preserve timezone
+        // Normalize format: remove milliseconds if present (API returns .000, but we might need consistency)
+        // Keep the timezone offset as-is from the API response
+        startTimeRFC3339 = timeToUse.replace(/\.\d{3}/, ''); // Remove milliseconds if present
+        finalTimezone = state.timezone; // Use the timezone that was used to fetch the slot
+
+        // Parse for the Date object (for internal use)
+        startDate = new Date(timeToUse);
+      } else {
+        // Parse "HH:MM AM/PM" format and convert to RFC3339
+        const [time, period] = timeToUse.split(' ');
+        const [hours, minutes] = time.split(':');
+        let hour24 = parseInt(hours);
+        if (period === 'PM' && hour24 !== 12) hour24 += 12;
+        if (period === 'AM' && hour24 === 12) hour24 = 0;
+        startDate = new Date(
+          state.selectedDate.year,
+          state.selectedDate.month,
+          state.selectedDate.day,
+          hour24,
+          parseInt(minutes),
+        );
+
+        // Format date to RFC3339 with timezone offset in the current timezone
+        finalTimezone = state.timezone;
+        startTimeRFC3339 = formatDateToRFC3339(startDate, finalTimezone);
+      }
 
       return {
         ...state,
@@ -183,13 +208,11 @@ const calendarReducer = (
           ...state.selectedDate,
           time: state.selectedTime,
           startTime: startDate.toISOString(),
-          endTime: endDate.toISOString(),
         },
         formData: {
           ...state.formData,
-          startTime: startTimeRFC3339, // RFC3339 format with timezone offset in BASE_TIMEZONE
-          endTime: endTimeRFC3339, // RFC3339 format with timezone offset in BASE_TIMEZONE
-          timezone: BASE_TIMEZONE, // Always use base timezone for final times
+          startTime: startTimeRFC3339, // RFC3339 format with timezone offset from slot or current timezone
+          timezone: finalTimezone, // Use the timezone from the slot or current timezone
         },
       };
     }
@@ -280,24 +303,237 @@ const calendarReducer = (
 
 const Calendar = () => {
   const [state, dispatch] = useReducer(calendarReducer, initialState);
+  const [availableDaysData, setAvailableDaysData] = useState<
+    AvailableDaysData[]
+  >([]);
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string;
+    email?: string;
+    description?: string;
+    startTime?: string;
+    timezone?: string;
+  }>({});
 
   const calendarRef = useRef<HTMLDivElement>(null);
   const startButtonRef = useRef<HTMLDivElement>(null);
   const timeButtonsRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-  // Available days data (will be replaced with API call later)
-  const availableDaysData: AvailableDaysData[] = [
-    { year: 2026, month: 'Jan', availableDays: [1, 2, 9, 12, 19, 21, 29] },
-    { year: 2026, month: 'Feb', availableDays: [1, 2, 9, 12, 19, 21, 29] },
-    { year: 2026, month: 'Mar', availableDays: [1, 2, 3, 13, 21, 29] },
-  ];
+  // Validation regex patterns
+  const validationPatterns = {
+    name: /^[a-zA-Z0-9\s'-]{2,50}$/, // 2-50 characters, letters, numbers, spaces, hyphens, apostrophes
+    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, // Standard email format
+    description: /^[\s\S]{4,500}$/, // 4-500 characters, any text
+    startTime:
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?([+-]\d{2}:\d{2}|Z)$/, // RFC3339 format
+    timezone: /^[A-Za-z_][A-Za-z0-9_/+-]*$/, // Timezone format like "Africa/Cairo", "UTC", "America/New_York", etc.
+  };
+
+  // Validation error messages
+  const validationMessages = {
+    name: 'Name must be 2-50 characters and contain only letters, numbers, spaces, hyphens, and apostrophes',
+    email: 'Please enter a valid email address',
+    description: 'Description must be between 4 and 500 characters',
+    startTime: 'Start time is required and must be in valid format',
+    timezone: 'Timezone must be in valid format (e.g., Africa/Cairo or UTC)',
+  };
+
+  // Validate a single field
+  const validateField = (field: string, value: string): string | undefined => {
+    if (!value || value.trim() === '') {
+      return `${field.charAt(0).toUpperCase() + field.slice(1)} is required`;
+    }
+
+    const pattern =
+      validationPatterns[field as keyof typeof validationPatterns];
+    if (pattern && !pattern.test(value.trim())) {
+      return validationMessages[field as keyof typeof validationMessages];
+    }
+
+    return undefined;
+  };
+
+  // Validate all form fields (returns all errors including hidden fields)
+  const validateAllFields = (): {
+    visibleErrors: typeof fieldErrors;
+    allErrors: Array<{ field: string; error: string }>;
+  } => {
+    const { name, email, description, startTime, timezone } = state.formData;
+    const allErrors: Array<{ field: string; error: string }> = [];
+
+    const nameError = validateField('name', name);
+    if (nameError) allErrors.push({ field: 'name', error: nameError });
+
+    const emailError = validateField('email', email);
+    if (emailError) allErrors.push({ field: 'email', error: emailError });
+
+    const descriptionError = validateField('description', description);
+    if (descriptionError)
+      allErrors.push({ field: 'description', error: descriptionError });
+
+    const startTimeError = validateField('startTime', startTime);
+    if (startTimeError)
+      allErrors.push({ field: 'startTime', error: startTimeError });
+
+    const timezoneError = validateField('timezone', timezone);
+    if (timezoneError)
+      allErrors.push({ field: 'timezone', error: timezoneError });
+
+    // Only return visible field errors for UI display
+    const visibleErrors: typeof fieldErrors = {
+      ...(nameError && { name: nameError }),
+      ...(emailError && { email: emailError }),
+      ...(descriptionError && { description: descriptionError }),
+    };
+
+    return { visibleErrors, allErrors };
+  };
 
   // Base timezone for available time slots (all times are based on this)
   const BASE_TIMEZONE = 'Africa/Cairo';
 
+  // Fetch available days from API
+  const fetchAvailableDays = async (years: number[], timezone: string) => {
+    if (!years || years.length === 0) {
+      return;
+    }
+
+    try {
+      // Use proxy URL in development, full URL in production
+      // The proxy is configured in vite.config.ts
+      const isDevelopment = import.meta.env.DEV;
+      const baseUrl = isDevelopment
+        ? '/api'
+        : 'https://calender-stellervision-production.up.railway.app/api';
+
+      // Fetch data for all required years in parallel
+      const fetchPromises = years.map((year) => {
+        const url = `${baseUrl}/availability/year?year=${year}&timezone=${encodeURIComponent(timezone)}`;
+
+        return fetch(url, {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+          },
+          mode: 'cors',
+        }).then((response) => {
+          if (!response.ok) {
+            throw new Error(
+              `Failed to fetch available days for year ${year}: ${response.status} ${response.statusText}`,
+            );
+          }
+          return response.json();
+        });
+      });
+
+      const results = await Promise.all(fetchPromises);
+
+      // Merge all years' data into a single array
+      const mergedData: AvailableDaysData[] = results.flat();
+      setAvailableDaysData(mergedData);
+      return mergedData;
+    } catch (error) {
+      console.error('Error fetching available days:', error);
+      // Set empty array on error to prevent app crash
+      setAvailableDaysData([]);
+      throw error;
+    }
+  };
+
+  // Fetch available days on mount and when year/timezone changes
+  useEffect(() => {
+    const viewedYear = state.currentYear;
+    const timezone = state.timezone;
+    const now = new Date();
+    const currentYearValue = now.getFullYear();
+
+    // Determine which years to fetch
+    // Calendar allows viewing current month + next 2 months, so we need:
+    // 1. Current year (today's year) - always needed
+    // 2. Viewed year (might be different if viewing near year boundary)
+    // 3. Next year (if viewing November/December or already in next year)
+    const yearsToFetch = new Set<number>([currentYearValue, viewedYear]);
+
+    // If viewing November or December (months 10 or 11) in current year, fetch next year
+    // Or if already viewing next year's months, fetch the year after
+    if (
+      (viewedYear === currentYearValue && state.currentMonth >= 10) ||
+      viewedYear > currentYearValue
+    ) {
+      yearsToFetch.add(viewedYear + 1);
+    }
+
+    fetchAvailableDays(Array.from(yearsToFetch), timezone).catch(() => {
+      // Error is already handled in fetchAvailableDays (empty array is set as fallback)
+    });
+  }, [state.currentYear, state.timezone, state.currentMonth]);
+
+  // Fetch available time slots for a specific day
+  const fetchDaySlots = async (
+    year: number,
+    month: number,
+    day: number,
+    timezone: string,
+  ) => {
+    setIsLoadingSlots(true);
+    try {
+      // Format date as YYYY-MM-DD
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+      // Use proxy URL in development, full URL in production
+      const isDevelopment = import.meta.env.DEV;
+      const baseUrl = isDevelopment
+        ? '/api'
+        : 'https://calender-stellervision-production.up.railway.app/api';
+      const url = `${baseUrl}/availability/day?date=${dateStr}&timezone=${encodeURIComponent(timezone)}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+        },
+        mode: 'cors',
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch slots: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const data: DayAvailabilityResponse = await response.json();
+
+      // Filter only available slots
+      const available = data.slots.filter(
+        (slot) => slot.status === 'available',
+      );
+
+      setAvailableSlots(available);
+    } catch (error) {
+      console.error('Error fetching day slots:', error);
+      setAvailableSlots([]);
+    } finally {
+      setIsLoadingSlots(false);
+    }
+  };
+
+  // Fetch slots when a day is selected (viewState becomes 3)
+  useEffect(() => {
+    if (state.viewState === 3 && state.selectedDate) {
+      const { year, month, day } = state.selectedDate;
+      fetchDaySlots(year, month, day, state.timezone);
+    } else {
+      // Clear slots when not in time selection view
+      setAvailableSlots([]);
+    }
+  }, [state.viewState, state.selectedDate, state.timezone]);
+
   // Configuration for available time slots (in BASE_TIMEZONE)
-  const startTime = '11:00 AM'; // Start time in Africa/Cairo
-  const endTime = '04:00 PM'; // End time in Africa/Cairo
+  const startTime = '12:00 PM'; // Start time in Africa/Cairo
+  const endTime = '05:00 PM'; // End time in Africa/Cairo
   const intervalMinutes = 15; // Interval between slots
 
   // Generate time slots between start and end time in 15-minute intervals
@@ -486,10 +722,34 @@ const Calendar = () => {
     return formatter.format(new Date(utcTime));
   };
 
-  // Get available times converted to current timezone
-  const availableTimes = baseAvailableTimes.map((time) =>
-    convertTimeToTimezone(time, state.timezone),
-  );
+  // Format slot time for display
+  const formatSlotTime = (
+    slotStartTime: string, // Format: "2026-01-12T13:00:00.000+02:00"
+    displayTimezone: string,
+  ): string => {
+    // Parse the slot time (it's in RFC3339 format with timezone offset)
+    const date = new Date(slotStartTime);
+
+    // Format in the display timezone
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: displayTimezone,
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    return formatter.format(date);
+  };
+
+  // Get available times - use fetched slots if available, otherwise use generated times
+  const availableTimes =
+    availableSlots.length > 0
+      ? availableSlots.map((slot) =>
+          formatSlotTime(slot.start_time, state.timezone),
+        )
+      : baseAvailableTimes.map((time) =>
+          convertTimeToTimezone(time, state.timezone),
+        );
 
   // Auto-complete animation state when calendar opens
   useEffect(() => {
@@ -595,7 +855,12 @@ const Calendar = () => {
     const monthData = availableDaysData.find(
       (data) => data.year === year && data.month === monthAbbr,
     );
-    return monthData ? monthData.availableDays.includes(day) : false;
+
+    if (!monthData) {
+      return false;
+    }
+
+    return monthData.availableDays.includes(day);
   };
 
   // Check if current month is within the allowed range (current month and next 2 months)
@@ -795,12 +1060,35 @@ const Calendar = () => {
   // Handle next button click (from time selection)
   const handleTimeNext = () => {
     if (state.selectedDate && state.selectedTime) {
-      // Convert the selected time (displayed in current timezone) back to base timezone (Africa/Cairo)
-      const baseTimezoneTime = convertTimeFromDisplayToBase(
-        state.selectedTime,
-        state.timezone,
-        state.selectedDate,
-      );
+      let baseTimezoneTime: string;
+
+      // If we have slots, find the matching slot and use its start_time
+      if (availableSlots.length > 0) {
+        // Find the slot whose formatted time matches the selected time
+        const matchingSlot = availableSlots.find((slot) => {
+          const formattedTime = formatSlotTime(slot.start_time, state.timezone);
+          return formattedTime === state.selectedTime;
+        });
+
+        if (matchingSlot) {
+          // Use the slot's start_time directly (it's already in RFC3339 format with the timezone used to fetch it)
+          baseTimezoneTime = matchingSlot.start_time;
+        } else {
+          // Fallback: convert the displayed time back to base timezone
+          baseTimezoneTime = convertTimeFromDisplayToBase(
+            state.selectedTime,
+            state.timezone,
+            state.selectedDate,
+          );
+        }
+      } else {
+        // No slots available, use the conversion logic
+        baseTimezoneTime = convertTimeFromDisplayToBase(
+          state.selectedTime,
+          state.timezone,
+          state.selectedDate,
+        );
+      }
 
       // Dispatch with the base timezone time
       dispatch({ type: 'CONFIRM_TIME', baseTimezoneTime });
@@ -848,7 +1136,6 @@ const Calendar = () => {
     if (period === 'PM' && hour24 !== 12) hour24 += 12;
     if (period === 'AM' && hour24 === 12) hour24 = 0;
 
-    // Calculate end time (15 minutes later)
     const startDate = new Date(
       selectedDate.year,
       selectedDate.month,
@@ -856,17 +1143,13 @@ const Calendar = () => {
       hour24,
       parseInt(minutes),
     );
-    const endDate = new Date(startDate.getTime() + 15 * 60000);
 
     const startHour = startDate.getHours();
     const startMin = startDate.getMinutes();
-    const endHour = endDate.getHours();
-    const endMin = endDate.getMinutes();
 
     const startTime = `${startHour % 12 || 12}:${startMin.toString().padStart(2, '0')}${startHour >= 12 ? 'pm' : 'am'}`;
-    const endTime = `${endHour % 12 || 12}:${endMin.toString().padStart(2, '0')}${endHour >= 12 ? 'pm' : 'am'}`;
 
-    return `${startTime} - ${endTime}, ${dayNames[date.getDay()]}, ${monthNames[selectedDate.month]} ${selectedDate.day}, ${selectedDate.year}`;
+    return `${startTime}, ${dayNames[date.getDay()]}, ${monthNames[selectedDate.month]} ${selectedDate.day}, ${selectedDate.year}`;
   };
 
   // Handle back button
@@ -901,11 +1184,37 @@ const Calendar = () => {
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
+    const fieldName = e.target.name;
+    const value = e.target.value;
+
     dispatch({
       type: 'UPDATE_FORM',
-      field: e.target.name,
-      value: e.target.value,
+      field: fieldName,
+      value: value,
     });
+
+    // Clear error for this field when user starts typing
+    if (fieldErrors[fieldName as keyof typeof fieldErrors]) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName as keyof typeof newErrors];
+        return newErrors;
+      });
+    }
+  };
+
+  // Handle field blur (validate on blur)
+  const handleFieldBlur = (
+    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const fieldName = e.target.name;
+    const value = e.target.value;
+    const error = validateField(fieldName, value);
+
+    setFieldErrors((prev) => ({
+      ...prev,
+      [fieldName]: error,
+    }));
   };
 
   // Handle timezone change
@@ -913,12 +1222,150 @@ const Calendar = () => {
     dispatch({ type: 'UPDATE_TIMEZONE', timezone: e.target.value });
   };
 
+  // Format booking data for API
+  // Returns only: name, email, description, slot_start_time, timezone
+  const formatBookingData = () => {
+    // TEMPORARY: Hardcoded data for testing
+    return {
+      name: 'Hazem',
+      email: 'hazem@example.com',
+      slot_start_time: '2026-01-15T15:30:00.000Z',
+      description: 'Test',
+      timezone: 'UTC',
+    };
+
+    // TODO: Uncomment below after testing
+    // const { name, email, description, startTime } = state.formData;
+
+    // // Validate required fields
+    // if (!name || !email || !startTime) {
+    //   throw new Error('Name, email, and start time are required fields');
+    // }
+
+    // // Convert startTime to UTC ISO format
+    // // startTime is in RFC3339 format with Cairo timezone: "2026-01-15T13:15:00+02:00"
+    // // Convert to proper UTC ISO: "2026-01-15T11:15:00.000Z" (13:15 Cairo UTC+2 = 11:15 UTC)
+    // const date = new Date(startTime);
+
+    // if (isNaN(date.getTime())) {
+    //   throw new Error(`Invalid start time format: ${startTime}`);
+    // }
+
+    // // Convert to UTC ISO string format: "2026-01-15T11:15:00.000Z"
+    // const slot_start_time = date.toISOString();
+
+    // // Return only the required fields in the exact format
+    // return {
+    //   name: name.trim(),
+    //   email: email.trim(),
+    //   slot_start_time,
+    //   description: description ? description.trim() : '',
+    //   timezone: 'UTC',
+    // };
+  };
+
   // Handle form submit
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const eventData = formatForGoogleCalendar();
-    console.log('Google Calendar API Event Data:', eventData);
-    console.log('Formatted JSON:', JSON.stringify(eventData, null, 2));
+    setSubmitError(null);
+
+    // Validate all fields before submitting (including hidden fields)
+    const { visibleErrors, allErrors } = validateAllFields();
+
+    if (allErrors.length > 0) {
+      // Set visible field errors for UI
+      setFieldErrors(visibleErrors);
+
+      // Show general error if hidden fields (startTime, timezone) have errors
+      const hiddenErrors = allErrors.filter(
+        (err) => err.field === 'startTime' || err.field === 'timezone',
+      );
+      if (hiddenErrors.length > 0) {
+        const hiddenErrorMessages = hiddenErrors.map(
+          (err) =>
+            `${err.field === 'startTime' ? 'Start time' : 'Timezone'}: ${err.error}`,
+        );
+        setSubmitError(
+          `Form validation failed: ${hiddenErrorMessages.join('; ')}. Please select a time slot again.`,
+        );
+      }
+      setIsSubmitting(false);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const bookingData = formatBookingData();
+
+      // Log the data being sent for debugging
+      console.log('Sending booking data:', bookingData);
+      console.log('Booking data JSON:', JSON.stringify(bookingData, null, 2));
+
+      // Use proxy URL in development, full URL in production
+      const isDevelopment = import.meta.env.DEV;
+      const baseUrl = isDevelopment
+        ? '/api'
+        : 'https://calender-stellervision-production.up.railway.app/api';
+      const url = `${baseUrl}/bookings/create`;
+
+      console.log('POST URL:', url);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        mode: 'cors',
+        body: JSON.stringify(bookingData),
+      });
+
+      console.log('Response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        // Try to parse as JSON first, otherwise use text
+        let errorDetails: string;
+        const contentType = response.headers.get('content-type');
+
+        try {
+          if (contentType && contentType.includes('application/json')) {
+            const errorJson = await response.json();
+            errorDetails = JSON.stringify(errorJson, null, 2);
+          } else {
+            errorDetails = await response.text();
+          }
+        } catch {
+          errorDetails = await response.text();
+        }
+
+        console.error('Server error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+          body: errorDetails,
+        });
+
+        throw new Error(
+          `Failed to create booking: ${response.status} ${response.statusText}. ${errorDetails.substring(0, 200)}`,
+        );
+      }
+
+      const result = await response.json();
+      console.log('Booking created successfully:', result);
+
+      // Close calendar on success
+      dispatch({ type: 'CLOSE_CALENDAR' });
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'An error occurred while creating the booking. Please try again.';
+      setSubmitError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Get timezone display name (using CSS uppercase)
@@ -983,130 +1430,28 @@ const Calendar = () => {
     }
   };
 
-  /**
-   * Transform formData to Google Calendar API format
-   *
-   * Google Calendar API Event Format:
-   * {
-   *   summary: string (REQUIRED) - Event title/name
-   *   description: string (OPTIONAL) - Event description
-   *   start: {
-   *     dateTime: string (REQUIRED) - RFC3339 format: "2026-01-10T09:00:00+02:00"
-   *     timeZone: string (REQUIRED) - IANA timezone: "Africa/Cairo"
-   *   },
-   *   end: {
-   *     dateTime: string (REQUIRED) - RFC3339 format: "2026-01-10T09:15:00+02:00"
-   *     timeZone: string (REQUIRED) - IANA timezone: "Africa/Cairo"
-   *   },
-   *   attendees: array (OPTIONAL) - Array of attendee objects
-   *     [{
-   *       email: string (REQUIRED) - Attendee email
-   *       displayName: string (OPTIONAL) - Attendee name
-   *     }]
-   *   location: string (OPTIONAL) - Physical location
-   *   reminders: object (OPTIONAL) - Reminder settings
-   * }
-   *
-   * Field Mapping:
-   * - formData.name → summary (REQUIRED)
-   * - formData.description → description (OPTIONAL)
-   * - formData.email → attendees[0].email (OPTIONAL, but recommended)
-   * - formData.name → attendees[0].displayName (OPTIONAL)
-   * - formData.startTime → start.dateTime (REQUIRED) - Must be RFC3339 format with timezone offset
-   * - formData.endTime → end.dateTime (REQUIRED) - Must be RFC3339 format with timezone offset
-   * - formData.timezone → start.timeZone & end.timeZone (REQUIRED) - IANA timezone string
-   *
-   * Example Output:
-   * {
-   *   "summary": "Hazem Gad",
-   *   "description": "Web design consultation",
-   *   "start": {
-   *     "dateTime": "2026-01-10T11:00:00+02:00",
-   *     "timeZone": "Africa/Cairo"
-   *   },
-   *   "end": {
-   *     "dateTime": "2026-01-10T11:15:00+02:00",
-   *     "timeZone": "Africa/Cairo"
-   *   },
-   *   "attendees": [
-   *     {
-   *       "email": "hazemhgad22@gmail.com",
-   *       "displayName": "Hazem Gad"
-   *     }
-   *   ]
-   * }
-   *
-   * Usage:
-   * const eventData = formatForGoogleCalendar();
-   * // Then send to Google Calendar API: POST https://www.googleapis.com/calendar/v3/calendars/primary/events
-   */
-  const formatForGoogleCalendar = () => {
-    const { summary, name, email, description, startTime, endTime, timezone } =
-      state.formData;
-
-    // Build the Google Calendar API event object
-    // startTime and endTime are already in RFC3339 format with timezone offset
-    // Format: "2026-01-10T11:00:00+02:00"
-    const googleCalendarEvent = {
-      // REQUIRED: Event summary (title)
-      summary: summary || 'Meeting', // Use summary from formData
-
-      // OPTIONAL: Event description
-      description: description || undefined, // Only include if not empty
-
-      // REQUIRED: Start time
-      start: {
-        dateTime: startTime, // Already formatted as RFC3339: "2026-01-10T11:00:00+02:00"
-        timeZone: timezone, // IANA timezone string (e.g., "Africa/Cairo")
-      },
-
-      // REQUIRED: End time
-      end: {
-        dateTime: endTime, // Already formatted as RFC3339: "2026-01-10T11:15:00+02:00"
-        timeZone: timezone, // IANA timezone string (e.g., "Africa/Cairo")
-      },
-
-      // OPTIONAL: Attendees array (name and email are for the submitter/attendee)
-      ...(email && {
-        attendees: [
-          {
-            email: email, // REQUIRED if attendees array is present - submitter's email
-            displayName: name || undefined, // OPTIONAL: Submitter's name
-          },
-        ],
-      }),
-
-      // OPTIONAL: Location (not in current formData, but can be added)
-      // location: '',
-
-      // OPTIONAL: Reminders (can customize or use defaults)
-      // reminders: {
-      //   useDefault: true, // Use calendar's default reminders
-      // },
-    };
-
-    return googleCalendarEvent;
-  };
-
   return (
     <div
       ref={calendarRef}
-      className={`text-textPrimary pointer-events-auto absolute top-0 z-[99999] flex h-screen w-full flex-col bg-transparent transition-transform duration-800 outline-none ${
+      className={`text-textPrimary pointer-events-auto absolute top-0 z-[99999] flex h-screen w-full flex-col overflow-y-auto bg-transparent transition-transform duration-800 outline-none ${
         state.viewState === 0
           ? 'translate-y-[calc(100%-77px)]'
-          : 'translate-y-0 overflow-y-auto'
+          : 'translate-y-0'
       }`}
       tabIndex={-1}
+      onWheel={(e) => {
+        // Ensure wheel events are handled by this container
+        e.stopPropagation();
+      }}
     >
-      <div className="relative h-auto flex-1">
+      <div className="relative h-auto flex-1 pb-4">
         <div
-          className={`pointer-events-none absolute inset-0 z-0 bg-black ${
+          className={`pointer-events-none absolute inset-0 -z-1 bg-black ${
             state.viewState === 0
               ? 'opacity-0 transition-opacity duration-800'
               : 'opacity-100'
           }`}
         />
-
         {/* Start Now Button - Always visible */}
         <div
           ref={startButtonRef}
@@ -1125,406 +1470,502 @@ const Calendar = () => {
             {state.viewState === 0 ? 'Start Now' : 'Return to view'}
           </button>
         </div>
-
-        {/* Header Container - Title and Back Button */}
-        {(state.viewState === 1 ||
-          state.viewState === 2 ||
-          state.viewState === 3 ||
-          state.viewState === 4) && (
-          <div className="relative z-10 mx-auto mt-8 flex w-full max-w-lg items-center">
-            {/* Back Button - Left */}
-            {(state.viewState === 3 || state.viewState === 4) && (
-              <button
-                onClick={handleBack}
-                className="absolute left-0 text-lg font-normal uppercase hover:underline"
-              >
-                &lt; BACK
-              </button>
-            )}
-            {/* Title - Centered */}
-            <AnimatePresence mode="wait">
-              {(state.viewState === 1 || state.viewState === 2) && (
-                <motion.h2
-                  key="select-day-title"
-                  initial={{
-                    opacity: 0,
-                  }}
-                  animate={{
-                    opacity: 1,
-                  }}
-                  transition={{
-                    opacity: {
-                      duration: 0.4,
-                      delay: 0.4,
-                      ease: 'easeInOut',
-                    },
-                  }}
-                  className="mx-auto inline-block rounded-full bg-white px-3 py-1 text-xs font-bold text-black uppercase lg:text-sm"
-                >
-                  {getTitle()}
-                </motion.h2>
-              )}
-              {(state.viewState === 3 || state.viewState === 4) && (
-                <motion.h2
-                  key="other-title"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="mx-auto inline-block rounded-full bg-white px-3 py-1 text-sm font-bold text-black uppercase"
-                >
-                  {getTitle()}
-                </motion.h2>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-
-        {/* State 2: Select Day */}
-        {(state.viewState === 1 || state.viewState === 2) && (
-          <div className="relative z-10 flex flex-1 flex-col p-6">
-            {/* Month/Year Navigation */}
-            <div className="font-grid mb-6 flex items-center justify-center gap-4">
-              <motion.button
-                initial={{ x: -100 }}
-                animate={{ x: 0 }}
-                transition={{
-                  x: { duration: 0.4, delay: 0.4, ease: 'easeOut' },
-                }}
-                onClick={handlePreviousMonth}
-                disabled={isPreviousMonthDisabled()}
-                className="disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                <img
-                  src={arrowRightIcon}
-                  alt="Previous"
-                  className="h-4 w-4 rotate-180 lg:h-8 lg:w-8"
-                />
-              </motion.button>
-              <motion.span
-                initial={{ y: 50, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{
-                  y: { duration: 0.4, delay: 0.4, ease: 'easeOut' },
-                  opacity: { duration: 0.4, delay: 0.4 },
-                }}
-                className="text-xl font-bold lg:text-3xl"
-              >
-                {getMonthName(state.currentMonth)} {state.currentYear}
-              </motion.span>
-              <motion.button
-                initial={{ x: 100 }}
-                animate={{ x: 0 }}
-                transition={{
-                  x: { duration: 0.4, delay: 0.4, ease: 'easeOut' },
-                }}
-                onClick={handleNextMonth}
-                disabled={isNextMonthDisabled()}
-                className="disabled:cursor-not-allowed disabled:opacity-30"
-              >
-                <img
-                  src={arrowRightIcon}
-                  alt="Next"
-                  className="h-4 w-4 lg:h-8 lg:w-8"
-                />
-              </motion.button>
-            </div>
-
-            {/* Calendar Grid */}
-            <div className="flex-1 overflow-auto">
-              <div className="mx-auto w-full max-w-lg">
-                {/* Weekday Headers */}
-                <div className="mb-6 grid grid-cols-7 gap-2 lg:gap-4">
-                  {weekdays.map((day) => (
-                    <motion.div
-                      key={day}
-                      initial={{ y: -20, opacity: 0, scale: 0.8 }}
-                      animate={{ y: 0, opacity: 1, scale: 1 }}
+        <div>
+          <div className="mx-auto max-w-lg">
+            {/* Header Container - Title and Back Button */}
+            {(state.viewState === 1 ||
+              state.viewState === 2 ||
+              state.viewState === 3 ||
+              state.viewState === 4) && (
+              <div className="relative z-10 my-8 flex w-full items-center">
+                {/* Back Button - Left */}
+                {(state.viewState === 3 || state.viewState === 4) && (
+                  <button
+                    onClick={handleBack}
+                    className="absolute left-0 text-lg font-normal uppercase hover:underline"
+                  >
+                    &lt; BACK
+                  </button>
+                )}
+                {/* Title - Centered */}
+                <AnimatePresence mode="wait">
+                  {(state.viewState === 1 || state.viewState === 2) && (
+                    <motion.h2
+                      key="select-day-title"
+                      initial={{
+                        opacity: 0,
+                      }}
+                      animate={{
+                        opacity: 1,
+                      }}
                       transition={{
-                        y: {
-                          duration: 0.4,
-                          delay: 0.4,
-                          ease: 'easeOut',
-                        },
                         opacity: {
                           duration: 0.4,
                           delay: 0.4,
-                        },
-                        scale: {
-                          duration: 0.4,
-                          delay: 0.4,
-                          ease: 'easeOut',
+                          ease: 'easeInOut',
                         },
                       }}
-                      className="rounded-xl text-center text-xs font-bold uppercase shadow-[inset_1px_0_0_0_rgba(255,255,255,0.1),inset_-1px_0_0_0_rgba(255,255,255,0.1),inset_0_4px_6px_rgba(255,255,255,0.6)] lg:text-sm"
+                      className="mx-auto inline-block rounded-full bg-white px-3 py-1 text-xs font-bold text-black uppercase lg:text-sm"
                     >
-                      {day}
-                    </motion.div>
-                  ))}
-                </div>
-
-                {/* Days Grid */}
-                <div className="grid grid-cols-7 gap-2 lg:gap-4">
-                  {calendarDays.map((day, index) => {
-                    const isDisabled = day !== null && isDayDisabled(day);
-                    return (
-                      <motion.button
-                        key={index}
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: day === null ? 0 : 1 }}
-                        transition={{
-                          scale: {
-                            duration: 0.4,
-                            delay: 0.4,
-                            ease: 'easeOut',
-                          },
-                          opacity: {
-                            duration: 0.4,
-                            delay: 0.4,
-                          },
-                        }}
-                        onClick={() =>
-                          day !== null && !isDisabled && handleDayClick(day)
-                        }
-                        disabled={day === null || isDisabled}
-                        className={`aspect-square rounded-xl text-center text-base font-bold lg:text-xl ${
-                          day === null
-                            ? 'cursor-default opacity-0'
-                            : isDisabled
-                              ? 'cursor-not-allowed bg-white text-black opacity-30 shadow-[inset_1px_0_0_rgba(0,0,0,0.1),inset_-1px_0_0_rgba(0,0,0,0.1),inset_0_4px_6px_rgba(0,0,0,0.6)]'
-                              : 'bg-black text-white shadow-[inset_1px_0_0_rgba(255,255,255,0.1),inset_-1px_0_0_rgba(255,255,255,0.1),inset_0_4px_6px_rgba(255,255,255,0.6)]'
-                        }`}
-                      >
-                        {day !== null ? day.toString().padStart(2, '0') : ''}
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Timezone Selector */}
-            <div className="mx-auto mt-2 flex w-fit items-center gap-2">
-              <GlobeIcon />
-              <div className="relative">
-                <select
-                  value={state.timezone}
-                  onChange={handleTimezoneChange}
-                  aria-label="Select timezone"
-                  title="Select timezone"
-                  className="bg-bgPrimary w-fit appearance-none rounded-md px-4 py-3 pr-12 text-white uppercase focus:outline-none"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='12' height='8' fill='white'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 12px center',
-                    backgroundSize: '12px 8px',
-                  }}
-                >
-                  {timezones.map((tz) => (
-                    <option
-                      key={tz}
-                      value={tz}
-                      className="bg-bgPrimary uppercase"
-                    >
-                      {getTimezoneDisplayName(tz)} (
-                      {getCurrentTimeInTimezone(tz)})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* State 3: Select Time */}
-        {state.viewState === 3 && (
-          <div className="relative z-10 flex flex-col overflow-hidden p-6">
-            {/* Time Buttons */}
-            <div className="flex-1 overflow-auto">
-              <div className="mx-auto max-w-lg space-y-3">
-                {availableTimes.map((time, index) => (
-                  <div
-                    key={time}
-                    ref={(el) => {
-                      timeButtonsRef.current[time] = el;
-                    }}
-                    className="flex gap-2 overflow-hidden"
-                  >
-                    <motion.button
+                      {getTitle()}
+                    </motion.h2>
+                  )}
+                  {(state.viewState === 3 || state.viewState === 4) && (
+                    <motion.h2
+                      key="other-title"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{
-                        duration: 0.4,
-                        delay: 0.05 * index,
-                        ease: 'easeOut',
-                      }}
-                      onClick={() => handleTimeClick(time)}
-                      className="time-button w-full rounded-xl bg-[#333] px-4 py-3 text-center shadow-[inset_3px_0_0_rgba(255,255,255,0.04),inset_-3px_0_0_0px_rgba(255,255,255,0.04),inset_0_2px_4px_rgba(255,255,255,0.6)]"
+                      exit={{ opacity: 0 }}
+                      className="mx-auto inline-block rounded-full bg-white px-3 py-1 text-sm font-bold text-black uppercase"
                     >
-                      {time}
-                    </motion.button>
-                    <button
-                      onClick={handleTimeNext}
-                      className="next-button w-0 overflow-hidden rounded-xl bg-white py-3 text-center font-bold text-black transition-opacity hover:bg-gray-200"
-                    >
-                      NEXT
-                    </button>
+                      {getTitle()}
+                    </motion.h2>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
+            {/* State 2: Select Day */}
+            {(state.viewState === 1 || state.viewState === 2) && (
+              <div className="relative z-10 flex flex-1 flex-col p-6 lg:p-0">
+                {/* Month/Year Navigation */}
+                <div className="font-grid mb-6 flex items-center justify-center gap-4">
+                  <motion.button
+                    initial={{ x: -100 }}
+                    animate={{ x: 0 }}
+                    transition={{
+                      x: { duration: 0.4, delay: 0.4, ease: 'easeOut' },
+                    }}
+                    onClick={handlePreviousMonth}
+                    disabled={isPreviousMonthDisabled()}
+                    className="disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <img
+                      src={arrowRightIcon}
+                      alt="Previous"
+                      className="h-4 w-4 rotate-180 lg:h-8 lg:w-8"
+                    />
+                  </motion.button>
+                  <motion.span
+                    initial={{ y: 50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{
+                      y: { duration: 0.4, delay: 0.4, ease: 'easeOut' },
+                      opacity: { duration: 0.4, delay: 0.4 },
+                    }}
+                    className="text-xl font-bold lg:text-3xl"
+                  >
+                    {getMonthName(state.currentMonth)} {state.currentYear}
+                  </motion.span>
+                  <motion.button
+                    initial={{ x: 100 }}
+                    animate={{ x: 0 }}
+                    transition={{
+                      x: { duration: 0.4, delay: 0.4, ease: 'easeOut' },
+                    }}
+                    onClick={handleNextMonth}
+                    disabled={isNextMonthDisabled()}
+                    className="disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <img
+                      src={arrowRightIcon}
+                      alt="Next"
+                      className="h-4 w-4 lg:h-8 lg:w-8"
+                    />
+                  </motion.button>
+                </div>
+
+                {/* Calendar Grid */}
+                <div className="flex-1">
+                  <div className="w-full">
+                    {/* Weekday Headers */}
+                    <div className="mb-6 grid grid-cols-7 gap-2 lg:gap-4">
+                      {weekdays.map((day) => (
+                        <motion.div
+                          key={day}
+                          initial={{ y: -20, opacity: 0, scale: 0.8 }}
+                          animate={{ y: 0, opacity: 1, scale: 1 }}
+                          transition={{
+                            y: {
+                              duration: 0.4,
+                              delay: 0.4,
+                              ease: 'easeOut',
+                            },
+                            opacity: {
+                              duration: 0.4,
+                              delay: 0.4,
+                            },
+                            scale: {
+                              duration: 0.4,
+                              delay: 0.4,
+                              ease: 'easeOut',
+                            },
+                          }}
+                          className="rounded-xl text-center text-xs font-bold uppercase shadow-[inset_1px_0_0_0_rgba(255,255,255,0.1),inset_-1px_0_0_0_rgba(255,255,255,0.1),inset_0_4px_6px_rgba(255,255,255,0.6)] lg:text-sm"
+                        >
+                          {day}
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    {/* Days Grid */}
+                    <div className="grid grid-cols-7 gap-2 lg:gap-4">
+                      {calendarDays.map((day, index) => {
+                        const isDisabled = day !== null && isDayDisabled(day);
+                        return (
+                          <motion.button
+                            key={index}
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{
+                              scale: 1,
+                              opacity: day === null ? 0 : 1,
+                            }}
+                            transition={{
+                              scale: {
+                                duration: 0.4,
+                                delay: 0.4,
+                                ease: 'easeOut',
+                              },
+                              opacity: {
+                                duration: 0.4,
+                                delay: 0.4,
+                              },
+                            }}
+                            onClick={() =>
+                              day !== null && !isDisabled && handleDayClick(day)
+                            }
+                            disabled={day === null || isDisabled}
+                            className={`aspect-square rounded-xl text-center text-base font-bold lg:text-xl ${
+                              day === null
+                                ? 'cursor-default opacity-0'
+                                : isDisabled
+                                  ? 'calendar-day-disabled cursor-not-allowed'
+                                  : 'calendar-day-available'
+                            }`}
+                          >
+                            {day !== null
+                              ? day.toString().padStart(2, '0')
+                              : ''}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
                   </div>
-                ))}
+                </div>
+
+                {/* Timezone Selector */}
+                <div className="mx-auto mt-2 flex w-fit items-center gap-2">
+                  <GlobeIcon />
+                  <div className="relative">
+                    <select
+                      value={state.timezone}
+                      onChange={handleTimezoneChange}
+                      aria-label="Select timezone"
+                      title="Select timezone"
+                      className="bg-bgPrimary w-fit appearance-none rounded-md px-4 py-3 pr-12 text-white uppercase focus:outline-none"
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='12' height='8' fill='white'/%3E%3C/svg%3E")`,
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 12px center',
+                        backgroundSize: '12px 8px',
+                      }}
+                    >
+                      {timezones.map((tz) => (
+                        <option
+                          key={tz}
+                          value={tz}
+                          className="bg-bgPrimary uppercase"
+                        >
+                          {getTimezoneDisplayName(tz)} (
+                          {getCurrentTimeInTimezone(tz)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* AUTO ROTATE TEXT */}
+                <div className="border-textPrimary relative mx-auto mt-4 h-17 w-lg overflow-hidden rounded-md border-3">
+                  <div className="relative h-full w-full">
+                    <div
+                      className="noise-move-slow-animation absolute inset-0 z-0"
+                      style={{
+                        backgroundImage: `url(${noiseImg})`,
+                        backgroundRepeat: 'repeat',
+                        backgroundSize: '100px 100px',
+                      }}
+                    />
+                    {/* AUTO ROTATE TEXT ANIMATION */}
+                    <div className="font-grid absolute inset-0 z-0 overflow-hidden text-4xl">
+                      <div className="scroll-text-animation left-1/2 flex h-full flex-row items-center gap-[32rem]">
+                        {autoRotateTexts.map((text: string, index: number) => (
+                          <div
+                            key={text.slice(0, 5) + index}
+                            className="text-textPrimary whitespace-nowrap"
+                          >
+                            {text}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* State 3: Select Time */}
+            {state.viewState === 3 && (
+              <div className="relative z-10 flex flex-col p-6 lg:p-0">
+                {/* Time Buttons */}
+                <div className="flex-1">
+                  <div className="space-y-3">
+                    {isLoadingSlots ? (
+                      <div className="py-8 text-center text-white">
+                        Loading available time slots...
+                      </div>
+                    ) : availableTimes.length === 0 ? (
+                      <div className="py-8 text-center text-white">
+                        No available time slots for this day.
+                      </div>
+                    ) : (
+                      availableTimes.map((time, index) => (
+                        <div
+                          key={time}
+                          ref={(el) => {
+                            timeButtonsRef.current[time] = el;
+                          }}
+                          className="flex gap-2 overflow-hidden"
+                        >
+                          <motion.button
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{
+                              duration: 0.4,
+                              delay: 0.05 * index,
+                              ease: 'easeOut',
+                            }}
+                            onClick={() => handleTimeClick(time)}
+                            className="time-button w-full rounded-xl bg-[#333] px-4 py-3 text-center shadow-[inset_3px_0_0_rgba(255,255,255,0.04),inset_-3px_0_0_0px_rgba(255,255,255,0.04),inset_0_2px_4px_rgba(255,255,255,0.6)]"
+                          >
+                            {time}
+                          </motion.button>
+                          <button
+                            onClick={handleTimeNext}
+                            className="next-button calendar-day-available big w-0 overflow-hidden rounded-xl py-3 text-center font-bold"
+                          >
+                            NEXT
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* State 4: Confirm */}
+            {state.viewState === 4 && (
+              <div className="relative z-10 mt-[77px] flex w-full flex-col px-4 lg:px-0">
+                {/* Info Section */}
+                <div className="[&>img>path]:text-textPrimary mb-8 space-y-2">
+                  <p className="flex items-center gap-2 text-lg">
+                    <img
+                      src={timeSvg}
+                      alt="time"
+                      className="stroke-textPrimary h-8 w-8"
+                    />
+                    15 min
+                  </p>
+                  <p className="flex items-center gap-2 text-sm opacity-100">
+                    <img src={timeSvg} alt="time" className="h-8 w-8" />
+                    Web conferencing details provided upon confirmation.
+                  </p>
+                  <p className="flex items-center gap-2 text-lg font-bold">
+                    <img src={timeSvg} alt="time" className="h-8 w-8" />
+                    {formatSelectedDateTime()}
+                  </p>
+                  <p className="flex items-center gap-2 text-lg">
+                    <img src={timeSvg} alt="time" className="h-8 w-8" />
+                    {getTimezoneDisplayName(
+                      state.formData.timezone,
+                    ).toUpperCase()}
+                  </p>
+                </div>
+
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="w-full space-y-6">
+                  <h3 className="font-grid text-[2rem] font-bold uppercase">
+                    Enter details
+                  </h3>
+
+                  {/* Name Input */}
+                  <div className="relative">
+                    <label
+                      htmlFor="name"
+                      className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                    >
+                      name <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={state.formData.name}
+                      onChange={handleInputChange}
+                      onBlur={handleFieldBlur}
+                      required
+                      pattern="^[a-zA-Z0-9\s'-]{2,50}$"
+                      className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                        fieldErrors.name ? 'border-red-500' : 'border-white'
+                      }`}
+                      placeholder="Your name"
+                    />
+                    {fieldErrors.name && (
+                      <p className="mt-1 text-xs text-red-400">
+                        {fieldErrors.name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Email Input */}
+                  <div className="relative">
+                    <label
+                      htmlFor="email"
+                      className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                    >
+                      email <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={state.formData.email}
+                      onChange={handleInputChange}
+                      onBlur={handleFieldBlur}
+                      required
+                      pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                      className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                        fieldErrors.email ? 'border-red-500' : 'border-white'
+                      }`}
+                    />
+                    {fieldErrors.email && (
+                      <p className="mt-1 text-xs text-red-400">
+                        {fieldErrors.email}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Description Input */}
+                  <div className="relative">
+                    <label
+                      htmlFor="description"
+                      className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                    >
+                      description <span className="text-red-400">*</span>
+                    </label>
+                    <textarea
+                      id="description"
+                      name="description"
+                      value={state.formData.description}
+                      onChange={handleInputChange}
+                      onBlur={handleFieldBlur}
+                      required
+                      minLength={4}
+                      maxLength={500}
+                      rows={4}
+                      className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                        fieldErrors.description
+                          ? 'border-red-500'
+                          : 'border-white'
+                      }`}
+                    />
+                    {fieldErrors.description && (
+                      <p className="mt-1 text-xs text-red-400">
+                        {fieldErrors.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Hidden Start Time Input (Read-only, auto-filled from previous steps) */}
+                  <input
+                    type="hidden"
+                    id="startTime"
+                    name="startTime"
+                    value={state.formData.startTime}
+                    readOnly
+                    required
+                    pattern="^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?([+-]\d{2}:\d{2}|Z)$"
+                  />
+
+                  {/* Hidden Timezone Input (Read-only, auto-filled from previous steps) */}
+                  <input
+                    type="hidden"
+                    id="timezone"
+                    name="timezone"
+                    value={state.formData.timezone}
+                    readOnly
+                    required
+                    pattern="^[A-Za-z_][A-Za-z0-9_/+-]*$"
+                  />
+
+                  {/* TEMPORARY: Read-only inputs for testing (will be removed later) */}
+                  <div className="relative opacity-50">
+                    <label
+                      htmlFor="startTime-test"
+                      className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs text-gray-400"
+                    >
+                      startTime (readonly - testing)
+                    </label>
+                    <input
+                      type="text"
+                      id="startTime-test"
+                      name="startTime-test"
+                      value={state.formData.startTime}
+                      readOnly
+                      disabled
+                      className="w-full cursor-not-allowed rounded-md border border-gray-600 bg-transparent px-4 py-3 text-sm text-gray-400"
+                      title="Start time in RFC3339 format with timezone offset (testing only)"
+                    />
+                  </div>
+                  <div className="relative opacity-50">
+                    <label
+                      htmlFor="timezone-test"
+                      className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs text-gray-400"
+                    >
+                      timezone (readonly - testing)
+                    </label>
+                    <input
+                      type="text"
+                      id="timezone-test"
+                      name="timezone-test"
+                      value={state.formData.timezone}
+                      readOnly
+                      disabled
+                      className="w-full cursor-not-allowed rounded-md border border-gray-600 bg-transparent px-4 py-3 text-sm text-gray-400"
+                      title="Timezone (testing only)"
+                    />
+                  </div>
+
+                  {/* Error Message */}
+                  {submitError && (
+                    <div className="mt-6 rounded-md border border-red-500 bg-red-500/20 px-4 py-3 text-sm text-red-200">
+                      {submitError}
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="calendar-day-available big mt-4 w-full rounded-xl px-6 py-4 text-lg font-bold text-black uppercase disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit'}
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
-        )}
-
-        {/* State 4: Confirm */}
-        {state.viewState === 4 && (
-          <div className="relative z-10 mx-auto mt-[77px] flex w-full max-w-lg flex-col overflow-auto px-4 lg:px-0">
-            {/* Info Section */}
-            <div className="[&>img>path]:text-textPrimary mb-8 space-y-2">
-              <p className="flex items-center gap-2 text-lg">
-                <img
-                  src={timeSvg}
-                  alt="time"
-                  className="stroke-textPrimary h-8 w-8"
-                />
-                15 min
-              </p>
-              <p className="flex items-center gap-2 text-sm opacity-100">
-                <img src={timeSvg} alt="time" className="h-8 w-8" />
-                Web conferencing details provided upon confirmation.
-              </p>
-              <p className="flex items-center gap-2 text-lg font-bold">
-                <img src={timeSvg} alt="time" className="h-8 w-8" />
-                {formatSelectedDateTime()}
-              </p>
-            </div>
-
-            {/* Form */}
-            <div className="mx-auto w-full max-w-lg space-y-6">
-              <h3 className="text-xl font-bold uppercase">Enter details</h3>
-
-              {/* Summary Input */}
-              <div className="relative">
-                <label
-                  htmlFor="summary"
-                  className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
-                >
-                  summary
-                </label>
-                <input
-                  type="text"
-                  id="summary"
-                  name="summary"
-                  value={state.formData.summary}
-                  onChange={handleInputChange}
-                  className="w-full rounded-md border border-white bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none"
-                  placeholder="Meeting title"
-                />
-              </div>
-
-              {/* Name Input */}
-              <div className="relative">
-                <label
-                  htmlFor="name"
-                  className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
-                >
-                  name
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={state.formData.name}
-                  onChange={handleInputChange}
-                  className="w-full rounded-md border border-white bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none"
-                  placeholder="Your name"
-                />
-              </div>
-
-              {/* Email Input */}
-              <div className="relative">
-                <label
-                  htmlFor="email"
-                  className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
-                >
-                  email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={state.formData.email}
-                  onChange={handleInputChange}
-                  className="w-full rounded-md border border-white bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none"
-                />
-              </div>
-
-              {/* Description Input */}
-              <div className="relative">
-                <label
-                  htmlFor="description"
-                  className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
-                >
-                  description
-                </label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={state.formData.description}
-                  onChange={handleInputChange}
-                  rows={4}
-                  className="w-full rounded-md border border-white bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none"
-                />
-              </div>
-
-              {/* Start Time Input (Read-only, shows RFC3339 format with timezone) */}
-              <div className="relative">
-                <label
-                  htmlFor="startTime"
-                  className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
-                >
-                  startTime
-                </label>
-                <input
-                  type="text"
-                  id="startTime"
-                  name="startTime"
-                  value={state.formData.startTime}
-                  readOnly
-                  className="w-full cursor-not-allowed rounded-md border border-white bg-transparent px-4 py-3 text-white opacity-70"
-                  title="Start time in RFC3339 format with timezone offset"
-                />
-              </div>
-
-              {/* End Time Input (Read-only, shows RFC3339 format with timezone) */}
-              <div className="relative">
-                <label
-                  htmlFor="endTime"
-                  className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
-                >
-                  endTime
-                </label>
-                <input
-                  type="text"
-                  id="endTime"
-                  name="endTime"
-                  value={state.formData.endTime}
-                  readOnly
-                  className="w-full cursor-not-allowed rounded-md border border-white bg-transparent px-4 py-3 text-white opacity-70"
-                  title="End time in RFC3339 format with timezone offset"
-                />
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                onClick={handleSubmit}
-                className="mt-8 w-full rounded-xl border border-white bg-white px-6 py-4 text-lg font-bold text-black uppercase transition-transform hover:scale-105 hover:bg-gray-100"
-              >
-                Submit
-              </button>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

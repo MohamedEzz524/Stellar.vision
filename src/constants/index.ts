@@ -5,7 +5,24 @@ export const texts = [
   'Products',
   'UI/UX design',
 ];
-
+export const autoRotateTexts = [
+  'AUTO ROTATE TEXT',
+  'SECOND TEXT',
+  'THIRD TEXT',
+];
+export const text3D = [
+  'First multiline text that will scroll through First multiline text that will scroll through',
+  'First multiline text that will scroll through First multiline text that will scroll through',
+  'Second multiline text that will scroll through Second multiline text that will scroll through',
+  'Third multiline text that will scroll through Third multiline text that will scroll through',
+  'Fourth multiline text that will scroll through Fourth multiline text that will scroll through',
+  'Fifth multiline text that will scroll through Fifth multiline text that will scroll through',
+  'Sixth multiline text that will scroll through Sixth multiline text that will scroll through',
+  'Seventh multiline text that will scroll through Seventh multiline text that will scroll through',
+  'Eighth multiline text that will scroll through Eighth multiline text that will scroll through',
+  'Ninth multiline text that will scroll through Ninth multiline text that will scroll through',
+  'Tenth multiline text that will scroll through Tenth multiline text that will scroll through',
+];
 export interface Project {
   id: string;
   title: string;
