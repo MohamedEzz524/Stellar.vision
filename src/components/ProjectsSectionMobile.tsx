@@ -21,6 +21,7 @@ interface PathLine extends THREE.Line {
 // Constants for particle system
 const PARTICLES_GRID_SIZE = 40; // 40x40 = 1600 particles per card
 const MAX_SCATTER_DISTANCE = 10;
+const CARD_HORIZONTAL_PADDING = 1.5; // Padding on left and right (in Three.js units)
 
 const ProjectsSectionMobile = ({
   projects,
@@ -244,7 +245,8 @@ const ProjectsSectionMobile = ({
 
       // Create particle system for each card
       textures.forEach((texture) => {
-        const cardWidth = 12;
+        // Reduce card width to add padding on left and right
+        const cardWidth = 12 - CARD_HORIZONTAL_PADDING * 2;
         const cardHeight = 16;
         const image = texture.image;
         if (!(image instanceof HTMLImageElement)) return;
@@ -438,7 +440,7 @@ const ProjectsSectionMobile = ({
           } else if (localProgress <= movePhaseRatio) {
             // Moving phase: bottom to center with full opacity (use mesh for high quality)
             const moveProgress = localProgress / movePhaseRatio;
-            mesh.position.y = lerp(-12, 0, moveProgress);
+            mesh.position.set(0, lerp(-12, 0, moveProgress), 0);
             mesh.scale.set(0.8, 0.8, 1);
             mesh.rotation.set(0, 0, 0);
             mesh.visible = true;

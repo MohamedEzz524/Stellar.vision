@@ -27,7 +27,7 @@ const CustomCursor = () => {
 
   return (
     <div
-      className="custom-cursor"
+      className="custom-cursor pointer-events-none fixed z-[999999] hidden translate-x-[-50%] translate-y-[-50%] transform items-center justify-center will-change-transform lg:flex"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,

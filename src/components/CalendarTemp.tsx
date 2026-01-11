@@ -1,6 +1,6 @@
 import React, { useReducer, useRef, useEffect, useState } from 'react';
 import { gsap } from 'gsap';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import arrowRightIcon from '../assets/arrow-right.svg';
 import timeSvg from '../assets/time.svg';
 import { autoRotateTexts } from '../constants';
@@ -1332,8 +1332,8 @@ const Calendar = () => {
   // Simple globe SVG icon
   const GlobeIcon = () => (
     <svg
-      width="16"
-      height="16"
+      width="14"
+      height="14"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -1432,59 +1432,41 @@ const Calendar = () => {
               state.viewState === 2 ||
               state.viewState === 3 ||
               state.viewState === 4) && (
-              <div className="relative z-10 my-8 flex w-full items-center">
+              <div className="relative z-10 my-4 flex w-full items-center lg:my-8">
                 {/* Back Button - Left */}
                 {(state.viewState === 3 || state.viewState === 4) && (
                   <button
                     onClick={handleBack}
-                    className="absolute left-0 text-lg font-normal uppercase hover:underline"
+                    className="absolute left-0 text-[10px] font-normal uppercase hover:underline lg:text-lg"
                   >
                     &lt; BACK
                   </button>
                 )}
                 {/* Title - Centered */}
-                <AnimatePresence mode="wait">
-                  {(state.viewState === 1 || state.viewState === 2) && (
-                    <motion.h2
-                      key="select-day-title"
-                      initial={{
-                        opacity: 0,
-                      }}
-                      animate={{
-                        opacity: 1,
-                      }}
-                      transition={{
-                        opacity: {
-                          duration: 0.4,
-                          delay: 0.4,
-                          ease: 'easeInOut',
-                        },
-                      }}
-                      className="mx-auto inline-block rounded-full bg-white px-3 py-1 text-xs font-bold text-black uppercase lg:text-sm"
-                    >
-                      {getTitle()}
-                    </motion.h2>
-                  )}
-                  {(state.viewState === 3 || state.viewState === 4) && (
-                    <motion.h2
-                      key="other-title"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="mx-auto inline-block rounded-full bg-white px-3 py-1 text-sm font-bold text-black uppercase"
-                    >
-                      {getTitle()}
-                    </motion.h2>
-                  )}
-                </AnimatePresence>
+                {(state.viewState === 1 || state.viewState === 2) && (
+                  <h2
+                    key="select-day-title"
+                    className="mx-auto inline-block rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-black uppercase lg:px-3 lg:py-1 lg:text-sm"
+                  >
+                    {getTitle()}
+                  </h2>
+                )}
+                {(state.viewState === 3 || state.viewState === 4) && (
+                  <h2
+                    key="other-title"
+                    className="mx-auto inline-block rounded-full bg-white px-3 py-1 text-xs font-bold text-black uppercase lg:text-sm"
+                  >
+                    {getTitle()}
+                  </h2>
+                )}
               </div>
             )}
 
             {/* State 2: Select Day */}
             {(state.viewState === 1 || state.viewState === 2) && (
-              <div className="relative z-10 flex flex-1 flex-col p-6 lg:p-0">
+              <div className="relative z-10 flex flex-1 flex-col p-4 lg:p-0">
                 {/* Month/Year Navigation */}
-                <div className="font-grid mb-6 flex items-center justify-center gap-4">
+                <div className="font-grid mb-4 flex items-center justify-center gap-4 lg:mb-6">
                   <motion.button
                     initial={{ x: -100 }}
                     animate={{ x: 0 }}
@@ -1534,7 +1516,7 @@ const Calendar = () => {
                 <div className="flex-1">
                   <div className="w-full">
                     {/* Weekday Headers */}
-                    <div className="mb-6 grid grid-cols-7 gap-2 lg:gap-4">
+                    <div className="mb-4 grid grid-cols-7 gap-2 lg:mb-6 lg:gap-4">
                       {weekdays.map((day) => (
                         <motion.div
                           key={day}
@@ -1556,7 +1538,7 @@ const Calendar = () => {
                               ease: 'easeOut',
                             },
                           }}
-                          className="rounded-xl text-center text-xs font-bold uppercase shadow-[inset_1px_0_0_0_rgba(255,255,255,0.1),inset_-1px_0_0_0_rgba(255,255,255,0.1),inset_0_4px_6px_rgba(255,255,255,0.6)] lg:text-sm"
+                          className="rounded-xl text-center text-[9px] font-bold uppercase shadow-[inset_1px_0_0_0_rgba(255,255,255,0.1),inset_-1px_0_0_0_rgba(255,255,255,0.1),inset_0_4px_6px_rgba(255,255,255,0.6)] lg:text-sm"
                         >
                           {day}
                         </motion.div>
@@ -1590,7 +1572,7 @@ const Calendar = () => {
                               day !== null && !isDisabled && handleDayClick(day)
                             }
                             disabled={day === null || isDisabled}
-                            className={`aspect-square rounded-xl text-center text-base font-bold lg:text-xl ${
+                            className={`aspect-square rounded-md text-center text-xs font-bold md:rounded-xl lg:text-xl ${
                               day === null
                                 ? 'cursor-default opacity-0'
                                 : isDisabled
@@ -1609,7 +1591,7 @@ const Calendar = () => {
                 </div>
 
                 {/* Timezone Selector */}
-                <div className="mx-auto mt-2 flex w-fit items-center gap-2">
+                <div className="mx-auto mt-2 flex w-fit items-center gap-1 lg:gap-2">
                   <GlobeIcon />
                   <div className="relative">
                     <select
@@ -1617,7 +1599,7 @@ const Calendar = () => {
                       onChange={handleTimezoneChange}
                       aria-label="Select timezone"
                       title="Select timezone"
-                      className="bg-bgPrimary w-fit appearance-none rounded-md px-4 py-3 pr-12 text-white uppercase focus:outline-none"
+                      className="bg-bgPrimary w-fit appearance-none rounded-md px-4 py-3 pr-12 text-[10px] text-white uppercase focus:outline-none lg:text-base"
                       style={{
                         backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='12' height='8' fill='white'/%3E%3C/svg%3E")`,
                         backgroundRepeat: 'no-repeat',
@@ -1640,7 +1622,7 @@ const Calendar = () => {
                 </div>
 
                 {/* AUTO ROTATE TEXT */}
-                <div className="border-textPrimary relative mx-auto mt-4 h-17 w-lg overflow-hidden rounded-md border-3">
+                <div className="border-textPrimary relative mx-auto mt-4 h-12 w-[240px] overflow-hidden rounded-md border-2 lg:h-17 lg:w-lg lg:border-3">
                   <div className="relative h-full w-full">
                     <div
                       className="noise-move-slow-animation absolute inset-0 z-0"
@@ -1651,8 +1633,8 @@ const Calendar = () => {
                       }}
                     />
                     {/* AUTO ROTATE TEXT ANIMATION */}
-                    <div className="font-grid absolute inset-0 z-0 overflow-hidden text-4xl">
-                      <div className="scroll-text-animation left-1/2 flex h-full flex-row items-center gap-[32rem]">
+                    <div className="font-grid absolute inset-0 z-0 overflow-hidden text-2xl lg:text-4xl">
+                      <div className="scroll-text-animation gap:[240px] left-1/2 flex h-full flex-row items-center lg:gap-[32rem]">
                         {autoRotateTexts.map((text: string, index: number) => (
                           <div
                             key={text.slice(0, 5) + index}
@@ -1670,7 +1652,7 @@ const Calendar = () => {
 
             {/* State 3: Select Time */}
             {state.viewState === 3 && (
-              <div className="relative z-10 flex flex-col p-6 lg:p-0">
+              <div className="relative z-10 flex flex-col p-4 lg:p-0">
                 {/* Time Buttons */}
                 <div className="flex-1">
                   <div className="space-y-3">
@@ -1679,7 +1661,7 @@ const Calendar = () => {
                         Loading available time slots...
                       </div>
                     ) : availableTimes.length === 0 ? (
-                      <div className="py-8 text-center text-white">
+                      <div className="py-5 text-center text-white lg:py-8">
                         No available time slots for this day.
                       </div>
                     ) : (
@@ -1700,13 +1682,13 @@ const Calendar = () => {
                               ease: 'easeOut',
                             }}
                             onClick={() => handleTimeClick(time)}
-                            className="time-button w-full rounded-xl bg-[#333] px-4 py-3 text-center shadow-[inset_3px_0_0_rgba(255,255,255,0.04),inset_-3px_0_0_0px_rgba(255,255,255,0.04),inset_0_2px_4px_rgba(255,255,255,0.6)]"
+                            className="time-button w-full rounded-md bg-[#333] px-4 py-3 text-center text-xs shadow-[inset_3px_0_0_rgba(255,255,255,0.04),inset_-3px_0_0_0px_rgba(255,255,255,0.04),inset_0_2px_4px_rgba(255,255,255,0.6)] lg:rounded-xl lg:py-3 lg:text-sm"
                           >
                             {time}
                           </motion.button>
                           <button
                             onClick={handleTimeNext}
-                            className="next-button calendar-day-available big w-0 overflow-hidden rounded-xl py-3 text-center font-bold"
+                            className="next-button calendar-day-available big w-0 overflow-hidden rounded-md py-3 text-center text-xs font-bold lg:rounded-xl lg:py-3 lg:text-sm"
                           >
                             NEXT
                           </button>
@@ -1720,27 +1702,39 @@ const Calendar = () => {
 
             {/* State 4: Confirm */}
             {state.viewState === 4 && (
-              <div className="relative z-10 mt-[77px] flex w-full flex-col px-4 lg:px-0">
+              <div className="relative z-10 mt-6 flex w-full flex-col px-4 lg:mt-[77px] lg:px-0">
                 {/* Info Section */}
-                <div className="[&>img>path]:text-textPrimary mb-8 space-y-2">
-                  <p className="flex items-center gap-2 text-lg">
+                <div className="[&>img>path]:text-textPrimary mb-8 space-y-4 lg:space-y-2">
+                  <p className="flex items-center gap-2 text-sm lg:text-lg">
                     <img
                       src={timeSvg}
                       alt="time"
-                      className="stroke-textPrimary h-8 w-8"
+                      className="stroke-textPrimary h-6 w-6 lg:h-8 lg:w-8"
                     />
                     15 min
                   </p>
                   <p className="flex items-center gap-2 text-sm opacity-100">
-                    <img src={timeSvg} alt="time" className="h-8 w-8" />
+                    <img
+                      src={timeSvg}
+                      alt="time"
+                      className="h-6 w-6 lg:h-8 lg:w-8"
+                    />
                     Web conferencing details provided upon confirmation.
                   </p>
-                  <p className="flex items-center gap-2 text-lg font-bold">
-                    <img src={timeSvg} alt="time" className="h-8 w-8" />
+                  <p className="flex items-center gap-2 text-sm font-bold lg:text-lg">
+                    <img
+                      src={timeSvg}
+                      alt="time"
+                      className="h-6 w-6 lg:h-8 lg:w-8"
+                    />
                     {formatSelectedDateTime()}
                   </p>
-                  <p className="flex items-center gap-2 text-lg">
-                    <img src={timeSvg} alt="time" className="h-8 w-8" />
+                  <p className="flex items-center gap-2 text-sm lg:text-lg">
+                    <img
+                      src={timeSvg}
+                      alt="time"
+                      className="h-6 w-6 lg:h-8 lg:w-8"
+                    />
                     {getTimezoneDisplayName(
                       state.formData.timezone,
                     ).toUpperCase()}
@@ -1750,18 +1744,18 @@ const Calendar = () => {
                 {/* Success Message */}
                 {submitSuccess ? (
                   <div className="w-full space-y-6">
-                    <h3 className="font-grid text-[2rem] font-bold uppercase">
+                    <h3 className="font-grid text-2xl font-bold uppercase lg:text-[2rem]">
                       Booking confirmed!
                     </h3>
                     <div className="rounded-md border border-green-500 bg-green-500/20 px-4 py-6 text-white">
-                      <p className="mb-4 text-lg font-semibold">
+                      <p className="mb-4 text-sm font-semibold lg:text-lg">
                         Thank you for your booking!
                       </p>
-                      <p className="mb-2 text-sm">
+                      <p className="mb-2 text-xs lg:text-sm">
                         Your booking has been submitted successfully. We'll send
                         you a confirmation email shortly.
                       </p>
-                      <p className="text-sm opacity-80">
+                      <p className="text-xs opacity-80 lg:text-sm">
                         Web conferencing details will be provided upon
                         confirmation.
                       </p>
@@ -1769,14 +1763,14 @@ const Calendar = () => {
                     <button
                       type="button"
                       onClick={() => dispatch({ type: 'CLOSE_CALENDAR' })}
-                      className="calendar-day-available big mt-4 w-full rounded-xl px-6 py-4 text-lg font-bold text-black uppercase"
+                      className="calendar-day-available big mt-4 w-full rounded-md px-4 py-3 text-xs font-bold text-black uppercase lg:rounded-xl lg:px-6 lg:py-4 lg:text-lg"
                     >
                       Close
                     </button>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="w-full space-y-6">
-                    <h3 className="font-grid text-[2rem] font-bold uppercase">
+                    <h3 className="font-grid text-xl font-bold uppercase lg:text-[2rem]">
                       Enter details
                     </h3>
 
@@ -1784,7 +1778,7 @@ const Calendar = () => {
                     <div className="relative">
                       <label
                         htmlFor="name"
-                        className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                        className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs lg:text-sm"
                       >
                         name <span className="text-red-400">*</span>
                       </label>
@@ -1797,7 +1791,7 @@ const Calendar = () => {
                         onBlur={handleFieldBlur}
                         required
                         pattern="[a-zA-Z0-9 '-]{2,50}"
-                        className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                        className={`w-full rounded-sm border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none lg:rounded-md ${
                           fieldErrors.name ? 'border-red-500' : 'border-white'
                         }`}
                         placeholder="Your name"
@@ -1930,7 +1924,7 @@ const Calendar = () => {
 
                     {/* Error Message */}
                     {submitError && (
-                      <div className="mt-6 rounded-md border border-red-500 bg-red-500/20 px-4 py-3 text-sm text-red-200">
+                      <div className="mt-4 rounded-sm border border-red-500 bg-red-500/20 px-4 py-3 text-xs text-red-200 lg:mt-6 lg:rounded-md lg:text-sm">
                         {submitError}
                       </div>
                     )}
@@ -1939,7 +1933,7 @@ const Calendar = () => {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="calendar-day-available big mt-4 w-full rounded-xl px-6 py-4 text-lg font-bold text-black uppercase disabled:cursor-not-allowed disabled:opacity-50"
+                      className="calendar-day-available big mt-0 w-full rounded-md px-3 py-3 text-sm font-bold text-black uppercase disabled:cursor-not-allowed disabled:opacity-50 lg:mt-4 lg:rounded-xl lg:px-6 lg:py-4 lg:text-lg"
                     >
                       {isSubmitting ? 'Submitting...' : 'Submit'}
                     </button>

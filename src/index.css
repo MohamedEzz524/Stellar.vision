@@ -224,17 +224,6 @@ body,
   cursor: none !important;
 }
 
-.custom-cursor {
-  position: fixed;
-  pointer-events: none;
-  z-index: 999999;
-  transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.1s ease-in-out;
-  will-change: transform;
-}
 body:active .custom-cursor,
 html:active .custom-cursor {
   transform: scale(0.95);
