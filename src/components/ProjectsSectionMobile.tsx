@@ -59,7 +59,7 @@ const ProjectsSectionMobile = ({
   const updateCardsAnimationRef = useRef<((progress: number) => void) | null>(
     null,
   );
-  const drawGridRef = useRef<((progress: number) => void) | null>(null);
+  const drawGridRef = useRef<(() => void) | null>(null);
 
   const lerp = (start: number, end: number, t: number) =>
     start + (end - start) * t;
@@ -127,9 +127,15 @@ const ProjectsSectionMobile = ({
       const curve = new THREE.CatmullRomCurve3(points);
       const line = new THREE.Line(
         new THREE.BufferGeometry().setFromPoints(curve.getPoints(100)),
-        new THREE.LineBasicMaterial({ color: 0x000, linewidth: 1 }),
+        new THREE.LineBasicMaterial({
+          color: 0x000,
+          linewidth: 1,
+          transparent: true,
+          opacity: 0,
+        }),
       ) as PathLine;
       line.curve = curve;
+      line.visible = false; // Hide the path visually but keep curve for calculations
       return line;
     };
 
@@ -547,38 +553,17 @@ const ProjectsSectionMobile = ({
     };
     resizeGridCanvas();
 
-    const drawGrid = (scrollProgress = 0) => {
-      gridCtx.fillStyle = 'black';
-      gridCtx.fillRect(0, 0, gridCanvas.width, gridCanvas.height);
-      gridCtx.fillStyle = '#f40c3f';
-      const [dotSize, spacing] = [0.75, 20];
-      const [rows, cols] = [
-        Math.ceil(gridCanvas.height / spacing),
-        Math.ceil(gridCanvas.width / spacing) + 15,
-      ];
-      const offset = (scrollProgress * spacing * 10) % spacing;
-
-      for (let y = 0; y < rows; y++) {
-        for (let x = 0; x < cols; x++) {
-          gridCtx.beginPath();
-          gridCtx.arc(
-            x * spacing - offset,
-            y * spacing,
-            dotSize,
-            0,
-            Math.PI * 2,
-          );
-          gridCtx.fill();
-        }
-      }
+    const drawGrid = () => {
+      // Clear canvas to transparent (no background, no dots)
+      gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
     };
 
     drawGridRef.current = drawGrid;
-    drawGrid(0);
+    drawGrid();
 
     const handleResize = () => {
       resizeGridCanvas();
-      drawGrid(ScrollTrigger.getAll()[0]?.progress || 0);
+      drawGrid();
     };
 
     window.addEventListener('resize', handleResize);
@@ -685,7 +670,7 @@ const ProjectsSectionMobile = ({
       onUpdate: (self) => {
         const progress = self.progress;
         if (drawGridRef.current) {
-          drawGridRef.current(progress);
+          drawGridRef.current();
         }
         if (updateCardsAnimationRef.current) {
           updateCardsAnimationRef.current(progress);
@@ -724,9 +709,8 @@ const ProjectsSectionMobile = ({
   // Handle resize
   useEffect(() => {
     const handleResize = () => {
-      const progress = ScrollTrigger.getAll()[0]?.progress || 0;
       if (drawGridRef.current) {
-        drawGridRef.current(progress);
+        drawGridRef.current();
       }
 
       [lettersCameraRef.current, cardsCameraRef.current].forEach((camera) => {
@@ -752,6 +736,10 @@ const ProjectsSectionMobile = ({
 
       // Update letter positions
       const lineSpeedMultipliers = [0.8, 1, 0.7, 0.9];
+      const scrollProgress =
+        ScrollTrigger.getAll().find(
+          (st) => st.vars.trigger === sectionRef.current,
+        )?.progress || 0;
       pathsRef.current.forEach((line, lineIndex) => {
         const letterElements = line.letterElements || [];
         letterElements.forEach((element: HTMLElement, i: number) => {
@@ -759,7 +747,7 @@ const ProjectsSectionMobile = ({
           if (!curve || !lettersCameraRef.current) return;
 
           const point = curve.getPoint(
-            (i / 14 + progress * lineSpeedMultipliers[lineIndex]) % 1,
+            (i / 14 + scrollProgress * lineSpeedMultipliers[lineIndex]) % 1,
           );
           const vector = point.clone().project(lettersCameraRef.current);
           const positions = letterPositionsRef.current.get(element);

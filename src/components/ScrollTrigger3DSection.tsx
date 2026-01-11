@@ -230,10 +230,10 @@ const ScrollTrigger3DSection = ({
       if (scrollTriggerRef.current) {
         return scrollTriggerRef.current;
       }
-
-      // Measure actual track height from content (text is relative, not absolute)
-      const trackHeight =
-        textContainer.scrollHeight || textContainer.offsetHeight;
+    
+    // Measure actual track height from content (text is relative, not absolute)
+    const trackHeight =
+      textContainer.scrollHeight || textContainer.offsetHeight;
 
       // Single ScrollTrigger at top top
       // Initial state:
@@ -370,60 +370,60 @@ const ScrollTrigger3DSection = ({
           // Update object containers with top positioning (in pixels, relative to section)
           // Only update if 3D elements are loaded (use ref to avoid stale closure)
           if (isLazyLoadedRef.current) {
-            // Row 1 objects (indices 0 and 1)
-            // Object 0: add static offset down by 200% of its height
-            if (objectContainerRefs.current[0]) {
-              const container0Height =
-                objectContainerRefs.current[0].offsetHeight;
-              const offset0 = (container0Height * 100) / 100; // 100% of height (down)
-              gsap.set(objectContainerRefs.current[0], {
-                top: `${row1CurrentTop + offset0}px`,
-                y: '0px',
-              });
-            }
-            // Object 1: normal position
-            if (objectContainerRefs.current[1]) {
-              gsap.set(objectContainerRefs.current[1], {
-                top: `${row1CurrentTop}px`,
-                y: '0px',
-              });
-            }
-
-            // Row 2 objects (indices 2 and 3)
-            // Object 2: normal position
-            if (objectContainerRefs.current[2]) {
-              gsap.set(objectContainerRefs.current[2], {
-                top: `${row2CurrentTop}px`,
-                y: '0px',
-              });
-            }
-            // Object 3: add static offset up by 150% of its height
-            if (objectContainerRefs.current[3]) {
-              const container3Height =
-                objectContainerRefs.current[3].offsetHeight;
-              const offset3 = (container3Height * -150) / 100; // -150% of height (up)
-              gsap.set(objectContainerRefs.current[3], {
-                top: `${row2CurrentTop + offset3}px`,
-                y: '0px',
-              });
-            }
-
-            // Rotation: rotate on x and y axis (faster rotation)
-            const rotationSpeed = 3; // Multiplier for rotation speed
-            const maxRotationX = Math.PI; // 90 degrees
-            const maxRotationY = Math.PI; // 90 degrees
-            const rotationX = maxRotationX * progress * rotationSpeed;
-            const rotationY = maxRotationY * progress * rotationSpeed;
-
-            // Update each 3D object rotation only
-            objectRefs.current.forEach((objRef) => {
-              if (objRef.current) {
-                // Rotate
-                objRef.current.rotation.x = -Math.PI / 2 + rotationX; // Add base rotation
-                objRef.current.rotation.y = rotationY;
-                objRef.current.rotation.z = 0;
-              }
+          // Row 1 objects (indices 0 and 1)
+          // Object 0: add static offset down by 200% of its height
+          if (objectContainerRefs.current[0]) {
+            const container0Height =
+              objectContainerRefs.current[0].offsetHeight;
+            const offset0 = (container0Height * 100) / 100; // 100% of height (down)
+            gsap.set(objectContainerRefs.current[0], {
+              top: `${row1CurrentTop + offset0}px`,
+              y: '0px',
             });
+          }
+          // Object 1: normal position
+          if (objectContainerRefs.current[1]) {
+            gsap.set(objectContainerRefs.current[1], {
+              top: `${row1CurrentTop}px`,
+              y: '0px',
+            });
+          }
+
+          // Row 2 objects (indices 2 and 3)
+          // Object 2: normal position
+          if (objectContainerRefs.current[2]) {
+            gsap.set(objectContainerRefs.current[2], {
+              top: `${row2CurrentTop}px`,
+              y: '0px',
+            });
+          }
+          // Object 3: add static offset up by 150% of its height
+          if (objectContainerRefs.current[3]) {
+            const container3Height =
+              objectContainerRefs.current[3].offsetHeight;
+            const offset3 = (container3Height * -150) / 100; // -150% of height (up)
+            gsap.set(objectContainerRefs.current[3], {
+              top: `${row2CurrentTop + offset3}px`,
+              y: '0px',
+            });
+          }
+
+          // Rotation: rotate on x and y axis (faster rotation)
+          const rotationSpeed = 3; // Multiplier for rotation speed
+          const maxRotationX = Math.PI; // 90 degrees
+          const maxRotationY = Math.PI; // 90 degrees
+          const rotationX = maxRotationX * progress * rotationSpeed;
+          const rotationY = maxRotationY * progress * rotationSpeed;
+
+          // Update each 3D object rotation only
+          objectRefs.current.forEach((objRef) => {
+            if (objRef.current) {
+              // Rotate
+              objRef.current.rotation.x = -Math.PI / 2 + rotationX; // Add base rotation
+              objRef.current.rotation.y = rotationY;
+              objRef.current.rotation.z = 0;
+            }
+          });
           }
         },
       });
