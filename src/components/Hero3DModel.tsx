@@ -1,11 +1,13 @@
 import { useRef, useEffect, useState, useMemo } from 'react';
-import { Canvas, useLoader, useThree } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FlakesTexture } from '../assets/js/FlakesTexture';
 import { gsap } from 'gsap';
 import { registerModel3DRef, getModel3DRef } from '../utils/revealAnimation';
-import starModelUrl from '../assets/models/star.obj?url';
+import starModelUrl from '../assets/models/starr.glb?url';
 import hdrTextureUrl from '../assets/texture/hdr.jpeg?url';
 
 interface Hero3DModelProps {
@@ -19,10 +21,33 @@ const StarModel = ({
 }) => {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
-  const obj = useLoader(OBJLoader, starModelUrl);
   const { gl, scene } = useThree();
   const [envMap, setEnvMap] = useState<THREE.Texture | null>(null);
   const [materialReady, setMaterialReady] = useState(false);
+  const [gltf, setGltf] = useState<GLTF | null>(null);
+
+  // Load GLB with DRACOLoader configured
+  useEffect(() => {
+    const loader = new GLTFLoader();
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+    loader.setDRACOLoader(dracoLoader);
+
+    loader.load(
+      starModelUrl,
+      (loadedGltf) => {
+        setGltf(loadedGltf);
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading GLB model:', error);
+      },
+    );
+
+    return () => {
+      dracoLoader.dispose();
+    };
+  }, []);
 
   // Load HDR texture and set as scene environment for IBL lighting
   useEffect(() => {
@@ -33,6 +58,9 @@ const StarModel = ({
       (texture: THREE.Texture) => {
         texture.mapping = THREE.EquirectangularReflectionMapping;
         texture.flipY = false;
+        // Rotate HDRI on Y axis (horizontal offset for equirectangular)
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.offset.x = 0.25; // 90 degrees = 0.25 * 360 degrees (adjustable)
 
         try {
           // Convert to PMREM for optimized IBL
@@ -53,6 +81,7 @@ const StarModel = ({
             'PMREM conversion failed, using texture directly:',
             pmremError,
           );
+          // Rotation already applied above
           scene.environment = texture;
           setEnvMap(texture);
         }
@@ -88,23 +117,24 @@ const StarModel = ({
 
   // Apply metallic material to mesh when model and envMap are ready
   useEffect(() => {
-    if (obj && groupRef.current && envMap && !materialReady) {
-      const clonedObj = obj.clone();
+    if (gltf && groupRef.current && envMap && !materialReady) {
+      const clonedObj = gltf.scene.clone();
 
-      clonedObj.traverse((child) => {
+      clonedObj.traverse((child: THREE.Object3D) => {
         if (child instanceof THREE.Mesh) {
           meshRef.current = child;
 
-          // Metallic material: uses scene.environment for IBL automatically
+          // Mirror-like material: perfect reflection with environment map
           const ballMaterial = new THREE.MeshPhysicalMaterial({
             clearcoat: 1.0,
             clearcoatRoughness: 0.0,
             metalness: 1.0,
-            roughness: 0.15, // Allows IBL diffuse to show light/shadow variations
+            roughness: 0.0, // Perfect mirror - reflects environment
             color: 0xffffff,
             normalMap: flakesTexture,
             normalScale: new THREE.Vector2(0.15, 0.15),
-            envMapIntensity: 25.0,
+            envMap: scene.environment, // Set envMap directly in constructor
+            envMapIntensity: 12.0, // Environment strength (matching Blender)
           });
 
           ballMaterial.needsUpdate = true;
@@ -134,7 +164,7 @@ const StarModel = ({
       }
       flakesTexture.dispose();
     };
-  }, [obj, envMap, materialReady, flakesTexture, onModelReady, scene]);
+  }, [gltf, envMap, materialReady, flakesTexture, onModelReady, scene]);
 
   return <group ref={groupRef} />;
 };
@@ -366,10 +396,6 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
         >
           <RendererConfig />
           {/* Supplemental lighting - HDR provides main IBL via scene.environment */}
-          <ambientLight intensity={0.3} />
-          <directionalLight position={[5, 5, 5]} intensity={2.0} />
-          <directionalLight position={[-5, -5, -5]} intensity={1.0} />
-          <directionalLight position={[0, 10, 0]} intensity={1.5} />
           <StarModel
             onModelReady={(ref) => {
               groupRef.current = ref.current;

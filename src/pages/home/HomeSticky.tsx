@@ -4,7 +4,7 @@ import logoImg from '../../assets/images/logo.png';
 import noiseImg from '../../assets/images/noise.webp';
 import globalImage from '../../assets/images/global.webp';
 import ScrollProgress from '../../components/ScrollProgress';
-import Calendar from '../../components/Calendar';
+import Calendar from '../../components/CalendarTemp';
 import { autoRotateTexts } from '../../constants';
 
 const HomeSticky = () => {
@@ -80,7 +80,7 @@ const HomeSticky = () => {
               <div className="flicker-animation relative h-full w-full">
                 <img src={globalImage} alt="Global" className="block" />
                 <div
-                  className="noise-move-animation absolute inset-0 z-0"
+                  className="noise-glitch-fast-animation absolute inset-0 z-0"
                   style={{
                     backgroundImage: `url(${noiseImg})`,
                     backgroundRepeat: 'repeat',
@@ -94,7 +94,7 @@ const HomeSticky = () => {
             <div className="border-textPrimary relative h-full w-[16vw] overflow-hidden rounded-md border-3">
               <div className="relative h-full w-full">
                 <div
-                  className="noise-move-slow-animation absolute inset-0 z-0"
+                  className="noise-glitch-slow-animation absolute inset-0 z-0"
                   style={{
                     backgroundImage: `url(${noiseImg})`,
                     backgroundRepeat: 'repeat',
@@ -148,7 +148,7 @@ const HomeSticky = () => {
       {/* Noise background - fills space between borders with gradient fade to transparent center */}
       <div
         id="home-sticky-noise"
-        className="noise-gradient-move-animation pointer-events-none absolute"
+        className="noise-glitch-animation pointer-events-none absolute opacity-20"
         style={
           {
             left: `${topLeft}px`,
@@ -161,46 +161,46 @@ const HomeSticky = () => {
             '--fade-px': `${fadeDistance}px`,
             maskImage: `
             linear-gradient(to bottom, 
-              rgba(255, 255, 255, 0.5) 0, 
-              rgba(255, 255, 255, 0.1) calc(var(--fade-px) * 0.7), 
+              rgba(255, 255, 255, 1) 0, 
+              rgba(255, 255, 255, 0.5) calc(var(--fade-px) * 0.7), 
               rgba(255, 255, 255, 0) calc(var(--fade-px) * 1.125), 
               transparent calc(var(--fade-px) * 1.25), 
               transparent calc(100% - var(--fade-px) * 1.25), 
               rgba(255, 255, 255, 0) calc(100% - var(--fade-px) * 1.125), 
-              rgba(255, 255, 255, 0.1) calc(100% - var(--fade-px) * 0.7), 
-              rgba(255, 255, 255, 0.5) 100%
+              rgba(255, 255, 255, 0.5) calc(100% - var(--fade-px) * 0.7), 
+              rgba(255, 255, 255, 1) 100%
             ),
             linear-gradient(to right, 
-              rgba(255, 255, 255, 0.5) 0, 
-              rgba(255, 255, 255, 0.1) calc(var(--fade-px) * 0.7), 
+              rgba(255, 255, 255, 1) 0, 
+              rgba(255, 255, 255, 0.5) calc(var(--fade-px) * 0.7), 
               rgba(255, 255, 255, 0) calc(var(--fade-px) * 1.125), 
               transparent calc(var(--fade-px) * 1.25), 
               transparent calc(100% - var(--fade-px) * 1.25), 
               rgba(255, 255, 255, 0) calc(100% - var(--fade-px) * 1.125), 
-              rgba(255, 255, 255, 0.1) calc(100% - var(--fade-px) * 0.7), 
-              rgba(255, 255, 255, 0.5) 100%
+              rgba(255, 255, 255, 0.5) calc(100% - var(--fade-px) * 0.7), 
+              rgba(255, 255, 255, 1) 100%
             )
           `,
             WebkitMaskImage: `
             linear-gradient(to bottom, 
-              rgba(255, 255, 255, 0.4) 0, 
-              rgba(255, 255, 255, 0.25) calc(var(--fade-px) * 0.5), 
-              rgba(255, 255, 255, 0.1) calc(var(--fade-px) * 1.125), 
+              rgba(255, 255, 255, 0.1) 0, 
+              rgba(255, 255, 255, 0.5) calc(var(--fade-px) * 0.5), 
+              rgba(255, 255, 255, 0) calc(var(--fade-px) * 1.125), 
               transparent calc(var(--fade-px) * 1.25), 
               transparent calc(100% - var(--fade-px) * 1.25), 
-              rgba(255, 255, 255, 0.1) calc(100% - var(--fade-px) * 1.125), 
-              rgba(255, 255, 255, 0.25) calc(100% - var(--fade-px) * 0.5), 
-              rgba(255, 255, 255, 0.4) 100%
+              rgba(255, 255, 255, 0) calc(100% - var(--fade-px) * 1.125), 
+              rgba(255, 255, 255, 0.5) calc(100% - var(--fade-px) * 0.5), 
+              rgba(255, 255, 255, 1) 100%
             ),
             linear-gradient(to right, 
-              rgba(255, 255, 255, 0.4) 0, 
-              rgba(255, 255, 255, 0.25) calc(var(--fade-px) * 0.5), 
-              rgba(255, 255, 255, 0.1) calc(var(--fade-px) * 1.125), 
+              rgba(255, 255, 255, 1) 0, 
+              rgba(255, 255, 255, 0.5) calc(var(--fade-px) * 0.5), 
+              rgba(255, 255, 255, 0) calc(var(--fade-px) * 1.125), 
               transparent calc(var(--fade-px) * 1.25), 
               transparent calc(100% - var(--fade-px) * 1.25), 
-              rgba(255, 255, 255, 0.1) calc(100% - var(--fade-px) * 1.125), 
-              rgba(255, 255, 255, 0.25) calc(100% - var(--fade-px) * 0.5), 
-              rgba(255, 255, 255, 0.4) 100%
+              rgba(255, 255, 255, 0) calc(100% - var(--fade-px) * 1.125), 
+              rgba(255, 255, 255, 0.5) calc(100% - var(--fade-px) * 0.5), 
+              rgba(255, 255, 255, 1) 100%
             )
           `,
             maskComposite: 'add',

@@ -37,7 +37,7 @@
   @apply mx-auto max-w-[1920px] px-0 lg:px-20 xl:px-28;
 }
 @utility hero-section {
-  @apply bg-bgPrimary text-textPrimary relative h-screen min-h-screen w-full pt-28 pb-20;
+  @apply text-textPrimary relative h-screen min-h-screen w-full pt-28 pb-20;
 }
 @utility main-section {
   @apply bg-bgPrimary text-textPrimary h-screen min-h-screen w-full pt-28;
@@ -351,21 +351,82 @@ html:active .custom-cursor {
   }
 }
 
+/* Glitch animation - background position jumps in short intervals for a digital glitch effect */
+@keyframes noise-glitch {
+  0% {
+    background-position: 0 0;
+  }
+  8% {
+    background-position: -15px 12px;
+  }
+  16% {
+    background-position: 20px -8px;
+  }
+  24% {
+    background-position: -8px 25px;
+  }
+  32% {
+    background-position: 30px 5px;
+  }
+  40% {
+    background-position: -25px -15px;
+  }
+  48% {
+    background-position: 12px 35px;
+  }
+  56% {
+    background-position: -18px 8px;
+  }
+  64% {
+    background-position: 35px -12px;
+  }
+  72% {
+    background-position: -5px 45px;
+  }
+  80% {
+    background-position: 22px 15px;
+  }
+  88% {
+    background-position: -30px -5px;
+  }
+  96% {
+    background-position: 8px 28px;
+  }
+  100% {
+    background-position: -12px 20px;
+  }
+}
+
 .flicker-animation {
   animation: flicker 2s infinite;
 }
 
 .noise-move-slow-animation {
-  animation: noise-move-slow 5s linear infinite;
+  animation: noise-glitch 1.2s steps(1, end) infinite;
   background-repeat: repeat;
 }
 .noise-move-animation {
-  animation: noise-move 5s linear infinite;
+  animation: noise-glitch 0.9s steps(1, end) infinite;
   background-repeat: repeat;
 }
 
 .noise-gradient-move-animation {
   animation: noise-gradient-move 20s linear infinite;
+  background-repeat: repeat;
+}
+
+.noise-glitch-animation {
+  animation: noise-glitch 2s steps(1, end) infinite;
+  background-repeat: repeat;
+}
+
+.noise-glitch-fast-animation {
+  animation: noise-glitch 1.5s steps(1, end) infinite;
+  background-repeat: repeat;
+}
+
+.noise-glitch-slow-animation {
+  animation: noise-glitch 2.5s steps(1, end) infinite;
   background-repeat: repeat;
 }
 
@@ -482,4 +543,82 @@ html:active .custom-cursor {
     inset -1px 0 0 rgba(255, 255, 255, 0.1),
     inset 0 4px 6px rgba(255, 255, 255, 0.6);
   cursor: not-allowed;
+}
+
+/* Preloader halves with ::before and ::after pseudo-elements */
+.preloader-half {
+  position: relative;
+  width: 100px;
+  height: 60px; /* Shorter height */
+  margin: 0 10px;
+}
+
+.preloader-half-left {
+  transform-origin: center center;
+}
+
+.preloader-half-right {
+  transform-origin: center center;
+}
+
+/* Left half - vertical line on the left */
+.preloader-half-left::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3px;
+  height: 100%; /* Shorter than container */
+  background: rgb(255, 255, 255);
+}
+
+/* Left half - horizontal lines */
+.preloader-half-left::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 10px;
+  height: 3px;
+  background: rgb(255, 255, 255);
+}
+.preloader-half-left-line {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10px;
+  height: 3px;
+  background: rgb(255, 255, 255);
+}
+
+/* Right half - vertical line on the right */
+.preloader-half-right::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 3px;
+  height: 100%; /* Shorter than container */
+  background: rgb(255, 255, 255);
+}
+
+/* Right half - horizontal lines */
+.preloader-half-right::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 10px;
+  height: 3px;
+  background: rgb(255, 255, 255);
+}
+.preloader-half-right-line {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 10px;
+  height: 3px;
+  background: rgb(255, 255, 255);
 }

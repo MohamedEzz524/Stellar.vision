@@ -169,9 +169,9 @@ const ScrollTrigger3DSection = ({
 
         const lines = split.lines as HTMLElement[];
 
-        // Set initial opacity to 0.3 for all lines
+        // Set initial opacity to 0 for all lines
         lines.forEach((line) => {
-          gsap.set(line, { opacity: 0.3 });
+          gsap.set(line, { opacity: 0 });
           lineElementsRef.current.push(line);
         });
       });
@@ -274,29 +274,40 @@ const ScrollTrigger3DSection = ({
           gsap.set(textTrack, { y: `${trackCurrentY}px` });
 
           // Animate line opacity based on viewport position
+          // Fade in: 30vh below center to center (fades from 0 to 1)
+          // Fade out: center to 30vh above center (fades from 1 to 0)
           if (lineElementsRef.current.length > 0) {
             const viewportHeight = window.innerHeight;
             const viewportCenter = viewportHeight * 0.5; // Center of viewport
+            const fadeZone = viewportHeight * 0.4; // 30vh fade zone
 
             lineElementsRef.current.forEach((line) => {
               const lineRect = line.getBoundingClientRect();
               const lineCenter = lineRect.top + lineRect.height * 0.5;
 
               // Calculate distance from line center to viewport center
-              const distanceFromCenter = Math.abs(lineCenter - viewportCenter);
+              // Negative = below center, Positive = above center
+              const distanceFromCenter = lineCenter - viewportCenter;
 
-              // Calculate opacity based on proximity to viewport center
-              // Lines closer to center have higher opacity
-              // When line is at viewport center, opacity = 1
-              // When line is far from center, opacity approaches 0.3
-              const maxDistance = viewportHeight * 0.6; // Distance at which opacity starts to fade
-              const opacityProgress = Math.max(
-                0,
-                Math.min(1, 1 - distanceFromCenter / maxDistance),
-              );
+              let opacity: number;
 
-              // Interpolate opacity from 0.3 to 1
-              const opacity = 0 + opacityProgress; // 0.3 to 1.0
+              if (distanceFromCenter <= -fadeZone) {
+                // More than 30vh below center: opacity 0
+                opacity = 0;
+              } else if (distanceFromCenter < 0) {
+                // Between 30vh below center and center: fade in from 0 to 1
+                // Linear interpolation: map [-fadeZone, 0] to [0, 1]
+                const progress = (distanceFromCenter + fadeZone) / fadeZone;
+                opacity = Math.max(0, Math.min(1, progress));
+              } else if (distanceFromCenter <= fadeZone) {
+                // Between center and 30vh above center: fade out from 1 to 0
+                // Linear interpolation: map [0, fadeZone] to [1, 0]
+                const progress = distanceFromCenter / fadeZone;
+                opacity = Math.max(0, Math.min(1, 1 - progress));
+              } else {
+                // More than 30vh above center: opacity 0
+                opacity = 0;
+              }
 
               gsap.set(line, { opacity });
             });
@@ -468,125 +479,125 @@ const ScrollTrigger3DSection = ({
   return (
     <section
       ref={sectionRef}
-      className="relative h-screen w-full overflow-hidden border-t-[40px] border-red-700"
+      className="relative h-screen w-full overflow-hidden"
     >
       {/* 3D Objects Container - Outside text track, relative to section */}
       {/* Only render 3D elements when lazy loaded */}
       {isLazyLoaded && (
-      <div className="pointer-events-none absolute inset-0 z-10">
-        {/* Container with same max-width as text track for alignment */}
-        <div className="relative mx-auto h-full max-w-[344px] lg:max-w-[1000px]">
-          {/* Top Row - Left and Right */}
-          {/* Left object - top row */}
-          <div
-            ref={(el) => {
-              objectContainerRefs.current[0] = el;
-            }}
-            className="absolute left-0 z-[15] h-[120px] w-[120px] lg:h-[250px] lg:w-[250px]"
-          >
-            <Canvas
-              camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
-              gl={{ antialias: true, alpha: true }}
-              style={{ width: '100%', height: '100%' }}
+        <div className="pointer-events-none absolute inset-0 z-10">
+          {/* Container with same max-width as text track for alignment */}
+          <div className="relative mx-auto h-full max-w-[344px] lg:max-w-[1000px]">
+            {/* Top Row - Left and Right */}
+            {/* Left object - top row */}
+            <div
+              ref={(el) => {
+                objectContainerRefs.current[0] = el;
+              }}
+              className="absolute left-0 z-[15] h-[120px] w-[120px] lg:h-[250px] lg:w-[250px]"
             >
-              <ambientLight intensity={0.5} />
-              <directionalLight position={[5, 5, 5]} intensity={1} />
-              <pointLight position={[-5, -5, -5]} intensity={0.5} />
-              <Model3D
-                modelUrl={starModelUrl}
-                position={[0, 0, 0]}
-                rotation={[-Math.PI / 2, 0, 0]}
-                scale={0.15}
-                onModelReady={(ref) => {
-                  objectRefs.current[0] = ref;
-                }}
-              />
-            </Canvas>
-          </div>
+              <Canvas
+                camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
+                gl={{ antialias: true, alpha: true }}
+                style={{ width: '100%', height: '100%' }}
+              >
+                <ambientLight intensity={0.5} />
+                <directionalLight position={[5, 5, 5]} intensity={1} />
+                <pointLight position={[-5, -5, -5]} intensity={0.5} />
+                <Model3D
+                  modelUrl={starModelUrl}
+                  position={[0, 0, 0]}
+                  rotation={[-Math.PI / 2, 0, 0]}
+                  scale={0.15}
+                  onModelReady={(ref) => {
+                    objectRefs.current[0] = ref;
+                  }}
+                />
+              </Canvas>
+            </div>
 
-          {/* Right object - top row (different Y translation) */}
-          <div
-            ref={(el) => {
-              objectContainerRefs.current[1] = el;
-            }}
-            className="absolute right-0 z-[15] h-[120px] w-[120px] lg:h-[150px] lg:w-[150px]"
-          >
-            <Canvas
-              camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
-              gl={{ antialias: true, alpha: true }}
-              style={{ width: '100%', height: '100%' }}
+            {/* Right object - top row (different Y translation) */}
+            <div
+              ref={(el) => {
+                objectContainerRefs.current[1] = el;
+              }}
+              className="absolute right-0 z-[15] h-[120px] w-[120px] lg:h-[150px] lg:w-[150px]"
             >
-              <ambientLight intensity={0.5} />
-              <directionalLight position={[5, 5, 5]} intensity={1} />
-              <pointLight position={[-5, -5, -5]} intensity={0.5} />
-              <Model3D
-                modelUrl={starModelUrl}
-                position={[0, -2, 0]}
-                rotation={[-Math.PI / 2, 0, 0]}
-                scale={0.15}
-                onModelReady={(ref) => {
-                  objectRefs.current[1] = ref;
-                }}
-              />
-            </Canvas>
-          </div>
+              <Canvas
+                camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
+                gl={{ antialias: true, alpha: true }}
+                style={{ width: '100%', height: '100%' }}
+              >
+                <ambientLight intensity={0.5} />
+                <directionalLight position={[5, 5, 5]} intensity={1} />
+                <pointLight position={[-5, -5, -5]} intensity={0.5} />
+                <Model3D
+                  modelUrl={starModelUrl}
+                  position={[0, -2, 0]}
+                  rotation={[-Math.PI / 2, 0, 0]}
+                  scale={0.15}
+                  onModelReady={(ref) => {
+                    objectRefs.current[1] = ref;
+                  }}
+                />
+              </Canvas>
+            </div>
 
-          {/* Bottom Row - Left and Right (30vh below top row) */}
-          {/* Left object - bottom row - shifted left, deeper z-axis */}
-          <div
-            ref={(el) => {
-              objectContainerRefs.current[2] = el;
-            }}
-            className="absolute -left-[20px] z-[5] h-[120px] w-[120px] lg:-left-[75px] lg:h-[500px] lg:w-[500px]"
-          >
-            <Canvas
-              camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
-              gl={{ antialias: true, alpha: true }}
-              style={{ width: '100%', height: '100%' }}
+            {/* Bottom Row - Left and Right (30vh below top row) */}
+            {/* Left object - bottom row - shifted left, deeper z-axis */}
+            <div
+              ref={(el) => {
+                objectContainerRefs.current[2] = el;
+              }}
+              className="absolute -left-[20px] z-[5] h-[120px] w-[120px] lg:-left-[75px] lg:h-[500px] lg:w-[500px]"
             >
-              <ambientLight intensity={0.5} />
-              <directionalLight position={[5, 5, 5]} intensity={1} />
-              <pointLight position={[-5, -5, -5]} intensity={0.5} />
-              <Model3D
-                modelUrl={starModelUrl}
-                position={[0, 0, 0]}
-                rotation={[-Math.PI / 2, 0, 0]}
-                scale={0.15}
-                onModelReady={(ref) => {
-                  objectRefs.current[2] = ref;
-                }}
-              />
-            </Canvas>
-          </div>
+              <Canvas
+                camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
+                gl={{ antialias: true, alpha: true }}
+                style={{ width: '100%', height: '100%' }}
+              >
+                <ambientLight intensity={0.5} />
+                <directionalLight position={[5, 5, 5]} intensity={1} />
+                <pointLight position={[-5, -5, -5]} intensity={0.5} />
+                <Model3D
+                  modelUrl={starModelUrl}
+                  position={[0, 0, 0]}
+                  rotation={[-Math.PI / 2, 0, 0]}
+                  scale={0.15}
+                  onModelReady={(ref) => {
+                    objectRefs.current[2] = ref;
+                  }}
+                />
+              </Canvas>
+            </div>
 
-          {/* Right object - bottom row - shifted right, deeper z-axis */}
-          <div
-            ref={(el) => {
-              objectContainerRefs.current[3] = el;
-            }}
-            className="absolute -right-[20px] z-[5] h-[120px] w-[120px] lg:-right-[75px] lg:h-[150px] lg:w-[150px]"
-          >
-            <Canvas
-              camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
-              gl={{ antialias: true, alpha: true }}
-              style={{ width: '100%', height: '100%' }}
+            {/* Right object - bottom row - shifted right, deeper z-axis */}
+            <div
+              ref={(el) => {
+                objectContainerRefs.current[3] = el;
+              }}
+              className="absolute -right-[20px] z-[5] h-[120px] w-[120px] lg:-right-[75px] lg:h-[150px] lg:w-[150px]"
             >
-              <ambientLight intensity={0.5} />
-              <directionalLight position={[5, 5, 5]} intensity={1} />
-              <pointLight position={[-5, -5, -5]} intensity={0.5} />
-              <Model3D
-                modelUrl={starModelUrl}
-                position={[0, -2, 0]}
-                rotation={[-Math.PI / 2, 0, 0]}
-                scale={0.15}
-                onModelReady={(ref) => {
-                  objectRefs.current[3] = ref;
-                }}
-              />
-            </Canvas>
+              <Canvas
+                camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
+                gl={{ antialias: true, alpha: true }}
+                style={{ width: '100%', height: '100%' }}
+              >
+                <ambientLight intensity={0.5} />
+                <directionalLight position={[5, 5, 5]} intensity={1} />
+                <pointLight position={[-5, -5, -5]} intensity={0.5} />
+                <Model3D
+                  modelUrl={starModelUrl}
+                  position={[0, -2, 0]}
+                  rotation={[-Math.PI / 2, 0, 0]}
+                  scale={0.15}
+                  onModelReady={(ref) => {
+                    objectRefs.current[3] = ref;
+                  }}
+                />
+              </Canvas>
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* Text Wrapper Track */}
@@ -599,7 +610,7 @@ const ScrollTrigger3DSection = ({
             <div
               key={index}
               data-text-index={index}
-              className="mb-8 text-center text-3xl leading-tight font-bold whitespace-pre-line text-white lg:mb-16 lg:text-6xl lg:leading-tight"
+              className="mb-8 text-center text-2xl leading-tight font-bold whitespace-pre-line text-white lg:mb-16 lg:text-6xl lg:leading-tight"
             >
               {text}
             </div>

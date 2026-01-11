@@ -37,8 +37,8 @@ const Preloader = () => {
 
   const secondPreloaderRef = useRef<HTMLDivElement>(null);
   const firstPreloaderRef = useRef<HTMLDivElement>(null);
-  const leftHalfGroupRef = useRef<SVGGElement | null>(null);
-  const rightHalfGroupRef = useRef<SVGGElement | null>(null);
+  const leftHalfGroupRef = useRef<HTMLDivElement | null>(null);
+  const rightHalfGroupRef = useRef<HTMLDivElement | null>(null);
   const gElementsRef = useRef<SVGGElement[] | null>(null);
   const sortedElementsRef = useRef<Array<{
     x: number;
@@ -64,25 +64,19 @@ const Preloader = () => {
     setState((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  // Get left and right half groups from the first preloader SVG
+  // Get left and right half divs from the first preloader
   useEffect(() => {
     if (
       state.firstPreloaderVisible &&
       firstPreloaderRef.current &&
       (!leftHalfGroupRef.current || !rightHalfGroupRef.current)
     ) {
-      const svg = firstPreloaderRef.current.querySelector('svg');
-      if (svg) {
-        const clipPathGroup = svg.querySelector('g[clip-path]');
-        if (clipPathGroup) {
-          leftHalfGroupRef.current = clipPathGroup.querySelector(
-            'g#left-half-group',
-          ) as SVGGElement;
-          rightHalfGroupRef.current = clipPathGroup.querySelector(
-            'g#right-half-group',
-          ) as SVGGElement;
-        }
-      }
+      leftHalfGroupRef.current = firstPreloaderRef.current.querySelector(
+        '#left-half-group',
+      ) as HTMLDivElement;
+      rightHalfGroupRef.current = firstPreloaderRef.current.querySelector(
+        '#right-half-group',
+      ) as HTMLDivElement;
     }
   }, [state.firstPreloaderVisible]);
 
@@ -133,25 +127,22 @@ const Preloader = () => {
           // Step 1: Start with groups close together (shifted inward on X-axis)
           // Left half shifts right (positive X), right half shifts left (negative X)
           gsap.set(leftHalf, {
-            x: 200, // Shift right toward center
-            y: 0,
+            x: 100, // Shift right toward center
           });
           gsap.set(rightHalf, {
-            x: -200, // Shift left toward center
-            y: 0,
+            x: -100, // Shift left toward center
           });
 
           // Step 2: Expand to default positions (x: 0 for both)
           gsap.to(leftHalf, {
             x: 0,
-            duration: 0.8,
+            duration: 0.6,
             ease: 'power2.out',
           });
           gsap.to(rightHalf, {
             x: 0,
-            duration: 0.8,
+            duration: 0.6,
             ease: 'power2.out',
-            delay: 0.1,
           });
         }
       })
@@ -211,19 +202,18 @@ const Preloader = () => {
               if (leftHalf && rightHalf) {
                 // Shift left half right, right half left (toward center)
                 gsap.to(leftHalf, {
-                  x: 200,
-                  duration: 0.6,
-                  ease: 'power2.in',
+                  x: 100,
+                  duration: 0.8,
+                  ease: 'power2.out',
                 });
                 gsap.to(rightHalf, {
-                  x: -200,
-                  duration: 0.6,
-                  ease: 'power2.in',
-                  delay: 0.05,
+                  x: -100,
+                  duration: 0.8,
+                  ease: 'power2.out',
                 });
               }
             })
-            .to({}, { duration: 0.6 }) // Wait for closing animation
+            .to({}, { duration: 0.8 }) // Wait for closing animation
             // Hide first preloader
             .call(() => {
               updateState({
@@ -347,7 +337,7 @@ const Preloader = () => {
             <div
               ref={firstPreloaderRef}
               data-v-a05bfe24=""
-              className="absolute inset-0"
+              className="absolute inset-0 flex items-center justify-center"
               style={{
                 opacity: state.firstPreloaderVisible ? 1 : 0,
                 visibility: state.firstPreloaderVisible ? 'visible' : 'hidden',
@@ -355,142 +345,20 @@ const Preloader = () => {
                   'opacity 0.5s ease-in-out, visibility 0.5s ease-in-out',
               }}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                xmlnsXlink="http://www.w3.org/1999/xlink"
-                viewBox="0 0 1920 1080"
-                width="1920"
-                height="1080"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  transform: 'translate3d(0px, 0px, 0px)',
-                  contentVisibility: 'visible',
-                }}
-                preserveAspectRatio="xMidYMid meet"
-              >
-                <defs>
-                  <clipPath id="__lottie_element_5">
-                    <rect width="1920" height="1080" x="0" y="0"></rect>
-                  </clipPath>
-                </defs>
-                <g clipPath="url(#__lottie_element_5)">
-                  {/* LEFT HALF GROUP */}
-                  <g id="left-half-group" transform="translate(0, 0)">
-                    <g
-                      style={{ display: 'block' }}
-                      transform="matrix(1,0,0,0.9776740074157715,960,540)"
-                      opacity="1"
+              {/* Left Half */}
+              <div
+                id="left-half-group"
+                className="preloader-half preloader-half-left"
                     >
-                      <g opacity="1" transform="matrix(1,0,0,1,0,0)">
-                        <path
-                          strokeLinecap="butt"
-                          strokeLinejoin="miter"
-                          fillOpacity="0"
-                          strokeMiterlimit="4"
-                          stroke="rgb(93,93,93)"
-                          strokeOpacity="1"
-                          strokeWidth="4"
-                          d=" M-384,-330 C-384,-330 -384,363 -384,363"
-                        ></path>
-                      </g>
-                    </g>
-                    <g
-                      style={{ display: 'block' }}
-                      transform="matrix(1,0,0,1,954.5289916992188,550.2860107421875)"
-                      opacity="1"
+                <div className="preloader-half-left-line" />
+              </div>
+              {/* Right Half */}
+              <div
+                id="right-half-group"
+                className="preloader-half preloader-half-right"
                     >
-                      <g opacity="1" transform="matrix(1,0,0,1,0,0)">
-                        <path
-                          strokeLinecap="butt"
-                          strokeLinejoin="miter"
-                          fillOpacity="0"
-                          strokeMiterlimit="4"
-                          stroke="rgb(255,255,255)"
-                          strokeOpacity="1"
-                          strokeWidth="12"
-                          d=" M-380,-334 C-380,-334 -328,-334 -328,-334"
-                        ></path>
-                      </g>
-                    </g>
-                    <g
-                      style={{ display: 'block' }}
-                      transform="matrix(1,0,0,1,953.4749755859375,1230.844970703125)"
-                      opacity="1"
-                    >
-                      <g opacity="1" transform="matrix(1,0,0,1,0,0)">
-                        <path
-                          strokeLinecap="butt"
-                          strokeLinejoin="miter"
-                          fillOpacity="0"
-                          strokeMiterlimit="4"
-                          stroke="rgb(255,255,255)"
-                          strokeOpacity="1"
-                          strokeWidth="12"
-                          d=" M-380,-334 C-380,-334 -328,-334 -328,-334"
-                        ></path>
-                      </g>
-                    </g>
-                  </g>
-                  {/* RIGHT HALF GROUP */}
-                  <g id="right-half-group" transform="translate(0, 0)">
-                    <g
-                      style={{ display: 'block' }}
-                      transform="matrix(1,0,0,1,960,540)"
-                      opacity="1"
-                    >
-                      <g opacity="1" transform="matrix(1,0,0,1,694,0)">
-                        <path
-                          strokeLinecap="butt"
-                          strokeLinejoin="miter"
-                          fillOpacity="0"
-                          strokeMiterlimit="4"
-                          stroke="rgb(93,93,93)"
-                          strokeOpacity="1"
-                          strokeWidth="4"
-                          d=" M-384,-330 C-384,-330 -384,363 -384,363"
-                        ></path>
-                      </g>
-                    </g>
-                    <g
-                      style={{ display: 'block' }}
-                      transform="matrix(-0.8089699745178223,0,0,1.0141099691390991,965.0640258789062,1235.4110107421875)"
-                      opacity="1"
-                    >
-                      <g opacity="1" transform="matrix(1,0,0,1,0,0)">
-                        <path
-                          strokeLinecap="butt"
-                          strokeLinejoin="miter"
-                          fillOpacity="0"
-                          strokeMiterlimit="4"
-                          stroke="rgb(255,255,255)"
-                          strokeOpacity="1"
-                          strokeWidth="12"
-                          d=" M-380,-334 C-380,-334 -328,-334 -328,-334"
-                        ></path>
-                      </g>
-                    </g>
-                    <g
-                      style={{ display: 'block' }}
-                      transform="matrix(-0.8089699745178223,0,0,1.0141099691390991,965.0640258789062,553.094970703125)"
-                      opacity="1"
-                    >
-                      <g opacity="1" transform="matrix(1,0,0,1,0,0)">
-                        <path
-                          strokeLinecap="butt"
-                          strokeLinejoin="miter"
-                          fillOpacity="0"
-                          strokeMiterlimit="4"
-                          stroke="rgb(255,255,255)"
-                          strokeOpacity="1"
-                          strokeWidth="12"
-                          d=" M-380,-334 C-380,-334 -328,-334 -328,-334"
-                        ></path>
-                      </g>
-                    </g>
-                  </g>
-                </g>
-              </svg>
+                <div className="preloader-half-right-line" />
+              </div>
             </div>
 
             {/* Second Preloader */}

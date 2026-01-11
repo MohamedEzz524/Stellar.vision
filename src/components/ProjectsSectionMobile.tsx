@@ -18,6 +18,10 @@ interface PathLine extends THREE.Line {
   letterElements?: HTMLElement[];
 }
 
+// Constants for particle system
+const PARTICLES_GRID_SIZE = 40; // 40x40 = 1600 particles per card
+const MAX_SCATTER_DISTANCE = 10;
+
 const ProjectsSectionMobile = ({
   projects,
   sectionId = 'works-mobile',
@@ -38,12 +42,22 @@ const ProjectsSectionMobile = ({
       { current: { x: number; y: number }; target: { x: number; y: number } }
     >
   >(new Map());
-  const cardsTextureRef = useRef<THREE.CanvasTexture | null>(null);
-  const textureCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const cardsPlaneRef = useRef<THREE.Mesh | null>(null);
+  const cardsMeshesRef = useRef<THREE.Mesh[]>([]);
+  const cardsParticlesRef = useRef<THREE.Points[]>([]);
+  const cardTexturesRef = useRef<THREE.Texture[]>([]);
+  const cardParticlePositionsRef = useRef<
+    Array<{
+      positions: THREE.BufferAttribute;
+      originalPositions: Float32Array;
+      scatterDirections: Float32Array;
+      opacity: number;
+    }>
+  >([]);
   const animationFrameRef = useRef<number | null>(null);
   const scrollTriggerRef = useRef<ScrollTrigger | null>(null);
-  const drawCardsOnCanvasRef = useRef<((offset: number) => void) | null>(null);
+  const updateCardsAnimationRef = useRef<((progress: number) => void) | null>(
+    null,
+  );
   const drawGridRef = useRef<((progress: number) => void) | null>(null);
 
   const lerp = (start: number, end: number, t: number) =>
@@ -157,9 +171,9 @@ const ProjectsSectionMobile = ({
     };
   }, []);
 
-  // Load images and create cards texture
+  // Load images and create individual card meshes
   useEffect(() => {
-    if (!projects || !projects.length) {
+    if (!projects || !projects.length || !cardsSceneRef.current) {
       console.warn('ProjectsSectionMobile: No projects data provided');
       return;
     }
@@ -192,82 +206,320 @@ const ProjectsSectionMobile = ({
       .map((p) => loadImage(p.image));
 
     Promise.all(imagePromises).then((textures) => {
-      const textureCanvas = document.createElement('canvas');
-      const ctx = textureCanvas.getContext('2d');
-      if (!ctx) return;
+      cardTexturesRef.current = textures;
+      const meshes: THREE.Mesh[] = [];
+      const particles: THREE.Points[] = [];
+      const particleData: Array<{
+        positions: THREE.BufferAttribute;
+        originalPositions: Float32Array;
+        scatterDirections: Float32Array;
+        opacity: number;
+      }> = [];
 
-      [textureCanvas.width, textureCanvas.height] = [4096, 2048];
-      textureCanvasRef.current = textureCanvas;
+      // Shader for texture-based particles
+      const particleVertexShader = `
+        attribute float opacity;
+        varying float vOpacity;
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          vOpacity = opacity;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = 3.0 * (300.0 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `;
 
-      const drawCardsOnCanvas = (offset = 0) => {
-        ctx.clearRect(0, 0, textureCanvas.width, textureCanvas.height);
-        const [cardWidth, cardHeight] = [
-          textureCanvas.width / 3,
-          textureCanvas.height / 2,
-        ];
-        const spacing = textureCanvas.width / 2.5;
-        textures.forEach((img, i) => {
-          if (img?.image && img.image instanceof HTMLImageElement) {
-            try {
-              ctx.drawImage(
-                img.image,
-                i * spacing +
-                  (0.35 - offset) * textureCanvas.width * 5 -
-                  cardWidth,
-                (textureCanvas.height - cardHeight) / 2,
-                cardWidth,
-                cardHeight,
-              );
-            } catch (error) {
-              console.error(`Error drawing image ${i}:`, error);
+      const particleFragmentShader = `
+        uniform sampler2D uTexture;
+        varying float vOpacity;
+        varying vec2 vUv;
+        void main() {
+          vec4 color = texture2D(uTexture, vUv);
+          color.a *= vOpacity;
+          if (color.a < 0.01) discard;
+          gl_FragColor = color;
+        }
+      `;
+
+      // Create particle system for each card
+      textures.forEach((texture) => {
+        const cardWidth = 12;
+        const cardHeight = 16;
+        const image = texture.image;
+        if (!(image instanceof HTMLImageElement)) return;
+        const aspectRatio = image.width / image.height;
+        const adjustedWidth =
+          aspectRatio > cardWidth / cardHeight
+            ? cardWidth
+            : cardHeight * aspectRatio;
+        const adjustedHeight =
+          aspectRatio > cardWidth / cardHeight
+            ? cardWidth / aspectRatio
+            : cardHeight;
+
+        // Create normal mesh for high-quality display
+        const meshGeometry = new THREE.PlaneGeometry(
+          adjustedWidth,
+          adjustedHeight,
+        );
+        const meshMaterial = new THREE.MeshBasicMaterial({
+          map: texture,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 1,
+          depthTest: true,
+          depthWrite: true,
+        });
+        const cardMesh = new THREE.Mesh(meshGeometry, meshMaterial);
+        cardMesh.position.set(0, -12, 0);
+        cardMesh.scale.set(0.8, 0.8, 1);
+        cardMesh.rotation.set(0, 0, 0);
+        cardMesh.visible = true;
+        cardsSceneRef.current?.add(cardMesh);
+        meshes.push(cardMesh);
+
+        // Create grid of particles
+        const particleCount = PARTICLES_GRID_SIZE * PARTICLES_GRID_SIZE;
+        const positions = new Float32Array(particleCount * 3);
+        const uvs = new Float32Array(particleCount * 2);
+        const opacities = new Float32Array(particleCount);
+        const scatterDirections = new Float32Array(particleCount * 3);
+
+        // Generate particle grid
+        const gridStepX = adjustedWidth / PARTICLES_GRID_SIZE;
+        const gridStepY = adjustedHeight / PARTICLES_GRID_SIZE;
+        const startX = -adjustedWidth / 2;
+        const startY = adjustedHeight / 2;
+
+        for (let i = 0; i < PARTICLES_GRID_SIZE; i++) {
+          for (let j = 0; j < PARTICLES_GRID_SIZE; j++) {
+            const index = i * PARTICLES_GRID_SIZE + j;
+            const x = startX + j * gridStepX + gridStepX / 2;
+            const y = startY - i * gridStepY - gridStepY / 2;
+
+            positions[index * 3] = x;
+            positions[index * 3 + 1] = y;
+            positions[index * 3 + 2] = 0;
+
+            // UV coordinates (flip V to match PlaneGeometry orientation)
+            uvs[index * 2] = (j + 0.5) / PARTICLES_GRID_SIZE;
+            uvs[index * 2 + 1] = 1.0 - (i + 0.5) / PARTICLES_GRID_SIZE;
+
+            opacities[index] = 0;
+
+            // Random scatter direction (spherical coordinates)
+            const angle1 = Math.random() * Math.PI * 2;
+            const angle2 = Math.random() * Math.PI * 2;
+            scatterDirections[index * 3] = Math.cos(angle1) * Math.sin(angle2);
+            scatterDirections[index * 3 + 1] =
+              Math.sin(angle1) * Math.sin(angle2);
+            scatterDirections[index * 3 + 2] = Math.cos(angle2);
+          }
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute(
+          'position',
+          new THREE.BufferAttribute(positions, 3),
+        );
+        geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+        geometry.setAttribute(
+          'opacity',
+          new THREE.BufferAttribute(opacities, 1),
+        );
+
+        const material = new THREE.ShaderMaterial({
+          vertexShader: particleVertexShader,
+          fragmentShader: particleFragmentShader,
+          uniforms: {
+            uTexture: { value: texture },
+          },
+          transparent: true,
+          depthTest: true,
+          depthWrite: false,
+        });
+
+        const points = new THREE.Points(geometry, material);
+        // Start position: bottom center (below view)
+        points.position.set(0, -12, 0);
+        points.scale.set(0.8, 0.8, 1);
+        points.rotation.set(0, 0, 0);
+        points.visible = false; // Hidden initially, only show during scatter phase
+        cardsSceneRef.current?.add(points);
+        particles.push(points);
+
+        // Store particle data for animation
+        particleData.push({
+          positions: geometry.attributes.position as THREE.BufferAttribute,
+          originalPositions: new Float32Array(positions),
+          scatterDirections,
+          opacity: 0,
+        });
+      });
+
+      cardsMeshesRef.current = meshes;
+      cardsParticlesRef.current = particles;
+      cardParticlePositionsRef.current = particleData;
+
+      // Function to update card animations based on scroll progress
+      const updateCardsAnimation = (scrollProgress: number) => {
+        const numCards = meshes.length;
+        if (numCards === 0) return;
+
+        // Each card has: move phase (50%) + fade phase (50%)
+        // Cards animate sequentially - next card starts only when previous finishes
+        // Total progress per card: 50% move + 50% fade = 100%
+        const movePhaseRatio = 0.5; // 50% of card's timeline to reach center
+        const fadePhaseRatio = 0.5; // 50% of card's timeline to fade out at center
+        const cardPhaseRatio = movePhaseRatio + fadePhaseRatio; // Total per card = 1.0
+        const totalProgressNeeded = numCards * cardPhaseRatio;
+
+        // Normalize progress to account for all cards
+        const normalizedProgress = Math.min(
+          scrollProgress * totalProgressNeeded,
+          totalProgressNeeded,
+        );
+
+        meshes.forEach((mesh, index) => {
+          const points = particles[index];
+          const particleData = cardParticlePositionsRef.current[index];
+          if (!particleData || !points) return;
+
+          // Cards animate sequentially - no overlap
+          // Card 0 starts at 0, finishes at 1.0
+          // Card 1 starts at 1.0, finishes at 2.0
+          // Card 2 starts at 2.0, finishes at 3.0
+          const cardStartTime = index * cardPhaseRatio;
+          const cardEndTime = cardStartTime + cardPhaseRatio; // When card finishes
+
+          let localProgress = 0;
+          if (
+            normalizedProgress >= cardStartTime &&
+            normalizedProgress <= cardEndTime
+          ) {
+            // Card is animating
+            localProgress =
+              (normalizedProgress - cardStartTime) / cardPhaseRatio;
+          } else if (normalizedProgress > cardEndTime) {
+            // Card animation finished
+            localProgress = 1;
+          }
+
+          const positions = particleData.positions.array as Float32Array;
+          const originalPositions = particleData.originalPositions;
+          const scatterDirections = particleData.scatterDirections;
+          const opacityAttribute = (
+            points.geometry.attributes.opacity as THREE.BufferAttribute
+          ).array as Float32Array;
+          const particleCount = originalPositions.length / 3;
+          const meshMaterial = mesh.material as THREE.MeshBasicMaterial;
+
+          if (localProgress === 0) {
+            // Before animation starts: hidden at bottom
+            mesh.position.y = -12;
+            mesh.scale.set(0.8, 0.8, 1);
+            mesh.rotation.set(0, 0, 0);
+            mesh.visible = true;
+            meshMaterial.opacity = 1;
+            points.visible = false;
+            points.position.y = -12;
+            points.scale.set(0.8, 0.8, 1);
+            points.rotation.set(0, 0, 0);
+            // Reset particles to original positions
+            for (let i = 0; i < particleCount; i++) {
+              positions[i * 3] = originalPositions[i * 3];
+              positions[i * 3 + 1] = originalPositions[i * 3 + 1];
+              positions[i * 3 + 2] = originalPositions[i * 3 + 2];
+              opacityAttribute[i] = 0;
             }
+            particleData.positions.needsUpdate = true;
+            points.geometry.attributes.opacity.needsUpdate = true;
+          } else if (localProgress <= movePhaseRatio) {
+            // Moving phase: bottom to center with full opacity (use mesh for high quality)
+            const moveProgress = localProgress / movePhaseRatio;
+            mesh.position.y = lerp(-12, 0, moveProgress);
+            mesh.scale.set(0.8, 0.8, 1);
+            mesh.rotation.set(0, 0, 0);
+            mesh.visible = true;
+            meshMaterial.opacity = 1;
+            points.visible = false;
+            // Keep particles in original positions for when we switch
+            for (let i = 0; i < particleCount; i++) {
+              positions[i * 3] = originalPositions[i * 3];
+              positions[i * 3 + 1] = originalPositions[i * 3 + 1];
+              positions[i * 3 + 2] = originalPositions[i * 3 + 2];
+              opacityAttribute[i] = 1;
+            }
+            particleData.positions.needsUpdate = true;
+            points.geometry.attributes.opacity.needsUpdate = true;
+          } else {
+            // Fade phase: stay at center, switch to particles and scatter
+            const fadeProgress =
+              (localProgress - movePhaseRatio) / fadePhaseRatio;
+            mesh.position.y = 0;
+            mesh.scale.set(0.8, 0.8, 1);
+            mesh.rotation.set(0, 0, 0);
+            // Hide mesh, show particles
+            mesh.visible = false;
+            points.visible = true;
+            points.position.y = 0;
+            const scale = lerp(0.8, 0.3, fadeProgress);
+            points.scale.set(scale, scale, 1);
+            points.rotation.set(0, 0, 0);
+            // Scatter particles outward
+            const scatterAmount = fadeProgress * fadeProgress * fadeProgress; // Cubic for acceleration
+            for (let i = 0; i < particleCount; i++) {
+              const origX = originalPositions[i * 3];
+              const origY = originalPositions[i * 3 + 1];
+              const origZ = originalPositions[i * 3 + 2];
+              const dirX = scatterDirections[i * 3];
+              const dirY = scatterDirections[i * 3 + 1];
+              const dirZ = scatterDirections[i * 3 + 2];
+              // Scatter outward from original position
+              positions[i * 3] =
+                origX + dirX * MAX_SCATTER_DISTANCE * scatterAmount;
+              positions[i * 3 + 1] =
+                origY + dirY * MAX_SCATTER_DISTANCE * scatterAmount;
+              positions[i * 3 + 2] =
+                origZ + dirZ * MAX_SCATTER_DISTANCE * scatterAmount;
+              opacityAttribute[i] = lerp(1, 0, fadeProgress);
+            }
+            particleData.positions.needsUpdate = true;
+            points.geometry.attributes.opacity.needsUpdate = true;
           }
         });
       };
 
-      const cardsTexture = new THREE.CanvasTexture(textureCanvas);
-      Object.assign(cardsTexture, {
-        generateMipmaps: true,
-        minFilter: THREE.LinearMipmapLinearFilter,
-        magFilter: THREE.LinearFilter,
-        anisotropy:
-          cardsRendererRef.current?.capabilities.getMaxAnisotropy() || 1,
-        wrapS: THREE.RepeatWrapping,
-        wrapT: THREE.RepeatWrapping,
-      });
-      cardsTextureRef.current = cardsTexture;
+      updateCardsAnimationRef.current = updateCardsAnimation;
 
-      if (cardsSceneRef.current) {
-        const cardsPlane = new THREE.Mesh(
-          new THREE.PlaneGeometry(30, 15, 50, 1),
-          new THREE.MeshBasicMaterial({
-            map: cardsTexture,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 1,
-            depthTest: false,
-            depthWrite: false,
-          }),
-        );
-        cardsSceneRef.current.add(cardsPlane);
-        cardsPlaneRef.current = cardsPlane;
-
-        const positions = cardsPlane.geometry.attributes.position;
-        for (let i = 0; i < positions.count; i++) {
-          positions.setZ(i, Math.pow(positions.getX(i) / 15, 2) * 5);
-        }
-        positions.needsUpdate = true;
-      }
-
-      // Initial draw
-      drawCardsOnCanvas(0);
-
-      // Store draw function for ScrollTrigger
-      drawCardsOnCanvasRef.current = drawCardsOnCanvas;
+      // Initial state
+      updateCardsAnimation(0);
     });
 
     return () => {
-      drawCardsOnCanvasRef.current = null;
+      // Cleanup
+      cardsMeshesRef.current.forEach((mesh) => {
+        cardsSceneRef.current?.remove(mesh);
+        mesh.geometry.dispose();
+        const material = mesh.material as THREE.MeshBasicMaterial;
+        material.map?.dispose();
+        material.dispose();
+      });
+      cardsParticlesRef.current.forEach((points) => {
+        cardsSceneRef.current?.remove(points);
+        points.geometry.dispose();
+        (
+          points.material as THREE.ShaderMaterial
+        ).uniforms.uTexture.value?.dispose();
+        (points.material as THREE.ShaderMaterial).dispose();
+      });
+      cardsMeshesRef.current = [];
+      cardsParticlesRef.current = [];
+      cardParticlePositionsRef.current = [];
+      cardTexturesRef.current.forEach((texture) => texture.dispose());
+      cardTexturesRef.current = [];
+      updateCardsAnimationRef.current = null;
     };
   }, [projects]);
 
@@ -424,7 +676,7 @@ const ProjectsSectionMobile = ({
     const scrollTrigger = ScrollTrigger.create({
       trigger: sectionRef.current,
       start: 'top top',
-      end: '+=700%',
+      end: () => `+=${Math.max(projects.length * 50, 100)}%`,
       pin: true,
       pinSpacing: true,
       scrub: 1,
@@ -433,9 +685,8 @@ const ProjectsSectionMobile = ({
         if (drawGridRef.current) {
           drawGridRef.current(progress);
         }
-        if (drawCardsOnCanvasRef.current && cardsTextureRef.current) {
-          drawCardsOnCanvasRef.current(progress);
-          cardsTextureRef.current.needsUpdate = true;
+        if (updateCardsAnimationRef.current) {
+          updateCardsAnimationRef.current(progress);
         }
         // Update letter positions
         const lineSpeedMultipliers = [0.8, 1, 0.7, 0.9];
@@ -466,7 +717,7 @@ const ProjectsSectionMobile = ({
     return () => {
       scrollTrigger.kill();
     };
-  }, []);
+  }, [projects.length]);
 
   // Handle resize
   useEffect(() => {

@@ -66,7 +66,6 @@ export const playRevealAnimation = (): (() => void) => {
   const isLargeDesktop = window.matchMedia('(min-width: 1280px)').matches;
   // Get elements by ID
   const logo = document.getElementById('home-sticky-logo');
-  const noise = document.getElementById('home-sticky-noise');
   const bottomLeft = document.getElementById('home-sticky-bottom-left');
   const bottomRight = document.getElementById('home-sticky-bottom-right');
   const heroImage = document.getElementById('hero-image');
@@ -87,9 +86,6 @@ export const playRevealAnimation = (): (() => void) => {
   // Set initial states
   if (logo) {
     gsap.set(logo, { y: -100 });
-  }
-  if (noise) {
-    gsap.set(noise, { opacity: 0 });
   }
   if (bottomLeft) {
     gsap.set(bottomLeft, { x: '-100%' });
@@ -219,19 +215,6 @@ export const playRevealAnimation = (): (() => void) => {
     '-=0.4', // Start 0.4s before step 1 ends
   );
 
-  // Step 3: Noise fade in
-  if (noise) {
-    tl.to(
-      noise,
-      {
-        opacity: 1,
-        duration: 0.6,
-        ease: 'power2.out',
-      },
-      '-=0.2', // Start 0.2s before step 2 ends
-    );
-  }
-
   // Step 4: All h2 elements reset + heroImage goes to -rotate-6
   const h2Animation =
     h2Elements.length > 0
@@ -254,9 +237,9 @@ export const playRevealAnimation = (): (() => void) => {
       tl.to(
         model3DRef.current.scale,
         {
-          x: isLargeDesktop ? 0.5 : isDesktop ? .3 : 1.2,
-          y: isLargeDesktop ? 0.5 : isDesktop ? .3 : 1.2,
-          z: isLargeDesktop ? 0.5 : isDesktop ? .3 : 1.2,
+          x: isLargeDesktop ? 0.5 : isDesktop ? 0.3 : 1.2,
+          y: isLargeDesktop ? 0.5 : isDesktop ? 0.3 : 1.2,
+          z: isLargeDesktop ? 0.5 : isDesktop ? 0.3 : 1.2,
           duration: 0.8,
           ease: 'power2.out',
         },

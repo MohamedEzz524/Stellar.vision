@@ -93,7 +93,7 @@ const HeroSection = () => {
 
   return (
     <section id="hero-section" className="hero-section overflow-hidden">
-      <div className="absolute top-1 right-1 z-1 flex h-16 w-[calc(100%-150px)] items-center bg-gradient-to-b from-white to-transparent to-40% pl-4 text-base text-white lg:hidden">
+      <div className="absolute top-1 right-1 z-1 flex h-16 w-[calc(100%-150px)] items-center pl-4 text-base text-white lg:hidden">
         <div className="relative h-full w-full">
           {/* AUTO ROTATE TEXT ANIMATION */}
           <div className="font-grid absolute inset-0 z-0 overflow-hidden text-lg">

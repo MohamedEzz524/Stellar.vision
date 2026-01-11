@@ -4,7 +4,7 @@ import { texts } from '../../constants';
 
 const HomeHeader = () => {
   return (
-    <div className="home-header bg-bgPrimary border-border overflow-hidden border-t py-8">
+    <div className="home-header bg-bgPrimary border-border overflow-hidden border-t pt-8">
       <div className="container">
         <div className="text-textPrimary border-border flex flex-col justify-between gap-8 border-b px-8 pb-8 lg:flex-row lg:items-center lg:gap-4 lg:px-0">
           {/* Left */}

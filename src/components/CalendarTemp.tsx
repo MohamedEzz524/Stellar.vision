@@ -311,6 +311,7 @@ const Calendar = () => {
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
     email?: string;
@@ -322,6 +323,9 @@ const Calendar = () => {
   const calendarRef = useRef<HTMLDivElement>(null);
   const startButtonRef = useRef<HTMLDivElement>(null);
   const timeButtonsRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  // localStorage key for successful submission token
+  const SUBMISSION_TOKEN_KEY = 'calendar_booking_submitted';
 
   // Validation regex patterns
   const validationPatterns = {
@@ -443,6 +447,16 @@ const Calendar = () => {
       throw error;
     }
   };
+
+  // Check localStorage for successful submission token on mount and when entering confirm state
+  useEffect(() => {
+    if (state.viewState === 4) {
+      const token = localStorage.getItem(SUBMISSION_TOKEN_KEY);
+      if (token) {
+        setSubmitSuccess(true);
+      }
+    }
+  }, [state.viewState]);
 
   // Fetch available days on mount and when year/timezone changes
   useEffect(() => {
@@ -1223,52 +1237,11 @@ const Calendar = () => {
     dispatch({ type: 'UPDATE_TIMEZONE', timezone: e.target.value });
   };
 
-  // Format booking data for API
-  // Returns only: name, email, description, slot_start_time, timezone
-  const formatBookingData = () => {
-    // TEMPORARY: Hardcoded data for testing
-    return {
-      name: 'Hazem',
-      email: 'hazem@example.com',
-      slot_start_time: '2026-01-15T15:30:00.000Z',
-      description: 'Test',
-      timezone: 'UTC',
-    };
-
-    // TODO: Uncomment below after testing
-    // const { name, email, description, startTime } = state.formData;
-
-    // // Validate required fields
-    // if (!name || !email || !startTime) {
-    //   throw new Error('Name, email, and start time are required fields');
-    // }
-
-    // // Convert startTime to UTC ISO format
-    // // startTime is in RFC3339 format with Cairo timezone: "2026-01-15T13:15:00+02:00"
-    // // Convert to proper UTC ISO: "2026-01-15T11:15:00.000Z" (13:15 Cairo UTC+2 = 11:15 UTC)
-    // const date = new Date(startTime);
-
-    // if (isNaN(date.getTime())) {
-    //   throw new Error(`Invalid start time format: ${startTime}`);
-    // }
-
-    // // Convert to UTC ISO string format: "2026-01-15T11:15:00.000Z"
-    // const slot_start_time = date.toISOString();
-
-    // // Return only the required fields in the exact format
-    // return {
-    //   name: name.trim(),
-    //   email: email.trim(),
-    //   slot_start_time,
-    //   description: description ? description.trim() : '',
-    //   timezone: 'UTC',
-    // };
-  };
-
   // Handle form submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
+    setSubmitSuccess(false);
 
     // Validate all fields before submitting (including hidden fields)
     const { visibleErrors, allErrors } = validateAllFields();
@@ -1297,72 +1270,53 @@ const Calendar = () => {
     setIsSubmitting(true);
 
     try {
-      const bookingData = formatBookingData();
+      // Create FormData with all form fields
+      const formData = new FormData();
+      formData.append('access_key', '5390b48e-4403-4de3-91ff-c532ff505dcb');
+      formData.append('name', state.formData.name);
+      formData.append('email', state.formData.email);
+      formData.append('description', state.formData.description);
+      formData.append('startTime', state.formData.startTime);
+      formData.append('timezone', state.formData.timezone);
 
       // Log the data being sent for debugging
-      console.log('Sending booking data:', bookingData);
-      console.log('Booking data JSON:', JSON.stringify(bookingData, null, 2));
+      console.log('Sending form data to web3forms:', {
+        name: state.formData.name,
+        email: state.formData.email,
+        description: state.formData.description,
+        startTime: state.formData.startTime,
+        timezone: state.formData.timezone,
+      });
 
-      // Use proxy URL in development, full URL in production
-      const isDevelopment = import.meta.env.DEV;
-      const baseUrl = isDevelopment
-        ? '/api'
-        : 'https://calender-stellervision-production.up.railway.app/api';
-      const url = `${baseUrl}/bookings/create`;
-
-      console.log('POST URL:', url);
-
-      const response = await fetch(url, {
+      const response = await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        mode: 'cors',
-        body: JSON.stringify(bookingData),
+        body: formData,
       });
 
       console.log('Response status:', response.status, response.statusText);
 
-      if (!response.ok) {
-        // Try to parse as JSON first, otherwise use text
-        let errorDetails: string;
-        const contentType = response.headers.get('content-type');
+      const data = await response.json();
 
-        try {
-          if (contentType && contentType.includes('application/json')) {
-            const errorJson = await response.json();
-            errorDetails = JSON.stringify(errorJson, null, 2);
-          } else {
-            errorDetails = await response.text();
-          }
-        } catch {
-          errorDetails = await response.text();
-        }
-
-        console.error('Server error response:', {
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-          body: errorDetails,
-        });
-
+      if (!response.ok || !data.success) {
         throw new Error(
-          `Failed to create booking: ${response.status} ${response.statusText}. ${errorDetails.substring(0, 200)}`,
+          data.message ||
+            `Failed to submit form: ${response.status} ${response.statusText}`,
         );
       }
 
-      const result = await response.json();
-      console.log('Booking created successfully:', result);
+      console.log('Form submitted successfully:', data);
 
-      // Close calendar on success
-      dispatch({ type: 'CLOSE_CALENDAR' });
+      // Store token in localStorage to persist successful submission
+      localStorage.setItem(SUBMISSION_TOKEN_KEY, 'true');
+
+      // Show success message instead of closing
+      setSubmitSuccess(true);
     } catch (error) {
-      console.error('Error creating booking:', error);
+      console.error('Error submitting form:', error);
       const errorMessage =
         error instanceof Error
           ? error.message
-          : 'An error occurred while creating the booking. Please try again.';
+          : 'An error occurred while submitting the form. Please try again.';
       setSubmitError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -1425,7 +1379,7 @@ const Calendar = () => {
       case 3:
         return 'SELECT A TIME';
       case 4:
-        return 'CONFIRM';
+        return submitSuccess ? 'SUCCESS' : 'CONFIRM';
       default:
         return '';
     }
@@ -1460,13 +1414,13 @@ const Calendar = () => {
         >
           <div className="h-full w-auto max-w-[300px] lg:max-w-[400px]">
             <Button3dWrapper
-            onClick={() => {
-              if (state.viewState === 0) {
-                dispatch({ type: 'START_CALENDAR' });
-              } else {
-                dispatch({ type: 'CLOSE_CALENDAR' });
-              }
-            }}
+              onClick={() => {
+                if (state.viewState === 0) {
+                  dispatch({ type: 'START_CALENDAR' });
+                } else {
+                  dispatch({ type: 'CLOSE_CALENDAR' });
+                }
+              }}
               viewState={state.viewState}
             />
           </div>
@@ -1793,176 +1747,204 @@ const Calendar = () => {
                   </p>
                 </div>
 
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="w-full space-y-6">
-                  <h3 className="font-grid text-[2rem] font-bold uppercase">
-                    Enter details
-                  </h3>
-
-                  {/* Name Input */}
-                  <div className="relative">
-                    <label
-                      htmlFor="name"
-                      className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
-                    >
-                      name <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      value={state.formData.name}
-                      onChange={handleInputChange}
-                      onBlur={handleFieldBlur}
-                      required
-                      pattern="[a-zA-Z0-9 '-]{2,50}"
-                      className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
-                        fieldErrors.name ? 'border-red-500' : 'border-white'
-                      }`}
-                      placeholder="Your name"
-                    />
-                    {fieldErrors.name && (
-                      <p className="mt-1 text-xs text-red-400">
-                        {fieldErrors.name}
+                {/* Success Message */}
+                {submitSuccess ? (
+                  <div className="w-full space-y-6">
+                    <h3 className="font-grid text-[2rem] font-bold uppercase">
+                      Booking confirmed!
+                    </h3>
+                    <div className="rounded-md border border-green-500 bg-green-500/20 px-4 py-6 text-white">
+                      <p className="mb-4 text-lg font-semibold">
+                        Thank you for your booking!
                       </p>
-                    )}
-                  </div>
-
-                  {/* Email Input */}
-                  <div className="relative">
-                    <label
-                      htmlFor="email"
-                      className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
-                    >
-                      email <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={state.formData.email}
-                      onChange={handleInputChange}
-                      onBlur={handleFieldBlur}
-                      required
-                      pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
-                      className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
-                        fieldErrors.email ? 'border-red-500' : 'border-white'
-                      }`}
-                    />
-                    {fieldErrors.email && (
-                      <p className="mt-1 text-xs text-red-400">
-                        {fieldErrors.email}
+                      <p className="mb-2 text-sm">
+                        Your booking has been submitted successfully. We'll send
+                        you a confirmation email shortly.
                       </p>
-                    )}
-                  </div>
-
-                  {/* Description Input */}
-                  <div className="relative">
-                    <label
-                      htmlFor="description"
-                      className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
-                    >
-                      description <span className="text-red-400">*</span>
-                    </label>
-                    <textarea
-                      id="description"
-                      name="description"
-                      value={state.formData.description}
-                      onChange={handleInputChange}
-                      onBlur={handleFieldBlur}
-                      required
-                      minLength={4}
-                      maxLength={500}
-                      rows={4}
-                      className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
-                        fieldErrors.description
-                          ? 'border-red-500'
-                          : 'border-white'
-                      }`}
-                    />
-                    {fieldErrors.description && (
-                      <p className="mt-1 text-xs text-red-400">
-                        {fieldErrors.description}
+                      <p className="text-sm opacity-80">
+                        Web conferencing details will be provided upon
+                        confirmation.
                       </p>
-                    )}
-                  </div>
-
-                  {/* Hidden Start Time Input (Read-only, auto-filled from previous steps) */}
-                  <input
-                    type="hidden"
-                    id="startTime"
-                    name="startTime"
-                    value={state.formData.startTime}
-                    readOnly
-                    required
-                    pattern="^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?([+-]\d{2}:\d{2}|Z)$"
-                  />
-
-                  {/* Hidden Timezone Input (Read-only, auto-filled from previous steps) */}
-                  <input
-                    type="hidden"
-                    id="timezone"
-                    name="timezone"
-                    value={state.formData.timezone}
-                    readOnly
-                    required
-                    pattern="^[A-Za-z_][A-Za-z0-9_/+-]*$"
-                  />
-
-                  {/* TEMPORARY: Read-only inputs for testing (will be removed later) */}
-                  <div className="relative opacity-50">
-                    <label
-                      htmlFor="startTime-test"
-                      className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs text-gray-400"
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => dispatch({ type: 'CLOSE_CALENDAR' })}
+                      className="calendar-day-available big mt-4 w-full rounded-xl px-6 py-4 text-lg font-bold text-black uppercase"
                     >
-                      startTime (readonly - testing)
-                    </label>
+                      Close
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="w-full space-y-6">
+                    <h3 className="font-grid text-[2rem] font-bold uppercase">
+                      Enter details
+                    </h3>
+
+                    {/* Name Input */}
+                    <div className="relative">
+                      <label
+                        htmlFor="name"
+                        className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                      >
+                        name <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={state.formData.name}
+                        onChange={handleInputChange}
+                        onBlur={handleFieldBlur}
+                        required
+                        pattern="[a-zA-Z0-9 '-]{2,50}"
+                        className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                          fieldErrors.name ? 'border-red-500' : 'border-white'
+                        }`}
+                        placeholder="Your name"
+                      />
+                      {fieldErrors.name && (
+                        <p className="mt-1 text-xs text-red-400">
+                          {fieldErrors.name}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Email Input */}
+                    <div className="relative">
+                      <label
+                        htmlFor="email"
+                        className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                      >
+                        email <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={state.formData.email}
+                        onChange={handleInputChange}
+                        onBlur={handleFieldBlur}
+                        required
+                        pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                        className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                          fieldErrors.email ? 'border-red-500' : 'border-white'
+                        }`}
+                      />
+                      {fieldErrors.email && (
+                        <p className="mt-1 text-xs text-red-400">
+                          {fieldErrors.email}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Description Input */}
+                    <div className="relative">
+                      <label
+                        htmlFor="description"
+                        className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                      >
+                        description <span className="text-red-400">*</span>
+                      </label>
+                      <textarea
+                        id="description"
+                        name="description"
+                        value={state.formData.description}
+                        onChange={handleInputChange}
+                        onBlur={handleFieldBlur}
+                        required
+                        minLength={4}
+                        maxLength={500}
+                        rows={4}
+                        className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                          fieldErrors.description
+                            ? 'border-red-500'
+                            : 'border-white'
+                        }`}
+                      />
+                      {fieldErrors.description && (
+                        <p className="mt-1 text-xs text-red-400">
+                          {fieldErrors.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Hidden Start Time Input (Read-only, auto-filled from previous steps) */}
                     <input
-                      type="text"
-                      id="startTime-test"
-                      name="startTime-test"
+                      type="hidden"
+                      id="startTime"
+                      name="startTime"
                       value={state.formData.startTime}
                       readOnly
-                      disabled
-                      className="w-full cursor-not-allowed rounded-md border border-gray-600 bg-transparent px-4 py-3 text-sm text-gray-400"
-                      title="Start time in RFC3339 format with timezone offset (testing only)"
+                      required
+                      pattern="^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?([+-]\d{2}:\d{2}|Z)$"
                     />
-                  </div>
-                  <div className="relative opacity-50">
-                    <label
-                      htmlFor="timezone-test"
-                      className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs text-gray-400"
-                    >
-                      timezone (readonly - testing)
-                    </label>
+
+                    {/* Hidden Timezone Input (Read-only, auto-filled from previous steps) */}
                     <input
-                      type="text"
-                      id="timezone-test"
-                      name="timezone-test"
+                      type="hidden"
+                      id="timezone"
+                      name="timezone"
                       value={state.formData.timezone}
                       readOnly
-                      disabled
-                      className="w-full cursor-not-allowed rounded-md border border-gray-600 bg-transparent px-4 py-3 text-sm text-gray-400"
-                      title="Timezone (testing only)"
+                      required
+                      pattern="^[A-Za-z_][A-Za-z0-9_/+-]*$"
                     />
-                  </div>
 
-                  {/* Error Message */}
-                  {submitError && (
-                    <div className="mt-6 rounded-md border border-red-500 bg-red-500/20 px-4 py-3 text-sm text-red-200">
-                      {submitError}
+                    {/* TEMPORARY: Read-only inputs for testing (will be removed later) */}
+                    <div className="relative opacity-50">
+                      <label
+                        htmlFor="startTime-test"
+                        className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs text-gray-400"
+                      >
+                        startTime (readonly - testing)
+                      </label>
+                      <input
+                        type="text"
+                        id="startTime-test"
+                        name="startTime-test"
+                        value={state.formData.startTime}
+                        readOnly
+                        disabled
+                        className="w-full cursor-not-allowed rounded-md border border-gray-600 bg-transparent px-4 py-3 text-sm text-gray-400"
+                        title="Start time in RFC3339 format with timezone offset (testing only)"
+                      />
                     </div>
-                  )}
+                    <div className="relative opacity-50">
+                      <label
+                        htmlFor="timezone-test"
+                        className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs text-gray-400"
+                      >
+                        timezone (readonly - testing)
+                      </label>
+                      <input
+                        type="text"
+                        id="timezone-test"
+                        name="timezone-test"
+                        value={state.formData.timezone}
+                        readOnly
+                        disabled
+                        className="w-full cursor-not-allowed rounded-md border border-gray-600 bg-transparent px-4 py-3 text-sm text-gray-400"
+                        title="Timezone (testing only)"
+                      />
+                    </div>
 
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="calendar-day-available big mt-4 w-full rounded-xl px-6 py-4 text-lg font-bold text-black uppercase disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isSubmitting ? 'Submitting...' : 'Submit'}
-                  </button>
-                </form>
+                    {/* Error Message */}
+                    {submitError && (
+                      <div className="mt-6 rounded-md border border-red-500 bg-red-500/20 px-4 py-3 text-sm text-red-200">
+                        {submitError}
+                      </div>
+                    )}
+
+                    {/* Submit Button */}
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="calendar-day-available big mt-4 w-full rounded-xl px-6 py-4 text-lg font-bold text-black uppercase disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isSubmitting ? 'Submitting...' : 'Submit'}
+                    </button>
+                  </form>
+                )}
               </div>
             )}
           </div>
