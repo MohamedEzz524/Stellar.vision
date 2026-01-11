@@ -44,7 +44,7 @@ const ScrollProgress = ({ totalLeaves = 16 }: ScrollProgressProps) => {
 
       // Calculate how many leaves should be filled
       const leavesToFill = Math.min(
-        Math.floor((percentage / 100) * totalLeaves),
+        Math.ceil((percentage / 100) * totalLeaves),
         totalLeaves,
       );
 

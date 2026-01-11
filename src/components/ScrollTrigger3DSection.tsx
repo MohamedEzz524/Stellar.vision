@@ -80,6 +80,8 @@ const ScrollTrigger3DSection = ({
   const splitInstancesRef = useRef<SplitText[]>([]);
   const textElementsRef = useRef<HTMLElement[]>([]);
   const lineElementsRef = useRef<HTMLElement[]>([]);
+  const scrollTriggerRef = useRef<ScrollTrigger | null>(null);
+  const isLazyLoadedRef = useRef<boolean>(false);
   const [isLazyLoaded, setIsLazyLoaded] = useState(false);
 
   // Initialize refs for 4 objects
@@ -102,6 +104,7 @@ const ScrollTrigger3DSection = ({
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting || entry.intersectionRatio > 0) {
+            isLazyLoadedRef.current = true;
             setIsLazyLoaded(true);
             observer.disconnect();
           }
@@ -120,17 +123,8 @@ const ScrollTrigger3DSection = ({
     };
   }, [isLazyLoaded]);
 
-  // Main effect: Only run when lazy loaded
+  // Main effect: Setup ScrollTrigger immediately (text animation works without 3D)
   useEffect(() => {
-    if (!isLazyLoaded) return;
-
-    if (
-      !sectionRef.current ||
-      !textTrackRef.current ||
-      !textContainerRef.current
-    ) {
-      return;
-    }
     if (
       !sectionRef.current ||
       !textTrackRef.current ||
@@ -230,16 +224,11 @@ const ScrollTrigger3DSection = ({
       splitTextIntoLines();
     }, 100);
 
-    // Wait a bit for models to load, then setup ScrollTrigger
+    // Setup ScrollTrigger (works immediately without 3D elements)
     const setupScrollTrigger = () => {
-      // Check if all containers are available
-      const allContainersReady = objectContainerRefs.current.every(
-        (container) => container !== null,
-      );
-
-      if (!allContainersReady) {
-        console.warn('Object containers not ready yet');
-        return null;
+      // Don't recreate if it already exists
+      if (scrollTriggerRef.current) {
+        return scrollTriggerRef.current;
       }
 
       // Measure actual track height from content (text is relative, not absolute)
@@ -264,6 +253,8 @@ const ScrollTrigger3DSection = ({
         pin: section,
         pinSpacing: true,
         scrub: true,
+        invalidateOnRefresh: false, // Prevent recalculation on refresh
+        anticipatePin: 1, // Smooth pinning transitions
         onUpdate: (self) => {
           const progress = self.progress;
           const vhToPx = (vh: number) => (vh * window.innerHeight) / 100;
@@ -377,104 +368,86 @@ const ScrollTrigger3DSection = ({
           }
 
           // Update object containers with top positioning (in pixels, relative to section)
-          // Row 1 objects (indices 0 and 1)
-          // Object 0: add static offset down by 200% of its height
-          if (objectContainerRefs.current[0]) {
-            const container0Height =
-              objectContainerRefs.current[0].offsetHeight;
-            const offset0 = (container0Height * 100) / 100; // 100% of height (down)
-            gsap.set(objectContainerRefs.current[0], {
-              top: `${row1CurrentTop + offset0}px`,
-              y: '0px',
-            });
-          }
-          // Object 1: normal position
-          if (objectContainerRefs.current[1]) {
-            gsap.set(objectContainerRefs.current[1], {
-              top: `${row1CurrentTop}px`,
-              y: '0px',
-            });
-          }
-
-          // Row 2 objects (indices 2 and 3)
-          // Object 2: normal position
-          if (objectContainerRefs.current[2]) {
-            gsap.set(objectContainerRefs.current[2], {
-              top: `${row2CurrentTop}px`,
-              y: '0px',
-            });
-          }
-          // Object 3: add static offset up by 150% of its height
-          if (objectContainerRefs.current[3]) {
-            const container3Height =
-              objectContainerRefs.current[3].offsetHeight;
-            const offset3 = (container3Height * -150) / 100; // -150% of height (up)
-            gsap.set(objectContainerRefs.current[3], {
-              top: `${row2CurrentTop + offset3}px`,
-              y: '0px',
-            });
-          }
-
-          // Rotation: rotate on x and y axis (faster rotation)
-          const rotationSpeed = 3; // Multiplier for rotation speed
-          const maxRotationX = Math.PI; // 90 degrees
-          const maxRotationY = Math.PI; // 90 degrees
-          const rotationX = maxRotationX * progress * rotationSpeed;
-          const rotationY = maxRotationY * progress * rotationSpeed;
-
-          // Update each 3D object rotation only
-          objectRefs.current.forEach((objRef) => {
-            if (objRef.current) {
-              // Rotate
-              objRef.current.rotation.x = -Math.PI / 2 + rotationX; // Add base rotation
-              objRef.current.rotation.y = rotationY;
-              objRef.current.rotation.z = 0;
+          // Only update if 3D elements are loaded (use ref to avoid stale closure)
+          if (isLazyLoadedRef.current) {
+            // Row 1 objects (indices 0 and 1)
+            // Object 0: add static offset down by 200% of its height
+            if (objectContainerRefs.current[0]) {
+              const container0Height =
+                objectContainerRefs.current[0].offsetHeight;
+              const offset0 = (container0Height * 100) / 100; // 100% of height (down)
+              gsap.set(objectContainerRefs.current[0], {
+                top: `${row1CurrentTop + offset0}px`,
+                y: '0px',
+              });
             }
-          });
+            // Object 1: normal position
+            if (objectContainerRefs.current[1]) {
+              gsap.set(objectContainerRefs.current[1], {
+                top: `${row1CurrentTop}px`,
+                y: '0px',
+              });
+            }
+
+            // Row 2 objects (indices 2 and 3)
+            // Object 2: normal position
+            if (objectContainerRefs.current[2]) {
+              gsap.set(objectContainerRefs.current[2], {
+                top: `${row2CurrentTop}px`,
+                y: '0px',
+              });
+            }
+            // Object 3: add static offset up by 150% of its height
+            if (objectContainerRefs.current[3]) {
+              const container3Height =
+                objectContainerRefs.current[3].offsetHeight;
+              const offset3 = (container3Height * -150) / 100; // -150% of height (up)
+              gsap.set(objectContainerRefs.current[3], {
+                top: `${row2CurrentTop + offset3}px`,
+                y: '0px',
+              });
+            }
+
+            // Rotation: rotate on x and y axis (faster rotation)
+            const rotationSpeed = 3; // Multiplier for rotation speed
+            const maxRotationX = Math.PI; // 90 degrees
+            const maxRotationY = Math.PI; // 90 degrees
+            const rotationX = maxRotationX * progress * rotationSpeed;
+            const rotationY = maxRotationY * progress * rotationSpeed;
+
+            // Update each 3D object rotation only
+            objectRefs.current.forEach((objRef) => {
+              if (objRef.current) {
+                // Rotate
+                objRef.current.rotation.x = -Math.PI / 2 + rotationX; // Add base rotation
+                objRef.current.rotation.y = rotationY;
+                objRef.current.rotation.z = 0;
+              }
+            });
+          }
         },
       });
 
-      // Refresh ScrollTrigger to ensure it calculates positions correctly
-      ScrollTrigger.refresh();
-
+      scrollTriggerRef.current = scrollTrigger;
       return scrollTrigger;
     };
 
-    // Setup scroll trigger after a short delay to ensure models are loaded
-    let scrollTrigger: ScrollTrigger | null = null;
-
-    // Function to try setting up scroll trigger
-    const trySetupScrollTrigger = () => {
-      scrollTrigger = setupScrollTrigger();
-      // If containers weren't ready, try again after a short delay
-      if (!scrollTrigger) {
-        setTimeout(trySetupScrollTrigger, 100);
-      } else {
-        // Refresh after successful setup
-        ScrollTrigger.refresh();
-      }
-    };
-
-    const timeoutId = setTimeout(trySetupScrollTrigger, 500);
+    // Setup ScrollTrigger immediately (works without 3D elements)
+    setupScrollTrigger();
 
     return () => {
-      clearTimeout(timeoutId);
-      if (scrollTrigger) {
-        scrollTrigger.kill();
+      // Cleanup: kill only our ScrollTrigger instance
+      if (scrollTriggerRef.current) {
+        scrollTriggerRef.current.kill();
+        scrollTriggerRef.current = null;
       }
       // Cleanup SplitText instances
       splitInstancesRef.current.forEach((split) => split.revert());
       splitInstancesRef.current = [];
       lineElementsRef.current = [];
       textElementsRef.current = [];
-      // Also cleanup any ScrollTriggers attached to this section
-      ScrollTrigger.getAll().forEach((st) => {
-        if (st.vars.trigger === section) {
-          st.kill();
-        }
-      });
     };
-  }, [texts, objectAnimationStartVh, isLazyLoaded]);
+  }, [texts, objectAnimationStartVh]); // Removed isLazyLoaded to prevent re-initialization
 
   return (
     <section
