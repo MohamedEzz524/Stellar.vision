@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -12,12 +13,6 @@ interface ProjectsSectionMobileProps {
   sectionId?: string;
 }
 
-// Extended Line type with custom properties for animation paths
-interface PathLine extends THREE.Line {
-  curve?: THREE.CatmullRomCurve3;
-  letterElements?: HTMLElement[];
-}
-
 // Constants for particle system
 const PARTICLES_GRID_SIZE = 40; // 40x40 = 1600 particles per card
 const MAX_SCATTER_DISTANCE = 10;
@@ -28,21 +23,9 @@ const ProjectsSectionMobile = ({
   sectionId = 'works-mobile',
 }: ProjectsSectionMobileProps) => {
   const sectionRef = useRef<HTMLDivElement>(null);
-  const gridCanvasRef = useRef<HTMLCanvasElement>(null);
-  const textContainerRef = useRef<HTMLDivElement>(null);
-  const lettersRendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cardsRendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const lettersSceneRef = useRef<THREE.Scene | null>(null);
   const cardsSceneRef = useRef<THREE.Scene | null>(null);
-  const lettersCameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const cardsCameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const pathsRef = useRef<PathLine[]>([]);
-  const letterPositionsRef = useRef<
-    Map<
-      HTMLElement,
-      { current: { x: number; y: number }; target: { x: number; y: number } }
-    >
-  >(new Map());
   const cardsMeshesRef = useRef<THREE.Mesh[]>([]);
   const cardsParticlesRef = useRef<THREE.Points[]>([]);
   const cardTexturesRef = useRef<THREE.Texture[]>([]);
@@ -59,42 +42,26 @@ const ProjectsSectionMobile = ({
   const updateCardsAnimationRef = useRef<((progress: number) => void) | null>(
     null,
   );
-  const drawGridRef = useRef<(() => void) | null>(null);
+  const [activeCardIndex, setActiveCardIndex] = useState<number | null>(null);
 
   const lerp = (start: number, end: number, t: number) =>
     start + (end - start) * t;
 
-  // Initialize Three.js scenes
+  // Initialize Three.js scene
   useEffect(() => {
     if (!sectionRef.current) return;
 
-    const lettersScene = new THREE.Scene();
     const cardsScene = new THREE.Scene();
-    lettersSceneRef.current = lettersScene;
     cardsSceneRef.current = cardsScene;
 
-    const createCamera = () =>
-      new THREE.PerspectiveCamera(
-        50,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        1000,
-      );
-
-    const lettersCamera = createCamera();
-    const cardsCamera = createCamera();
-    lettersCameraRef.current = lettersCamera;
+    const cardsCamera = new THREE.PerspectiveCamera(
+      50,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000,
+    );
+    cardsCamera.position.setZ(20);
     cardsCameraRef.current = cardsCamera;
-
-    const lettersRenderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-    });
-    lettersRenderer.setSize(window.innerWidth, window.innerHeight);
-    lettersRenderer.setClearColor(0x000000, 0);
-    lettersRenderer.setPixelRatio(window.devicePixelRatio);
-    lettersRenderer.domElement.id = 'letters-canvas';
-    lettersRendererRef.current = lettersRenderer;
 
     const cardsRenderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -106,74 +73,10 @@ const ProjectsSectionMobile = ({
     cardsRenderer.domElement.id = 'cards-canvas';
     cardsRendererRef.current = cardsRenderer;
 
-    sectionRef.current.appendChild(lettersRenderer.domElement);
     sectionRef.current.appendChild(cardsRenderer.domElement);
 
-    [lettersCamera, cardsCamera].forEach((camera) => camera.position.setZ(20));
-
-    // Create text animation paths
-    const createTextAnimationPath = (yPos: number, amplitude: number) => {
-      const points: THREE.Vector3[] = [];
-      for (let i = 0; i <= 20; i++) {
-        const t = i / 20;
-        points.push(
-          new THREE.Vector3(
-            -25 + 50 * t,
-            yPos + Math.sin(t * Math.PI) * -amplitude,
-            (1 - Math.pow(Math.abs(t - 0.5) * 2, 2)) * -5,
-          ),
-        );
-      }
-      const curve = new THREE.CatmullRomCurve3(points);
-      const line = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(curve.getPoints(100)),
-        new THREE.LineBasicMaterial({
-          color: 0x000,
-          linewidth: 1,
-          transparent: true,
-          opacity: 0,
-        }),
-      ) as PathLine;
-      line.curve = curve;
-      line.visible = false; // Hide the path visually but keep curve for calculations
-      return line;
-    };
-
-    const paths = [
-      createTextAnimationPath(10, 2),
-      createTextAnimationPath(3.5, 1),
-      createTextAnimationPath(-3.5, -1),
-      createTextAnimationPath(-10, -2),
-    ];
-    paths.forEach((line) => lettersScene.add(line));
-    pathsRef.current = paths;
-
-    // Create letter elements
-    if (textContainerRef.current) {
-      const letterPositions = new Map<
-        HTMLElement,
-        { current: { x: number; y: number }; target: { x: number; y: number } }
-      >();
-      paths.forEach((line, i) => {
-        line.letterElements = Array.from({ length: 15 }, () => {
-          const el = document.createElement('div');
-          el.className = 'letter';
-          el.textContent = ['W', 'O', 'R', 'K'][i];
-          textContainerRef.current?.appendChild(el);
-          letterPositions.set(el, {
-            current: { x: 0, y: 0 },
-            target: { x: 0, y: 0 },
-          });
-          return el;
-        });
-      });
-      letterPositionsRef.current = letterPositions;
-    }
-
     return () => {
-      lettersRenderer.dispose();
       cardsRenderer.dispose();
-      lettersScene.clear();
       cardsScene.clear();
     };
   }, []);
@@ -389,6 +292,9 @@ const ProjectsSectionMobile = ({
           totalProgressNeeded,
         );
 
+        // Track which card is currently active (centered and clickable)
+        let newActiveCardIndex: number | null = null;
+
         meshes.forEach((mesh, index) => {
           const points = particles[index];
           const particleData = cardParticlePositionsRef.current[index];
@@ -461,6 +367,10 @@ const ProjectsSectionMobile = ({
             }
             particleData.positions.needsUpdate = true;
             points.geometry.attributes.opacity.needsUpdate = true;
+            // Card is active when it's past halfway to center (more visible)
+            if (moveProgress > 0.5) {
+              newActiveCardIndex = index;
+            }
           } else {
             // Fade phase: stay at center, switch to particles and scatter
             const fadeProgress =
@@ -495,8 +405,16 @@ const ProjectsSectionMobile = ({
             }
             particleData.positions.needsUpdate = true;
             points.geometry.attributes.opacity.needsUpdate = true;
+            // Card is active during fade phase (at center, before fully scattered)
+            if (fadeProgress < 0.8) {
+              // Active until 80% of fade phase (before too scattered)
+              newActiveCardIndex = index;
+            }
           }
         });
+
+        // Update active card index
+        setActiveCardIndex(newActiveCardIndex);
       };
 
       updateCardsAnimationRef.current = updateCardsAnimation;
@@ -531,108 +449,9 @@ const ProjectsSectionMobile = ({
     };
   }, [projects]);
 
-  // Grid canvas setup
-  useEffect(() => {
-    const gridCanvas = gridCanvasRef.current;
-    if (!gridCanvas) return;
-
-    const gridCtx = gridCanvas.getContext('2d');
-    if (!gridCtx) return;
-
-    const resizeGridCanvas = () => {
-      const dpr = window.devicePixelRatio || 1;
-      [gridCanvas.width, gridCanvas.height] = [
-        window.innerWidth * dpr,
-        window.innerHeight * dpr,
-      ];
-      [gridCanvas.style.width, gridCanvas.style.height] = [
-        `${window.innerWidth}px`,
-        `${window.innerHeight}px`,
-      ];
-      gridCtx.scale(dpr, dpr);
-    };
-    resizeGridCanvas();
-
-    const drawGrid = () => {
-      // Clear canvas to transparent (no background, no dots)
-      gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
-    };
-
-    drawGridRef.current = drawGrid;
-    drawGrid();
-
-    const handleResize = () => {
-      resizeGridCanvas();
-      drawGrid();
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
-
   // Animation loop
   useEffect(() => {
-    const updateTargetPositions = (scrollProgress = 0) => {
-      const lineSpeedMultipliers = [0.8, 1, 0.7, 0.9];
-      pathsRef.current.forEach((line, lineIndex) => {
-        const letterElements = line.letterElements || [];
-        letterElements.forEach((element: HTMLElement, i: number) => {
-          const curve = line.curve;
-          if (!curve || !lettersCameraRef.current) return;
-
-          const point = curve.getPoint(
-            (i / 14 + scrollProgress * lineSpeedMultipliers[lineIndex]) % 1,
-          );
-          const vector = point.clone().project(lettersCameraRef.current);
-          const positions = letterPositionsRef.current.get(element);
-          if (positions) {
-            positions.target = {
-              x: (-vector.x * 0.5 + 0.5) * window.innerWidth,
-              y: (-vector.y * 0.5 + 0.5) * window.innerHeight,
-            };
-          }
-        });
-      });
-    };
-
-    const updateLetterPositions = () => {
-      letterPositionsRef.current.forEach((positions, element) => {
-        const distX = positions.target.x - positions.current.x;
-        if (Math.abs(distX) > window.innerWidth * 0.7) {
-          [positions.current.x, positions.current.y] = [
-            positions.target.x,
-            positions.target.y,
-          ];
-        } else {
-          positions.current.x = lerp(
-            positions.current.x,
-            positions.target.x,
-            0.07,
-          );
-          positions.current.y = lerp(
-            positions.current.y,
-            positions.target.y,
-            0.07,
-          );
-        }
-        element.style.transform = `translate(-50%, -50%) translate3d(${positions.current.x}px, ${positions.current.y}px, 0px)`;
-      });
-    };
-
     const animate = () => {
-      updateLetterPositions();
-      if (
-        lettersRendererRef.current &&
-        lettersSceneRef.current &&
-        lettersCameraRef.current
-      ) {
-        lettersRendererRef.current.render(
-          lettersSceneRef.current,
-          lettersCameraRef.current,
-        );
-      }
       if (
         cardsRendererRef.current &&
         cardsSceneRef.current &&
@@ -647,7 +466,6 @@ const ProjectsSectionMobile = ({
     };
 
     animate();
-    updateTargetPositions(0);
 
     return () => {
       if (animationFrameRef.current) {
@@ -669,33 +487,9 @@ const ProjectsSectionMobile = ({
       scrub: 1,
       onUpdate: (self) => {
         const progress = self.progress;
-        if (drawGridRef.current) {
-          drawGridRef.current();
-        }
         if (updateCardsAnimationRef.current) {
           updateCardsAnimationRef.current(progress);
         }
-        // Update letter positions
-        const lineSpeedMultipliers = [0.8, 1, 0.7, 0.9];
-        pathsRef.current.forEach((line, lineIndex) => {
-          const letterElements = line.letterElements || [];
-          letterElements.forEach((element: HTMLElement, i: number) => {
-            const curve = line.curve;
-            if (!curve || !lettersCameraRef.current) return;
-
-            const point = curve.getPoint(
-              (i / 14 + progress * lineSpeedMultipliers[lineIndex]) % 1,
-            );
-            const vector = point.clone().project(lettersCameraRef.current);
-            const positions = letterPositionsRef.current.get(element);
-            if (positions) {
-              positions.target = {
-                x: (-vector.x * 0.5 + 0.5) * window.innerWidth,
-                y: (-vector.y * 0.5 + 0.5) * window.innerHeight,
-              };
-            }
-          });
-        });
       },
     });
 
@@ -709,56 +503,17 @@ const ProjectsSectionMobile = ({
   // Handle resize
   useEffect(() => {
     const handleResize = () => {
-      if (drawGridRef.current) {
-        drawGridRef.current();
+      if (cardsCameraRef.current) {
+        cardsCameraRef.current.aspect = window.innerWidth / window.innerHeight;
+        cardsCameraRef.current.updateProjectionMatrix();
       }
 
-      [lettersCameraRef.current, cardsCameraRef.current].forEach((camera) => {
-        if (camera) {
-          camera.aspect = window.innerWidth / window.innerHeight;
-          camera.updateProjectionMatrix();
-        }
-      });
-
-      [lettersRendererRef.current, cardsRendererRef.current].forEach(
-        (renderer) => {
-          if (renderer) {
-            renderer.setSize(window.innerWidth, window.innerHeight);
-          }
-        },
-      );
-
       if (cardsRendererRef.current) {
+        cardsRendererRef.current.setSize(window.innerWidth, window.innerHeight);
         cardsRendererRef.current.setPixelRatio(
           Math.min(window.devicePixelRatio, 2),
         );
       }
-
-      // Update letter positions
-      const lineSpeedMultipliers = [0.8, 1, 0.7, 0.9];
-      const scrollProgress =
-        ScrollTrigger.getAll().find(
-          (st) => st.vars.trigger === sectionRef.current,
-        )?.progress || 0;
-      pathsRef.current.forEach((line, lineIndex) => {
-        const letterElements = line.letterElements || [];
-        letterElements.forEach((element: HTMLElement, i: number) => {
-          const curve = line.curve;
-          if (!curve || !lettersCameraRef.current) return;
-
-          const point = curve.getPoint(
-            (i / 14 + scrollProgress * lineSpeedMultipliers[lineIndex]) % 1,
-          );
-          const vector = point.clone().project(lettersCameraRef.current);
-          const positions = letterPositionsRef.current.get(element);
-          if (positions) {
-            positions.target = {
-              x: (-vector.x * 0.5 + 0.5) * window.innerWidth,
-              y: (-vector.y * 0.5 + 0.5) * window.innerHeight,
-            };
-          }
-        });
-      });
     };
 
     window.addEventListener('resize', handleResize);
@@ -767,10 +522,33 @@ const ProjectsSectionMobile = ({
     };
   }, []);
 
+  // Get the active project for the overlay link
+  const activeProject =
+    activeCardIndex !== null ? projects[activeCardIndex] : null;
+  const isExternalLink =
+    activeProject?.href && activeProject.href.startsWith('http');
+
   return (
     <section id={sectionId} ref={sectionRef} className="work-section-mobile">
-      <canvas ref={gridCanvasRef} id="grid-canvas" />
-      <div ref={textContainerRef} className="text-container" />
+      {activeProject && (
+        <div className="card-link-overlay">
+          {isExternalLink ? (
+            <a
+              href={activeProject.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="card-link"
+              aria-label={`View project: ${activeProject.title}`}
+            />
+          ) : (
+            <Link
+              to={activeProject.href}
+              className="card-link"
+              aria-label={`View project: ${activeProject.title}`}
+            />
+          )}
+        </div>
+      )}
     </section>
   );
 };
