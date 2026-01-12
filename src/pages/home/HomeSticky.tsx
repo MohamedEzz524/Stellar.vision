@@ -4,7 +4,7 @@ import logoImg from '../../assets/images/logo.png';
 import noiseImg from '../../assets/images/noise.webp';
 import globalImage from '../../assets/images/global.webp';
 import ScrollProgress from '../../components/ScrollProgress';
-import Calendar from '../../components/CalendarTemp';
+import Calendar from '../../components/Calendar';
 import { autoRotateTexts } from '../../constants';
 
 const HomeSticky = () => {
@@ -39,7 +39,6 @@ const HomeSticky = () => {
           }}
         />
       </div>
-
       {/* Right border container - fills corner, inner div has border */}
       <div
         className="bg-bgPrimary absolute top-0 right-0 bottom-0"
@@ -54,7 +53,6 @@ const HomeSticky = () => {
           }}
         />
       </div>
-
       {/* Bottom border container - fills corner, inner div has border */}
       <div
         className="bg-bgPrimary absolute right-0 bottom-0 left-0 grid grid-cols-3 px-8 py-2.5"
@@ -129,7 +127,6 @@ const HomeSticky = () => {
           </div>
         )}
       </div>
-
       {/* Left border container - fills corner, inner div has border */}
       <div
         className="bg-bgPrimary absolute top-0 bottom-0 left-0"
@@ -144,7 +141,6 @@ const HomeSticky = () => {
           }}
         />
       </div>
-
       {/* Noise background - fills space between borders with gradient fade to transparent center */}
       <div
         id="home-sticky-noise"
@@ -208,13 +204,12 @@ const HomeSticky = () => {
           } as React.CSSProperties
         }
       />
-
       {/* Corner SVGs at each intersection where borders connect - positioned more inside */}
       {/* Top-left corner - faces outward from top-left */}
       <img
         src={cornerSvg}
         alt=""
-        className="absolute max-lg:z-10"
+        className="corner-svg absolute max-lg:z-10"
         style={{
           left: `${isLg ? topLeft - borderWidth / 20 : topLeft - borderWidth / 3}px`,
           top: `${isLg ? leftTop - borderWidth / 80 : leftTop - borderWidth + 67.5}px`,
@@ -223,12 +218,11 @@ const HomeSticky = () => {
           transform: 'rotate(180deg)',
         }}
       />
-
       {/* Top-right corner - faces outward from top-right */}
       <img
         src={cornerSvg}
         alt=""
-        className="absolute"
+        className="corner-svg absolute"
         style={{
           right: `${isLg ? topRight - borderWidth / 20 : topRight - borderWidth / 4}px`,
           top: `${leftTop - borderWidth / 80}px`,
@@ -237,12 +231,11 @@ const HomeSticky = () => {
           transform: 'rotate(-90deg)',
         }}
       />
-
       {/* Bottom-left corner - faces outward from bottom-left */}
       <img
         src={cornerSvg}
         alt=""
-        className="absolute"
+        className="corner-svg absolute"
         style={{
           left: `${isLg ? topLeft - borderWidth / 20 : topLeft - borderWidth / 3}px`,
           bottom: `${isLg ? leftBottom - borderWidth / 150 : leftBottom - borderWidth / 7 + 1}px`,
@@ -251,12 +244,11 @@ const HomeSticky = () => {
           transform: 'rotate(90deg)',
         }}
       />
-
       {/* Bottom-right corner - faces outward from bottom-right */}
       <img
         src={cornerSvg}
         alt=""
-        className="absolute"
+        className="corner-svg absolute"
         style={{
           right: `${isLg ? topRight - borderWidth / 20 : topRight - borderWidth / 4}px`,
           bottom: `${isLg ? leftBottom - borderWidth / 150 : leftBottom - borderWidth / 7 + 1}px`,
@@ -265,7 +257,6 @@ const HomeSticky = () => {
           transform: 'rotate(0deg)',
         }}
       />
-
       {/* Logo at top center */}
       <div
         className="bg-bgPrimary absolute left-0 z-3 flex w-38 translate-x-[4px] items-center justify-center border-1 border-white border-t-transparent max-lg:border-l-0 lg:left-1/2 lg:w-48 lg:-translate-x-1/2 lg:border-[3px]"
@@ -285,7 +276,7 @@ const HomeSticky = () => {
         <img
           src={cornerSvg}
           alt=""
-          className="absolute hidden lg:block"
+          className="corner-svg absolute hidden lg:block"
           style={{
             left: `${-borderWidth + 1}px`,
             top: `${-borderWidth / 80}px`,
@@ -299,7 +290,7 @@ const HomeSticky = () => {
         <img
           src={cornerSvg}
           alt=""
-          className="absolute"
+          className="corner-svg absolute"
           style={{
             right: `${-borderWidth + 1 + (isLg ? 0 : -26)}px`,
             top: `${-borderWidth / 80 + (isLg ? 0 : -1)}px`,
@@ -313,7 +304,7 @@ const HomeSticky = () => {
         <img
           src={cornerSvg}
           alt=""
-          className="absolute hidden lg:block"
+          className="corner-svg absolute hidden lg:block"
           style={{
             left: `${-borderWidth / 13}px`,
             bottom: `${-borderWidth / 20}px`,
@@ -327,7 +318,7 @@ const HomeSticky = () => {
         <img
           src={cornerSvg}
           alt=""
-          className="absolute -z-2"
+          className="corner-svg absolute -z-2"
           style={{
             right: `${-borderWidth / 20 + (isLg ? 0 : -1.1)}px`,
             bottom: `${-borderWidth / 13 + (isLg ? 0 : -0.8)}px`,
@@ -337,7 +328,6 @@ const HomeSticky = () => {
           }}
         />
       </div>
-
       <Calendar />
     </section>
   );

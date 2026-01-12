@@ -94,12 +94,16 @@ export const playRevealAnimation = (): (() => void) => {
     gsap.set(bottomRight, { x: '100%' });
   }
   if (heroImage) {
+    // Ensure hero image is visible when reveal starts
+    gsap.set(heroImage, {
+      opacity: 1,
+      visibility: 'visible',
+      pointerEvents: 'auto',
+    });
+
     if (model3DRef?.current) {
-      // TODO: For 3D model: keep container fixed size and centered, animate model scale instead
-      // gsap.set(heroImage, {
-      //   width: isDesktop ? '10%' : '10vw',
-      //   x: '-50%', // Center horizontally
-      // });
+      // For 3D model: keep container fixed size and centered, animate model scale instead
+      // Initial state is already set in component
     } else {
       // For image: set initial state with transform
       gsap.set(heroImage, {

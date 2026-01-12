@@ -42,6 +42,7 @@ const ProjectsSectionMobile = ({
   const updateCardsAnimationRef = useRef<((progress: number) => void) | null>(
     null,
   );
+  const activeCardIndexRef = useRef<number | null>(null);
   const [activeCardIndex, setActiveCardIndex] = useState<number | null>(null);
 
   const lerp = (start: number, end: number, t: number) =>
@@ -55,11 +56,11 @@ const ProjectsSectionMobile = ({
     cardsSceneRef.current = cardsScene;
 
     const cardsCamera = new THREE.PerspectiveCamera(
-      50,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000,
-    );
+        50,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000,
+      );
     cardsCamera.position.setZ(20);
     cardsCameraRef.current = cardsCamera;
 
@@ -413,8 +414,11 @@ const ProjectsSectionMobile = ({
           }
         });
 
-        // Update active card index
-        setActiveCardIndex(newActiveCardIndex);
+        // Update active card index only if it changed
+        if (activeCardIndexRef.current !== newActiveCardIndex) {
+          activeCardIndexRef.current = newActiveCardIndex;
+          setActiveCardIndex(newActiveCardIndex);
+        }
       };
 
       updateCardsAnimationRef.current = updateCardsAnimation;
@@ -506,7 +510,7 @@ const ProjectsSectionMobile = ({
       if (cardsCameraRef.current) {
         cardsCameraRef.current.aspect = window.innerWidth / window.innerHeight;
         cardsCameraRef.current.updateProjectionMatrix();
-      }
+          }
 
       if (cardsRendererRef.current) {
         cardsRendererRef.current.setSize(window.innerWidth, window.innerHeight);

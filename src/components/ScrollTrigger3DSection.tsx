@@ -1,17 +1,17 @@
-import { useRef, useEffect, useState } from 'react';
-import { Canvas, useLoader } from '@react-three/fiber';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-import { Mesh, Group } from 'three';
+import { useRef, useEffect, useState, useCallback } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { Mesh, Group, Object3D } from 'three';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
-import starModelUrl from '../assets/models/star.obj?url';
-// import ikeaModelUrl from '../assets/models/ikea.obj?url';
+import rockModelUrl from '../assets/models/rock2.compressed.glb?url';
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
 
 interface Model3DProps {
-  modelUrl: string;
+  scene: Object3D | null;
   position: [number, number, number];
   rotation?: [number, number, number];
   scale?: number;
@@ -19,28 +19,45 @@ interface Model3DProps {
 }
 
 const Model3D = ({
-  modelUrl,
+  scene,
   position,
   rotation = [0, 0, 0],
   scale = 1,
   onModelReady,
 }: Model3DProps) => {
   const groupRef = useRef<Group>(null);
-  const meshRef = useRef<Mesh>(null);
-  const obj = useLoader(OBJLoader, modelUrl);
+  const clonedSceneRef = useRef<Object3D | null>(null);
+  const onModelReadyRef = useRef(onModelReady);
+
+  // Keep callback ref updated without causing re-renders
+  useEffect(() => {
+    onModelReadyRef.current = onModelReady;
+  }, [onModelReady]);
 
   useEffect(() => {
-    if (obj && groupRef.current) {
-      const clonedObj = obj.clone();
+    if (scene && groupRef.current) {
+      // Dispose previous clone if exists
+      if (clonedSceneRef.current) {
+        clonedSceneRef.current.traverse((child) => {
+          if (child instanceof Mesh) {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((mat) => mat.dispose());
+              } else {
+                child.material.dispose();
+              }
+            }
+          }
+        });
+        groupRef.current.remove(clonedSceneRef.current);
+      }
 
-      clonedObj.traverse((child) => {
-        if (child instanceof Mesh) {
-          meshRef.current = child;
-        }
-      });
+      const clonedScene = scene.clone();
+      clonedSceneRef.current = clonedScene;
 
       groupRef.current.clear();
-      groupRef.current.add(clonedObj);
+      groupRef.current.add(clonedScene);
 
       groupRef.current.rotation.x = rotation[0];
       groupRef.current.rotation.y = rotation[1];
@@ -48,11 +65,30 @@ const Model3D = ({
       groupRef.current.scale.set(scale, scale, scale);
       groupRef.current.position.set(position[0], position[1], position[2]);
 
-      if (onModelReady) {
-        onModelReady(groupRef);
+      if (onModelReadyRef.current) {
+        onModelReadyRef.current(groupRef);
       }
     }
-  }, [obj, position, rotation, scale, onModelReady]);
+
+    return () => {
+      // Cleanup on unmount
+      const clonedScene = clonedSceneRef.current;
+      if (clonedScene) {
+        clonedScene.traverse((child: Object3D) => {
+          if (child instanceof Mesh) {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((mat) => mat.dispose());
+              } else {
+                child.material.dispose();
+              }
+            }
+          }
+        });
+      }
+    };
+  }, [scene, position, rotation, scale]);
 
   return <group ref={groupRef} />;
 };
@@ -83,14 +119,74 @@ const ScrollTrigger3DSection = ({
   const scrollTriggerRef = useRef<ScrollTrigger | null>(null);
   const isLazyLoadedRef = useRef<boolean>(false);
   const [isLazyLoaded, setIsLazyLoaded] = useState(false);
+  const [sharedModelScene, setSharedModelScene] = useState<Object3D | null>(
+    null,
+  );
+  const loaderRef = useRef<{
+    loader: GLTFLoader;
+    dracoLoader: DRACOLoader;
+  } | null>(null);
+  const lastUpdateTimeRef = useRef<number>(0);
+  const cachedLineRectsRef = useRef<Map<HTMLElement, DOMRect>>(new Map());
 
-  // Initialize refs for 4 objects
-  for (let i = 0; i < 4; i++) {
-    if (!objectRefs.current[i]) {
-      objectRefs.current[i] = { current: null };
+  // Initialize refs for 4 objects - moved to useEffect to avoid running on every render
+  useEffect(() => {
+    for (let i = 0; i < 4; i++) {
+      if (!objectRefs.current[i]) {
+        objectRefs.current[i] = { current: null };
+      }
+      objectContainerRefs.current[i] = null;
     }
-    objectContainerRefs.current[i] = null;
-  }
+  }, []);
+
+  // Load model once and share across all instances
+  useEffect(() => {
+    if (!isLazyLoaded || sharedModelScene) return;
+
+    const loader = new GLTFLoader();
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+    loader.setDRACOLoader(dracoLoader);
+    loaderRef.current = { loader, dracoLoader };
+
+    loader.load(
+      rockModelUrl,
+      (loadedGltf) => {
+        setSharedModelScene(loadedGltf.scene);
+      },
+      undefined,
+      (error) => {
+        console.error('Error loading GLB model:', error);
+      },
+    );
+
+    return () => {
+      if (loaderRef.current) {
+        loaderRef.current.dracoLoader.dispose();
+        loaderRef.current = null;
+      }
+    };
+  }, [isLazyLoaded, sharedModelScene]);
+
+  // Cleanup shared scene on unmount
+  useEffect(() => {
+    return () => {
+      if (sharedModelScene) {
+        sharedModelScene.traverse((child: Object3D) => {
+          if (child instanceof Mesh) {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((mat) => mat.dispose());
+              } else {
+                child.material.dispose();
+              }
+            }
+          }
+        });
+      }
+    };
+  }, [sharedModelScene]);
 
   // Lazy load: Intersection Observer to detect when section is approaching viewport
   useEffect(() => {
@@ -136,6 +232,7 @@ const ScrollTrigger3DSection = ({
     const section = sectionRef.current;
     const textTrack = textTrackRef.current;
     const textContainer = textContainerRef.current;
+    const cachedRects = cachedLineRectsRef.current;
 
     // Split text into lines using SplitText
     const splitTextIntoLines = () => {
@@ -230,10 +327,10 @@ const ScrollTrigger3DSection = ({
       if (scrollTriggerRef.current) {
         return scrollTriggerRef.current;
       }
-    
-    // Measure actual track height from content (text is relative, not absolute)
-    const trackHeight =
-      textContainer.scrollHeight || textContainer.offsetHeight;
+
+      // Measure actual track height from content (text is relative, not absolute)
+      const trackHeight =
+        textContainer.scrollHeight || textContainer.offsetHeight;
 
       // Single ScrollTrigger at top top
       // Initial state:
@@ -256,6 +353,11 @@ const ScrollTrigger3DSection = ({
         invalidateOnRefresh: false, // Prevent recalculation on refresh
         anticipatePin: 1, // Smooth pinning transitions
         onUpdate: (self) => {
+          // Throttle updates to ~60fps
+          const now = performance.now();
+          if (now - lastUpdateTimeRef.current < 16) return; // ~60fps
+          lastUpdateTimeRef.current = now;
+
           const progress = self.progress;
           const vhToPx = (vh: number) => (vh * window.innerHeight) / 100;
           const trackStartY = vhToPx(150);
@@ -272,8 +374,18 @@ const ScrollTrigger3DSection = ({
             const viewportCenter = viewportHeight * 0.5; // Center of viewport
             const fadeZone = viewportHeight * 0.4; // 30vh fade zone
 
+            // Cache getBoundingClientRect calls - only update every few frames
+            const shouldUpdateRects = Math.floor(progress * 100) % 3 === 0;
+
             lineElementsRef.current.forEach((line) => {
-              const lineRect = line.getBoundingClientRect();
+              let lineRect: DOMRect;
+              if (shouldUpdateRects || !cachedRects.has(line)) {
+                lineRect = line.getBoundingClientRect();
+                cachedRects.set(line, lineRect);
+              } else {
+                lineRect = cachedRects.get(line)!;
+              }
+
               const lineCenter = lineRect.top + lineRect.height * 0.5;
 
               // Calculate distance from line center to viewport center
@@ -288,13 +400,13 @@ const ScrollTrigger3DSection = ({
               } else if (distanceFromCenter < 0) {
                 // Between 30vh below center and center: fade in from 0 to 1
                 // Linear interpolation: map [-fadeZone, 0] to [0, 1]
-                const progress = (distanceFromCenter + fadeZone) / fadeZone;
-                opacity = Math.max(0, Math.min(1, progress));
+                const fadeProgress = (distanceFromCenter + fadeZone) / fadeZone;
+                opacity = Math.max(0, Math.min(1, fadeProgress));
               } else if (distanceFromCenter <= fadeZone) {
                 // Between center and 30vh above center: fade out from 1 to 0
                 // Linear interpolation: map [0, fadeZone] to [1, 0]
-                const progress = distanceFromCenter / fadeZone;
-                opacity = Math.max(0, Math.min(1, 1 - progress));
+                const fadeProgress = distanceFromCenter / fadeZone;
+                opacity = Math.max(0, Math.min(1, 1 - fadeProgress));
               } else {
                 // More than 30vh above center: opacity 0
                 opacity = 0;
@@ -370,60 +482,60 @@ const ScrollTrigger3DSection = ({
           // Update object containers with top positioning (in pixels, relative to section)
           // Only update if 3D elements are loaded (use ref to avoid stale closure)
           if (isLazyLoadedRef.current) {
-          // Row 1 objects (indices 0 and 1)
-          // Object 0: add static offset down by 200% of its height
-          if (objectContainerRefs.current[0]) {
-            const container0Height =
-              objectContainerRefs.current[0].offsetHeight;
-            const offset0 = (container0Height * 100) / 100; // 100% of height (down)
-            gsap.set(objectContainerRefs.current[0], {
-              top: `${row1CurrentTop + offset0}px`,
-              y: '0px',
-            });
-          }
-          // Object 1: normal position
-          if (objectContainerRefs.current[1]) {
-            gsap.set(objectContainerRefs.current[1], {
-              top: `${row1CurrentTop}px`,
-              y: '0px',
-            });
-          }
-
-          // Row 2 objects (indices 2 and 3)
-          // Object 2: normal position
-          if (objectContainerRefs.current[2]) {
-            gsap.set(objectContainerRefs.current[2], {
-              top: `${row2CurrentTop}px`,
-              y: '0px',
-            });
-          }
-          // Object 3: add static offset up by 150% of its height
-          if (objectContainerRefs.current[3]) {
-            const container3Height =
-              objectContainerRefs.current[3].offsetHeight;
-            const offset3 = (container3Height * -150) / 100; // -150% of height (up)
-            gsap.set(objectContainerRefs.current[3], {
-              top: `${row2CurrentTop + offset3}px`,
-              y: '0px',
-            });
-          }
-
-          // Rotation: rotate on x and y axis (faster rotation)
-          const rotationSpeed = 3; // Multiplier for rotation speed
-          const maxRotationX = Math.PI; // 90 degrees
-          const maxRotationY = Math.PI; // 90 degrees
-          const rotationX = maxRotationX * progress * rotationSpeed;
-          const rotationY = maxRotationY * progress * rotationSpeed;
-
-          // Update each 3D object rotation only
-          objectRefs.current.forEach((objRef) => {
-            if (objRef.current) {
-              // Rotate
-              objRef.current.rotation.x = -Math.PI / 2 + rotationX; // Add base rotation
-              objRef.current.rotation.y = rotationY;
-              objRef.current.rotation.z = 0;
+            // Row 1 objects (indices 0 and 1)
+            // Object 0: add static offset down by 200% of its height
+            if (objectContainerRefs.current[0]) {
+              const container0Height =
+                objectContainerRefs.current[0].offsetHeight;
+              const offset0 = (container0Height * 100) / 100; // 100% of height (down)
+              gsap.set(objectContainerRefs.current[0], {
+                top: `${row1CurrentTop + offset0}px`,
+                y: '0px',
+              });
             }
-          });
+            // Object 1: normal position
+            if (objectContainerRefs.current[1]) {
+              gsap.set(objectContainerRefs.current[1], {
+                top: `${row1CurrentTop}px`,
+                y: '0px',
+              });
+            }
+
+            // Row 2 objects (indices 2 and 3)
+            // Object 2: normal position
+            if (objectContainerRefs.current[2]) {
+              gsap.set(objectContainerRefs.current[2], {
+                top: `${row2CurrentTop}px`,
+                y: '0px',
+              });
+            }
+            // Object 3: add static offset up by 150% of its height
+            if (objectContainerRefs.current[3]) {
+              const container3Height =
+                objectContainerRefs.current[3].offsetHeight;
+              const offset3 = (container3Height * -150) / 100; // -150% of height (up)
+              gsap.set(objectContainerRefs.current[3], {
+                top: `${row2CurrentTop + offset3}px`,
+                y: '0px',
+              });
+            }
+
+            // Rotation: rotate on x and y axis (faster rotation)
+            const rotationSpeed = 3; // Multiplier for rotation speed
+            const maxRotationX = Math.PI; // 90 degrees
+            const maxRotationY = Math.PI; // 90 degrees
+            const rotationX = maxRotationX * progress * rotationSpeed;
+            const rotationY = maxRotationY * progress * rotationSpeed;
+
+            // Update each 3D object rotation only
+            objectRefs.current.forEach((objRef) => {
+              if (objRef.current) {
+                // Rotate
+                objRef.current.rotation.x = -Math.PI / 2 + rotationX; // Add base rotation
+                objRef.current.rotation.y = rotationY;
+                objRef.current.rotation.z = 0;
+              }
+            });
           }
         },
       });
@@ -446,8 +558,40 @@ const ScrollTrigger3DSection = ({
       splitInstancesRef.current = [];
       lineElementsRef.current = [];
       textElementsRef.current = [];
+      if (cachedRects) {
+        cachedRects.clear();
+      }
     };
   }, [texts, objectAnimationStartVh]); // Removed isLazyLoaded to prevent re-initialization
+
+  // Memoize callbacks to prevent re-renders
+  const handleModelReady0 = useCallback(
+    (ref: React.RefObject<Group | null>) => {
+      objectRefs.current[0] = ref;
+    },
+    [],
+  );
+
+  const handleModelReady1 = useCallback(
+    (ref: React.RefObject<Group | null>) => {
+      objectRefs.current[1] = ref;
+    },
+    [],
+  );
+
+  const handleModelReady2 = useCallback(
+    (ref: React.RefObject<Group | null>) => {
+      objectRefs.current[2] = ref;
+    },
+    [],
+  );
+
+  const handleModelReady3 = useCallback(
+    (ref: React.RefObject<Group | null>) => {
+      objectRefs.current[3] = ref;
+    },
+    [],
+  );
 
   return (
     <section
@@ -477,13 +621,11 @@ const ScrollTrigger3DSection = ({
                 <directionalLight position={[5, 5, 5]} intensity={1} />
                 <pointLight position={[-5, -5, -5]} intensity={0.5} />
                 <Model3D
-                  modelUrl={starModelUrl}
+                  scene={sharedModelScene}
                   position={[0, 0, 0]}
                   rotation={[-Math.PI / 2, 0, 0]}
-                  scale={0.15}
-                  onModelReady={(ref) => {
-                    objectRefs.current[0] = ref;
-                  }}
+                  scale={0.8}
+                  onModelReady={handleModelReady0}
                 />
               </Canvas>
             </div>
@@ -504,13 +646,11 @@ const ScrollTrigger3DSection = ({
                 <directionalLight position={[5, 5, 5]} intensity={1} />
                 <pointLight position={[-5, -5, -5]} intensity={0.5} />
                 <Model3D
-                  modelUrl={starModelUrl}
+                  scene={sharedModelScene}
                   position={[0, -2, 0]}
                   rotation={[-Math.PI / 2, 0, 0]}
-                  scale={0.15}
-                  onModelReady={(ref) => {
-                    objectRefs.current[1] = ref;
-                  }}
+                  scale={0.9}
+                  onModelReady={handleModelReady1}
                 />
               </Canvas>
             </div>
@@ -532,13 +672,11 @@ const ScrollTrigger3DSection = ({
                 <directionalLight position={[5, 5, 5]} intensity={1} />
                 <pointLight position={[-5, -5, -5]} intensity={0.5} />
                 <Model3D
-                  modelUrl={starModelUrl}
+                  scene={sharedModelScene}
                   position={[0, 0, 0]}
                   rotation={[-Math.PI / 2, 0, 0]}
-                  scale={0.15}
-                  onModelReady={(ref) => {
-                    objectRefs.current[2] = ref;
-                  }}
+                  scale={0.85}
+                  onModelReady={handleModelReady2}
                 />
               </Canvas>
             </div>
@@ -559,13 +697,11 @@ const ScrollTrigger3DSection = ({
                 <directionalLight position={[5, 5, 5]} intensity={1} />
                 <pointLight position={[-5, -5, -5]} intensity={0.5} />
                 <Model3D
-                  modelUrl={starModelUrl}
+                  scene={sharedModelScene}
                   position={[0, -2, 0]}
                   rotation={[-Math.PI / 2, 0, 0]}
-                  scale={0.15}
-                  onModelReady={(ref) => {
-                    objectRefs.current[3] = ref;
-                  }}
+                  scale={0.75}
+                  onModelReady={handleModelReady3}
                 />
               </Canvas>
             </div>

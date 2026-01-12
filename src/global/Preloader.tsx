@@ -64,21 +64,52 @@ const Preloader = () => {
     setState((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  // Get left and right half divs from the first preloader
+  // Get left and right half divs from the first preloader and set initial position
   useEffect(() => {
-    if (
-      state.firstPreloaderVisible &&
-      firstPreloaderRef.current &&
-      (!leftHalfGroupRef.current || !rightHalfGroupRef.current)
-    ) {
-      leftHalfGroupRef.current = firstPreloaderRef.current.querySelector(
-        '#left-half-group',
-      ) as HTMLDivElement;
-      rightHalfGroupRef.current = firstPreloaderRef.current.querySelector(
-        '#right-half-group',
-      ) as HTMLDivElement;
-    }
-  }, [state.firstPreloaderVisible]);
+    // Use a small delay to ensure refs are attached
+    const checkRefs = () => {
+      if (firstPreloaderRef.current) {
+        const leftHalf = firstPreloaderRef.current.querySelector(
+          '#left-half-group',
+        ) as HTMLDivElement;
+        const rightHalf = firstPreloaderRef.current.querySelector(
+          '#right-half-group',
+        ) as HTMLDivElement;
+
+        if (
+          leftHalf &&
+          rightHalf &&
+          (!leftHalfGroupRef.current || !rightHalfGroupRef.current)
+        ) {
+          leftHalfGroupRef.current = leftHalf;
+          rightHalfGroupRef.current = rightHalf;
+
+          // Set initial position immediately, even before visibility
+          // This prevents any jump when the element becomes visible
+          gsap.set(leftHalf, {
+            x: 100,
+            immediateRender: true,
+            force3D: true,
+          });
+          gsap.set(rightHalf, {
+            x: -100,
+            immediateRender: true,
+            force3D: true,
+          });
+        }
+      }
+    };
+
+    // Check immediately
+    checkRefs();
+
+    // Also check after a short delay to catch late-rendered elements
+    const timeoutId = setTimeout(checkRefs, 50);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, []); // Run once on mount
 
   // Get all <g> elements from the second preloader SVG and cache sorted order
   useEffect(() => {
@@ -111,156 +142,246 @@ const Preloader = () => {
     }
   }, [state.secondPreloaderVisible]);
 
-  // Animation sequence using GSAP timeline
+  // Wait for DOM to be ready before starting animation
   useEffect(() => {
-    const tl = gsap.timeline();
-    mainTimelineRef.current = tl;
+    // Ensure DOM is fully loaded and refs are available
+    const startAnimation = () => {
+      // Double-check that refs are available
+      if (!firstPreloaderRef.current) {
+        // Retry after a short delay if refs aren't ready
+        setTimeout(startAnimation, 50);
+        return;
+      }
 
-    // Step 1: First preloader fades in
-    tl.to({}, { duration: TIMINGS.INITIAL_DELAY })
-      .call(() => updateState({ firstPreloaderVisible: true }))
-      .to({}, { duration: 0.1 }) // Small delay to ensure refs are ready
-      .call(() => {
-        const leftHalf = leftHalfGroupRef.current;
-        const rightHalf = rightHalfGroupRef.current;
-        if (leftHalf && rightHalf) {
-          // Step 1: Start with groups close together (shifted inward on X-axis)
-          // Left half shifts right (positive X), right half shifts left (negative X)
-          gsap.set(leftHalf, {
-            x: 100, // Shift right toward center
-          });
-          gsap.set(rightHalf, {
-            x: -100, // Shift left toward center
-          });
+      const tl = gsap.timeline();
+      mainTimelineRef.current = tl;
 
-          // Step 2: Expand to default positions (x: 0 for both)
-          gsap.to(leftHalf, {
-            x: 0,
-            duration: 0.6,
-            ease: 'power2.out',
-          });
-          gsap.to(rightHalf, {
-            x: 0,
-            duration: 0.6,
-            ease: 'power2.out',
-          });
-        }
-      })
-      // Step 2: Show second preloader immediately after expansion
-      .call(() => updateState({ secondPreloaderVisible: true }))
-      .to({}, { duration: 0.05 }) // Minimal delay for refs to be ready
-      .call(() => {
-        const elements = gElementsRef.current;
-        const sortedElements = sortedElementsRef.current;
+      // Step 1: First preloader fades in
+      tl.to({}, { duration: TIMINGS.INITIAL_DELAY })
+        .call(() => {
+          // Ensure initial positions are set before making visible
+          const leftHalf = leftHalfGroupRef.current;
+          const rightHalf = rightHalfGroupRef.current;
 
-        if (elements && sortedElements && elements.length > 0) {
-          // Get current timeline time for absolute positioning
-          const startTime = tl.time();
+          if (leftHalf && rightHalf) {
+            // Double-check initial position is set (should already be set in useEffect)
+            gsap.set(leftHalf, {
+              x: 100,
+              immediateRender: true,
+              force3D: true,
+            });
+            gsap.set(rightHalf, {
+              x: -100,
+              immediateRender: true,
+              force3D: true,
+            });
+          }
+        })
+        .call(() => updateState({ firstPreloaderVisible: true }))
+        .to({}, { duration: 0.1 }) // Small delay to ensure visibility transition completes
+        .call(() => {
+          const leftHalf = leftHalfGroupRef.current;
+          const rightHalf = rightHalfGroupRef.current;
 
-          // Fill from left to right with varied timing (not uniform)
-          sortedElements.forEach(({ originalIndex }, i) => {
-            // Vary the delay: base delay + random variation for more organic feel
-            const baseDelay = i * TIMINGS.ELEMENT_FILL_DELAY;
-            // Increased variation: ±50ms to make timing differences more noticeable
-            const randomVariation = (Math.random() - 0.5) * 0.1;
-            const delay = Math.max(0, baseDelay + randomVariation);
-
-            tl.call(
-              () => {
-                const el = elements[originalIndex];
-                if (el) el.setAttribute('opacity', '1');
-              },
-              undefined,
-              startTime + delay,
-            );
-          });
-
-          // Calculate end time with buffer for the random variations
-          const fillEndTime =
-            startTime +
-            sortedElements.length * TIMINGS.ELEMENT_FILL_DELAY +
-            0.15;
-
-          // Hide second preloader elements and close first preloader after fill
-          tl.call(
-            () => {
-              // Hide all second preloader elements efficiently
-              for (let i = 0; i < elements.length; i++) {
-                elements[i].setAttribute('opacity', '0');
-              }
-              updateState({
-                secondPreloaderVisible: false,
-              });
-            },
-            undefined,
-            fillEndTime,
-          )
-            // Shift first preloader groups back together (X-axis only)
-            .call(() => {
+          if (leftHalf && rightHalf) {
+            // Step 2: Expand to default positions (x: 0 for both)
+            gsap.to(leftHalf, {
+              x: 0,
+              duration: 0.6,
+              ease: 'power2.out',
+              force3D: true,
+            });
+            gsap.to(rightHalf, {
+              x: 0,
+              duration: 0.6,
+              ease: 'power2.out',
+              force3D: true,
+            });
+          } else {
+            // If refs still not ready, retry after delay
+            console.warn('Preloader refs not ready, retrying...');
+            setTimeout(() => {
               const leftHalf = leftHalfGroupRef.current;
               const rightHalf = rightHalfGroupRef.current;
               if (leftHalf && rightHalf) {
-                // Shift left half right, right half left (toward center)
-                gsap.to(leftHalf, {
+                gsap.set(leftHalf, {
                   x: 100,
-                  duration: 0.8,
+                  immediateRender: true,
+                  force3D: true,
+                });
+                gsap.set(rightHalf, {
+                  x: -100,
+                  immediateRender: true,
+                  force3D: true,
+                });
+                gsap.to(leftHalf, {
+                  x: 0,
+                  duration: 0.6,
                   ease: 'power2.out',
+                  force3D: true,
                 });
                 gsap.to(rightHalf, {
-                  x: -100,
-                  duration: 0.8,
+                  x: 0,
+                  duration: 0.6,
                   ease: 'power2.out',
+                  force3D: true,
                 });
               }
-            })
-            .to({}, { duration: 0.8 }) // Wait for closing animation
-            // Hide first preloader
-            .call(() => {
-              updateState({
-                firstPreloaderVisible: false,
-              });
-            })
-            // Wait for 3D model to be ready, then start reveal animation
-            .call(() => {
-              updateState({ isRevealing: true });
-              // Wait for 3D model to be loaded before starting reveal animation
-              waitForModel3D(() => {
-                // Trigger reveal animation for hero section
-                revealAnimationCleanupRef.current = playRevealAnimation();
-              });
-            })
-            // Hide preloader after reveal animation
-            .to({}, { duration: TIMINGS.REVEAL_ANIMATION })
-            .call(() => {
-              updateState({ preloaderHidden: true });
+            }, 100);
+          }
+        })
+        // Step 2: Show second preloader immediately after expansion
+        .call(() => updateState({ secondPreloaderVisible: true }))
+        .to({}, { duration: 0.2 }) // Increased delay for refs to be ready
+        .call(() => {
+          // Re-query SVG elements to ensure they're available
+          if (secondPreloaderRef.current && !gElementsRef.current) {
+            const svg = secondPreloaderRef.current.querySelector('svg');
+            if (svg) {
+              const clipPathGroup = svg.querySelector('g[clip-path]');
+              if (clipPathGroup) {
+                const gElements = Array.from(
+                  clipPathGroup.querySelectorAll('g[style*="display: block"]'),
+                ) as SVGGElement[];
+                gElementsRef.current = gElements;
+                sortedElementsRef.current = gElements
+                  .map((el, idx) => {
+                    const transform = el.getAttribute('transform');
+                    const x = getXFromTransform(transform);
+                    return { x, originalIndex: idx };
+                  })
+                  .sort((a, b) => a.x - b.x);
+              }
+            }
+          }
+
+          const elements = gElementsRef.current;
+          const sortedElements = sortedElementsRef.current;
+
+          if (elements && sortedElements && elements.length > 0) {
+            // Get current timeline time for absolute positioning
+            const startTime = tl.time();
+
+            // Fill from left to right with varied timing (not uniform)
+            sortedElements.forEach(({ originalIndex }, i) => {
+              // Vary the delay: base delay + random variation for more organic feel
+              const baseDelay = i * TIMINGS.ELEMENT_FILL_DELAY;
+              // Increased variation: ±50ms to make timing differences more noticeable
+              const randomVariation = (Math.random() - 0.5) * 0.1;
+              const delay = Math.max(0, baseDelay + randomVariation);
+
+              tl.call(
+                () => {
+                  const el = elements[originalIndex];
+                  if (el) el.setAttribute('opacity', '1');
+                },
+                undefined,
+                startTime + delay,
+              );
             });
-        } else {
-          // Fallback: if ref not ready, auto-reveal after delay
-          tl.to({}, { duration: 3 })
-            .call(() => {
-              updateState({
-                firstPreloaderVisible: false,
-                secondPreloaderVisible: false,
+
+            // Calculate end time with buffer for the random variations
+            const fillEndTime =
+              startTime +
+              sortedElements.length * TIMINGS.ELEMENT_FILL_DELAY +
+              0.15;
+
+            // Hide second preloader elements and close first preloader after fill
+            tl.call(
+              () => {
+                // Hide all second preloader elements efficiently
+                for (let i = 0; i < elements.length; i++) {
+                  elements[i].setAttribute('opacity', '0');
+                }
+                updateState({
+                  secondPreloaderVisible: false,
+                });
+              },
+              undefined,
+              fillEndTime,
+            )
+              // Shift first preloader groups back together (X-axis only)
+              .call(() => {
+                const leftHalf = leftHalfGroupRef.current;
+                const rightHalf = rightHalfGroupRef.current;
+                if (leftHalf && rightHalf) {
+                  // Shift left half right, right half left (toward center)
+                  gsap.to(leftHalf, {
+                    x: 100,
+                    duration: 0.8,
+                    ease: 'power2.out',
+                  });
+                  gsap.to(rightHalf, {
+                    x: -100,
+                    duration: 0.8,
+                    ease: 'power2.out',
+                  });
+                }
+              })
+              .to({}, { duration: 0.8 }) // Wait for closing animation
+              // Hide first preloader
+              .call(() => {
+                updateState({
+                  firstPreloaderVisible: false,
+                });
+              })
+              // Wait for 3D model to be ready, then start reveal animation
+              .call(() => {
+                updateState({ isRevealing: true });
+                // Wait for 3D model to be loaded before starting reveal animation
+                waitForModel3D(() => {
+                  // Trigger reveal animation for hero section
+                  revealAnimationCleanupRef.current = playRevealAnimation();
+                });
+              })
+              // Hide preloader after reveal animation
+              .to({}, { duration: TIMINGS.REVEAL_ANIMATION })
+              .call(() => {
+                updateState({ preloaderHidden: true });
               });
-            })
-            .to({}, { duration: TIMINGS.REVEAL_DELAY })
-            .call(() => {
-              updateState({ isRevealing: true });
-              // Wait for 3D model to be loaded before starting reveal animation
-              waitForModel3D(() => {
-                // Trigger reveal animation for hero section
-                revealAnimationCleanupRef.current = playRevealAnimation();
+          } else {
+            // Fallback: if ref not ready, auto-reveal after delay
+            tl.to({}, { duration: 3 })
+              .call(() => {
+                updateState({
+                  firstPreloaderVisible: false,
+                  secondPreloaderVisible: false,
+                });
+              })
+              .to({}, { duration: TIMINGS.REVEAL_DELAY })
+              .call(() => {
+                updateState({ isRevealing: true });
+                // Wait for 3D model to be loaded before starting reveal animation
+                waitForModel3D(() => {
+                  // Trigger reveal animation for hero section
+                  revealAnimationCleanupRef.current = playRevealAnimation();
+                });
+              })
+              .to({}, { duration: TIMINGS.REVEAL_ANIMATION })
+              .call(() => {
+                updateState({ preloaderHidden: true });
               });
-            })
-            .to({}, { duration: TIMINGS.REVEAL_ANIMATION })
-            .call(() => {
-              updateState({ preloaderHidden: true });
-            });
-        }
-      });
+          }
+        });
+    };
+
+    // Wait for DOM to be ready
+    if (
+      document.readyState === 'complete' ||
+      document.readyState === 'interactive'
+    ) {
+      // DOM is already ready, start immediately
+      setTimeout(startAnimation, 100); // Small delay to ensure React has rendered
+    } else {
+      // Wait for DOM to be ready
+      window.addEventListener('load', startAnimation, { once: true });
+      // Also try after a short delay as fallback
+      setTimeout(startAnimation, 500);
+    }
 
     return () => {
       cleanup();
+      window.removeEventListener('load', startAnimation);
     };
   }, [updateState, cleanup]);
 
@@ -349,14 +470,14 @@ const Preloader = () => {
               <div
                 id="left-half-group"
                 className="preloader-half preloader-half-left"
-                    >
+              >
                 <div className="preloader-half-left-line" />
               </div>
               {/* Right Half */}
               <div
                 id="right-half-group"
                 className="preloader-half preloader-half-right"
-                    >
+              >
                 <div className="preloader-half-right-line" />
               </div>
             </div>

@@ -43,7 +43,7 @@ export const ExampleProjects: Project[] = [
     image:
       'https://cdn.prod.website-files.com/64354a08ff4dd191e639373a/66f2853311ed945e147c0089_Frame%201510%20(1)_11zon.webp',
     imageAlt: 'OCTY',
-    href: '/projects/octy',
+    href: 'https://www.facebook.com',
   },
   {
     id: '2',
@@ -53,7 +53,7 @@ export const ExampleProjects: Project[] = [
     image:
       'https://cdn.prod.website-files.com/64354a08ff4dd191e639373a/66ead266ebdc28cf66f30340_Jobcannon%20cover%20(1).webp',
     imageAlt: 'JobCannon',
-    href: '/projects/job-cannon',
+    href: 'https://www.instagram.com',
   },
   {
     id: '3',
@@ -63,7 +63,7 @@ export const ExampleProjects: Project[] = [
     image:
       'https://cdn.prod.website-files.com/64354a08ff4dd191e639373a/66f284e1475d07e10dc89bb8_Frame%201509%20(1)_11zon.webp',
     imageAlt: 'Simply Contact',
-    href: '/projects/simply-contact',
+    href: 'https://twitter.com',
   },
   {
     id: '4',
@@ -73,7 +73,7 @@ export const ExampleProjects: Project[] = [
     image:
       'https://cdn.prod.website-files.com/64354a08ff4dd191e639373a/66f2856f9671a128c8378666_Frame%201511%20(1)_11zon.webp',
     imageAlt: 'Procamp',
-    href: '/projects/procamp',
+    href: 'https://www.facebook.com',
   },
   {
     id: '5',
@@ -83,7 +83,7 @@ export const ExampleProjects: Project[] = [
     image:
       'https://cdn.prod.website-files.com/64354a08ff4dd191e639373a/66c2fb9e3f6522e6210e7a3a_cover-_2_.webp',
     imageAlt: 'EdWay',
-    href: '/projects/edway',
+    href: 'https://www.instagram.com',
   },
   {
     id: '6',
@@ -93,7 +93,7 @@ export const ExampleProjects: Project[] = [
     image:
       'https://cdn.prod.website-files.com/64354a08ff4dd191e639373a/66f286365bc1c2becf13c36e_Frame%201517%20(1)_11zon.webp',
     imageAlt: 'Skylight',
-    href: '/projects/skylight',
+    href: 'https://twitter.com',
   },
   {
     id: '7',
@@ -103,7 +103,7 @@ export const ExampleProjects: Project[] = [
     image:
       'https://cdn.prod.website-files.com/64354a08ff4dd191e639373a/66c8316006aecd15eecf26ea_Umami%20View_Cover_11zon.webp',
     imageAlt: 'Umami View',
-    href: '/projects/umami-view',
+    href: 'https://www.facebook.com',
   },
   {
     id: '8',
@@ -113,7 +113,7 @@ export const ExampleProjects: Project[] = [
     image:
       'https://cdn.prod.website-files.com/64354a08ff4dd191e639373a/66f285a933ecbaddd339f8d7_Frame%201513%20(1)_11zon.webp',
     imageAlt: 'Sirius',
-    href: '/projects/sirius',
+    href: 'https://www.instagram.com',
   },
   {
     id: '9',
@@ -123,7 +123,7 @@ export const ExampleProjects: Project[] = [
     image:
       'https://cdn.prod.website-files.com/64354a08ff4dd191e639373a/66d011782515a06c63c254f0_SOTD%20(1)_11zon.webp',
     imageAlt: '#30ua',
-    href: '/projects/30ua',
+    href: 'https://twitter.com',
   },
   {
     id: '10',
@@ -133,7 +133,7 @@ export const ExampleProjects: Project[] = [
     image:
       'https://cdn.prod.website-files.com/64354a08ff4dd191e639373a/66f284a75d1667682e1d417a_Frame%201388%20(1)_11zon.webp',
     imageAlt: 'Crocs Club',
-    href: '/projects/crocs-club',
+    href: 'https://www.facebook.com',
   },
   {
     id: '11',
@@ -143,6 +143,6 @@ export const ExampleProjects: Project[] = [
     image:
       'https://cdn.prod.website-files.com/64354a08ff4dd191e639373a/66f284a75d1667682e1d417a_Frame%201388%20(1)_11zon.webp',
     imageAlt: 'Crocs Club',
-    href: '/projects/crocs-club',
+    href: 'https://www.instagram.com',
   },
 ];

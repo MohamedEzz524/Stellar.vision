@@ -3,12 +3,16 @@ import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FlakesTexture } from '../assets/js/FlakesTexture';
 import { gsap } from 'gsap';
 import { registerModel3DRef, getModel3DRef } from '../utils/revealAnimation';
 import starModelUrl from '../assets/models/starr.glb?url';
-import hdrTextureUrl from '../assets/texture/hdr.jpeg?url';
+import hdrTextureUrl from '../assets/texture/citrus_orchard_road_puresky_1k.hdr?url';
+
+// HDR rotation on Y-axis: 0.0 = 0°, 0.25 = 90°, 0.5 = 180°, 0.75 = 270°
+const HDR_ROTATION_Y = 0.25; // Adjust this value to rotate the HDR environment
 
 interface Hero3DModelProps {
   onModelReady?: (modelRef: React.RefObject<THREE.Group | null>) => void;
@@ -21,6 +25,12 @@ const StarModel = ({
 }) => {
   const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
+  const clonedObjRef = useRef<THREE.Object3D | null>(null);
+  const loaderRef = useRef<{
+    loader: GLTFLoader;
+    dracoLoader: DRACOLoader;
+  } | null>(null);
+  const materialReadyRef = useRef(false);
   const { gl, scene } = useThree();
   const [envMap, setEnvMap] = useState<THREE.Texture | null>(null);
   const [materialReady, setMaterialReady] = useState(false);
@@ -32,6 +42,7 @@ const StarModel = ({
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
     loader.setDRACOLoader(dracoLoader);
+    loaderRef.current = { loader, dracoLoader };
 
     loader.load(
       starModelUrl,
@@ -45,39 +56,66 @@ const StarModel = ({
     );
 
     return () => {
-      dracoLoader.dispose();
+      if (loaderRef.current) {
+        loaderRef.current.dracoLoader.dispose();
+        loaderRef.current = null;
+      }
     };
   }, []);
 
   // Load HDR texture and set as scene environment for IBL lighting
   useEffect(() => {
-    const loader = new THREE.TextureLoader();
+    console.log('Starting HDR load from:', hdrTextureUrl);
+    const loader = new HDRLoader();
 
     loader.load(
       hdrTextureUrl,
-      (texture: THREE.Texture) => {
+      (texture: THREE.DataTexture) => {
+        console.log('HDR texture loaded:', {
+          width: texture.image?.width,
+          height: texture.image?.height,
+          type: texture.type,
+          format: texture.format,
+        });
+
+        // RGBELoader already sets the correct mapping for HDR
         texture.mapping = THREE.EquirectangularReflectionMapping;
         texture.flipY = false;
         // Rotate HDRI on Y axis (horizontal offset for equirectangular)
         texture.wrapS = THREE.RepeatWrapping;
-        texture.offset.x = 0.25; // 90 degrees = 0.25 * 360 degrees (adjustable)
+        texture.offset.x = HDR_ROTATION_Y; // Rotate HDR on Y-axis
 
         try {
-          // Convert to PMREM for optimized IBL
+          // Convert to PMREM for optimized IBL - this is crucial for proper lighting
+          console.log('Converting to PMREM...');
           const pmremGenerator = new THREE.PMREMGenerator(gl);
+          pmremGenerator.compileEquirectangularShader();
           const envMapResult = pmremGenerator.fromEquirectangular(texture);
           const envMapTexture = envMapResult.texture;
+
+          console.log('PMREM conversion complete:', {
+            envMapType: envMapTexture?.type,
+            envMapFormat: envMapTexture?.format,
+            hasImage: !!envMapTexture?.image,
+          });
 
           // Set as scene environment - provides IBL lighting to all materials
           scene.environment = envMapTexture;
 
-          envMapResult.dispose();
+          // Don't dispose envMapResult - it contains the texture we need
+          // Only dispose the generator and original texture
           pmremGenerator.dispose();
           texture.dispose();
 
           setEnvMap(envMapTexture);
+          console.log('HDR environment map loaded successfully', {
+            hasEnvironment: !!scene.environment,
+            envMapType: envMapTexture?.type,
+            envMapFormat: envMapTexture?.format,
+            sceneHasEnv: !!scene.environment,
+          });
         } catch (pmremError) {
-          console.warn(
+          console.error(
             'PMREM conversion failed, using texture directly:',
             pmremError,
           );
@@ -86,9 +124,18 @@ const StarModel = ({
           setEnvMap(texture);
         }
       },
-      undefined,
+      (progress) => {
+        if (progress.lengthComputable) {
+          const percentComplete = (progress.loaded / progress.total) * 100;
+          console.log(
+            'HDR loading progress:',
+            percentComplete.toFixed(2) + '%',
+          );
+        }
+      },
       (error: unknown) => {
         console.error('Error loading HDR texture:', error);
+        console.error('HDR URL was:', hdrTextureUrl);
       },
     );
   }, [gl, scene]);
@@ -117,8 +164,38 @@ const StarModel = ({
 
   // Apply metallic material to mesh when model and envMap are ready
   useEffect(() => {
-    if (gltf && groupRef.current && envMap && !materialReady) {
+    if (
+      gltf &&
+      groupRef.current &&
+      envMap &&
+      scene.environment &&
+      !materialReady
+    ) {
+      console.log('Creating material with environment map', {
+        hasEnvMap: !!envMap,
+        hasSceneEnv: !!scene.environment,
+        envMapType: envMap?.type,
+      });
+
+      // Dispose previous clone if exists (only if we're re-initializing)
+      if (clonedObjRef.current && groupRef.current) {
+        clonedObjRef.current.traverse((child: THREE.Object3D) => {
+          if (child instanceof THREE.Mesh) {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((mat) => mat.dispose());
+              } else {
+                child.material.dispose();
+              }
+            }
+          }
+        });
+        groupRef.current.remove(clonedObjRef.current);
+      }
+
       const clonedObj = gltf.scene.clone();
+      clonedObjRef.current = clonedObj;
 
       clonedObj.traverse((child: THREE.Object3D) => {
         if (child instanceof THREE.Mesh) {
@@ -133,11 +210,21 @@ const StarModel = ({
             color: 0xffffff,
             normalMap: flakesTexture,
             normalScale: new THREE.Vector2(0.15, 0.15),
-            envMap: scene.environment, // Set envMap directly in constructor
-            envMapIntensity: 12.0, // Environment strength (matching Blender)
+            envMap: scene.environment, // Use scene.environment which is the PMREM texture
+            envMapIntensity: 12, // Slightly reduced to prevent overexposure
           });
 
+          // Explicitly set envMap after creation to ensure it's applied
+          ballMaterial.envMap = scene.environment;
+          ballMaterial.envMapIntensity = 0.4; // Ensure intensity is set
           ballMaterial.needsUpdate = true;
+
+          console.log('Material created', {
+            hasEnvMap: !!ballMaterial.envMap,
+            envMapIntensity: ballMaterial.envMapIntensity,
+            metalness: ballMaterial.metalness,
+            roughness: ballMaterial.roughness,
+          });
 
           (child as THREE.Mesh).material = ballMaterial;
         }
@@ -150,6 +237,7 @@ const StarModel = ({
       groupRef.current.scale.set(0.2, 0.2, 0.5);
 
       setMaterialReady(true);
+      materialReadyRef.current = true;
       registerModel3DRef(groupRef);
       window.dispatchEvent(new CustomEvent('model3DReady'));
 
@@ -157,14 +245,38 @@ const StarModel = ({
         onModelReady(groupRef);
       }
     }
+  }, [gltf, envMap, materialReady, flakesTexture, onModelReady, scene]);
 
+  // Separate cleanup effect that only runs on unmount
+  useEffect(() => {
     return () => {
-      if (materialReady) {
+      // Cleanup cloned object and materials only on unmount
+      const clonedObj = clonedObjRef.current;
+      const group = groupRef.current;
+      const isReady = materialReadyRef.current;
+
+      if (clonedObj && group) {
+        clonedObj.traverse((child: THREE.Object3D) => {
+          if (child instanceof THREE.Mesh) {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((mat) => mat.dispose());
+              } else {
+                child.material.dispose();
+              }
+            }
+          }
+        });
+        group.remove(clonedObj);
+        clonedObjRef.current = null;
+      }
+      if (isReady) {
         registerModel3DRef(undefined);
       }
-      flakesTexture.dispose();
+      // Don't dispose flakesTexture - it's shared and created in useMemo
     };
-  }, [gltf, envMap, materialReady, flakesTexture, onModelReady, scene]);
+  }, []); // Empty deps - only runs on unmount
 
   return <group ref={groupRef} />;
 };
@@ -173,58 +285,31 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
   const groupRef = useRef<THREE.Group>(null);
   const [shouldRenderCanvas, setShouldRenderCanvas] = useState(false);
 
-  // Render Canvas when preloader button is clicked (gives time for model to load)
+  // Render Canvas early so 3D model can load in parallel with preloader
+  // This ensures the model is ready when the preloader finishes
   useEffect(() => {
-    const preloader = document.querySelector('.preloader-container');
-    if (!preloader) {
-      setShouldRenderCanvas(true);
-      return;
-    }
-
-    const handleButtonClick = () => {
+    // Start loading immediately, but hide visually until preloader is done
+    // This allows the model to load in the background
+    const startLoading = () => {
       setShouldRenderCanvas(true);
     };
 
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === 'attributes') {
-          const target = mutation.target as HTMLElement;
-          if (
-            target.getAttribute('style')?.includes('opacity: 0') ||
-            target.classList.contains('opacity-0')
-          ) {
-            handleButtonClick();
-            observer.disconnect();
-            return;
-          }
-        }
-      }
-    });
-
-    const button = document.querySelector(
-      '[data-v-a05bfe24] button, .preloader button',
-    );
-    if (button) {
-      button.addEventListener('click', handleButtonClick, { once: true });
+    // Start loading as soon as DOM is ready
+    if (
+      document.readyState === 'complete' ||
+      document.readyState === 'interactive'
+    ) {
+      // DOM is already ready, start immediately
+      setTimeout(startLoading, 100);
+    } else {
+      // Wait for DOM to be ready
+      window.addEventListener('load', startLoading, { once: true });
+      // Also start after a short delay as fallback
+      setTimeout(startLoading, 300);
     }
 
-    observer.observe(preloader, {
-      attributes: true,
-      attributeFilter: ['style', 'class'],
-      subtree: true,
-    });
-
-    const fallbackTimer = setTimeout(() => {
-      setShouldRenderCanvas(true);
-      observer.disconnect();
-    }, 10000);
-
     return () => {
-      observer.disconnect();
-      clearTimeout(fallbackTimer);
-      if (button) {
-        button.removeEventListener('click', handleButtonClick);
-      }
+      window.removeEventListener('load', startLoading);
     };
   }, []);
 
@@ -378,7 +463,7 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
       // @ts-expect-error - outputEncoding exists in this version of Three.js
       gl.outputEncoding = THREE.sRGBEncoding;
       gl.toneMapping = THREE.ACESFilmicToneMapping;
-      gl.toneMappingExposure = 5.0;
+      gl.toneMappingExposure = 0.2; // Reduced exposure to prevent overexposure
     }, [gl]);
     return null;
   };
@@ -387,6 +472,12 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
     <div
       id="hero-image"
       className="absolute top-1/2 left-1/2 z-10 flex h-[150px] max-h-[500px] w-[120%] max-w-[390px] -translate-x-1/2 -translate-y-[10rem] items-center justify-center lg:h-[100%] lg:max-h-full lg:w-[80%] lg:max-w-full lg:-translate-y-1/2"
+      style={{
+        // Hide visually until preloader is done, but allow loading in background
+        opacity: shouldRenderCanvas ? 1 : 0,
+        visibility: shouldRenderCanvas ? 'visible' : 'hidden',
+        pointerEvents: shouldRenderCanvas ? 'auto' : 'none',
+      }}
     >
       {shouldRenderCanvas && (
         <Canvas
@@ -395,7 +486,7 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
           style={{ width: '100%', height: '100%', maxHeight: '100%' }}
         >
           <RendererConfig />
-          {/* Supplemental lighting - HDR provides main IBL via scene.environment */}
+          {/* Add lights for better visibility - HDR provides main IBL via scene.environment */}
           <StarModel
             onModelReady={(ref) => {
               groupRef.current = ref.current;
