@@ -9,10 +9,17 @@ import { FlakesTexture } from '../assets/js/FlakesTexture';
 import { gsap } from 'gsap';
 import { registerModel3DRef, getModel3DRef } from '../utils/revealAnimation';
 import starModelUrl from '../assets/models/starr.glb?url';
-import hdrTextureUrl from '../assets/texture/citrus_orchard_road_puresky_1k.hdr?url';
 
 // HDR rotation on Y-axis: 0.0 = 0°, 0.25 = 90°, 0.5 = 180°, 0.75 = 270°
 const HDR_ROTATION_Y = 0.25; // Adjust this value to rotate the HDR environment
+
+// Dynamic import for HDR to code-split and reduce bundle size
+const getHdrTextureUrl = async () => {
+  const module = await import(
+    '../assets/texture/citrus_orchard_road_puresky_1k.hdr?url'
+  );
+  return module.default;
+};
 
 interface Hero3DModelProps {
   onModelReady?: (modelRef: React.RefObject<THREE.Group | null>) => void;
@@ -65,79 +72,96 @@ const StarModel = ({
 
   // Load HDR texture and set as scene environment for IBL lighting
   useEffect(() => {
-    console.log('Starting HDR load from:', hdrTextureUrl);
-    const loader = new HDRLoader();
+    let isMounted = true;
 
-    loader.load(
-      hdrTextureUrl,
-      (texture: THREE.DataTexture) => {
-        console.log('HDR texture loaded:', {
-          width: texture.image?.width,
-          height: texture.image?.height,
-          type: texture.type,
-          format: texture.format,
-        });
+    const loadHdr = async () => {
+      try {
+        const hdrTextureUrl = await getHdrTextureUrl();
+        if (!isMounted) return;
 
-        // RGBELoader already sets the correct mapping for HDR
-        texture.mapping = THREE.EquirectangularReflectionMapping;
-        texture.flipY = false;
-        // Rotate HDRI on Y axis (horizontal offset for equirectangular)
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.offset.x = HDR_ROTATION_Y; // Rotate HDR on Y-axis
+        console.log('Starting HDR load from:', hdrTextureUrl);
+        const loader = new HDRLoader();
 
-        try {
-          // Convert to PMREM for optimized IBL - this is crucial for proper lighting
-          console.log('Converting to PMREM...');
-          const pmremGenerator = new THREE.PMREMGenerator(gl);
-          pmremGenerator.compileEquirectangularShader();
-          const envMapResult = pmremGenerator.fromEquirectangular(texture);
-          const envMapTexture = envMapResult.texture;
+        loader.load(
+          hdrTextureUrl,
+          (texture: THREE.DataTexture) => {
+            console.log('HDR texture loaded:', {
+              width: texture.image?.width,
+              height: texture.image?.height,
+              type: texture.type,
+              format: texture.format,
+            });
 
-          console.log('PMREM conversion complete:', {
-            envMapType: envMapTexture?.type,
-            envMapFormat: envMapTexture?.format,
-            hasImage: !!envMapTexture?.image,
-          });
+            // RGBELoader already sets the correct mapping for HDR
+            texture.mapping = THREE.EquirectangularReflectionMapping;
+            texture.flipY = false;
+            // Rotate HDRI on Y axis (horizontal offset for equirectangular)
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.offset.x = HDR_ROTATION_Y; // Rotate HDR on Y-axis
 
-          // Set as scene environment - provides IBL lighting to all materials
-          scene.environment = envMapTexture;
+            try {
+              // Convert to PMREM for optimized IBL - this is crucial for proper lighting
+              console.log('Converting to PMREM...');
+              const pmremGenerator = new THREE.PMREMGenerator(gl);
+              pmremGenerator.compileEquirectangularShader();
+              const envMapResult = pmremGenerator.fromEquirectangular(texture);
+              const envMapTexture = envMapResult.texture;
 
-          // Don't dispose envMapResult - it contains the texture we need
-          // Only dispose the generator and original texture
-          pmremGenerator.dispose();
-          texture.dispose();
+              console.log('PMREM conversion complete:', {
+                envMapType: envMapTexture?.type,
+                envMapFormat: envMapTexture?.format,
+                hasImage: !!envMapTexture?.image,
+              });
 
-          setEnvMap(envMapTexture);
-          console.log('HDR environment map loaded successfully', {
-            hasEnvironment: !!scene.environment,
-            envMapType: envMapTexture?.type,
-            envMapFormat: envMapTexture?.format,
-            sceneHasEnv: !!scene.environment,
-          });
-        } catch (pmremError) {
-          console.error(
-            'PMREM conversion failed, using texture directly:',
-            pmremError,
-          );
-          // Rotation already applied above
-          scene.environment = texture;
-          setEnvMap(texture);
-        }
-      },
-      (progress) => {
-        if (progress.lengthComputable) {
-          const percentComplete = (progress.loaded / progress.total) * 100;
-          console.log(
-            'HDR loading progress:',
-            percentComplete.toFixed(2) + '%',
-          );
-        }
-      },
-      (error: unknown) => {
-        console.error('Error loading HDR texture:', error);
-        console.error('HDR URL was:', hdrTextureUrl);
-      },
-    );
+              // Set as scene environment - provides IBL lighting to all materials
+              scene.environment = envMapTexture;
+
+              // Don't dispose envMapResult - it contains the texture we need
+              // Only dispose the generator and original texture
+              pmremGenerator.dispose();
+              texture.dispose();
+
+              setEnvMap(envMapTexture);
+              console.log('HDR environment map loaded successfully', {
+                hasEnvironment: !!scene.environment,
+                envMapType: envMapTexture?.type,
+                envMapFormat: envMapTexture?.format,
+                sceneHasEnv: !!scene.environment,
+              });
+            } catch (pmremError) {
+              console.error(
+                'PMREM conversion failed, using texture directly:',
+                pmremError,
+              );
+              // Rotation already applied above
+              scene.environment = texture;
+              setEnvMap(texture);
+            }
+          },
+          (progress) => {
+            if (progress.lengthComputable) {
+              const percentComplete = (progress.loaded / progress.total) * 100;
+              console.log(
+                'HDR loading progress:',
+                percentComplete.toFixed(2) + '%',
+              );
+            }
+          },
+          (error: unknown) => {
+            console.error('Error loading HDR texture:', error);
+            console.error('HDR URL was:', hdrTextureUrl);
+          },
+        );
+      } catch (error) {
+        console.error('Error loading HDR URL:', error);
+      }
+    };
+
+    loadHdr();
+
+    return () => {
+      isMounted = false;
+    };
   }, [gl, scene]);
 
   // Cleanup: clear scene environment and dispose textures
