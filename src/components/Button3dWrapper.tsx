@@ -4,7 +4,8 @@ import { Model } from './Button3d';
 import * as THREE from 'three';
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 import { gsap } from 'gsap';
-import hdrTextureUrl from '../assets/texture/citrus_orchard_road_puresky_1k.hdr?url';
+// Load HDR from public folder to prevent bundling (reduces bundle size)
+const hdrTextureUrl = '/citrus_orchard_road_puresky_1k.hdr';
 
 // HDR rotation on Y-axis: 0.0 = 0°, 0.25 = 90°, 0.5 = 180°, 0.75 = 270°
 const HDR_ROTATION_Y = 0.25; // Adjust this value to rotate the HDR environment
@@ -20,8 +21,8 @@ interface Button3dWrapperProps {
 const RendererConfig = () => {
   const { gl } = useThree();
   useEffect(() => {
-    // @ts-expect-error - outputEncoding exists in this version of Three.js
-    gl.outputEncoding = THREE.sRGBEncoding;
+    // Use outputColorSpace instead of deprecated outputEncoding (Three.js r152+)
+    gl.outputColorSpace = THREE.SRGBColorSpace;
     gl.toneMapping = THREE.ACESFilmicToneMapping;
     gl.toneMappingExposure = 0.2; // Same as star
   }, [gl]);
