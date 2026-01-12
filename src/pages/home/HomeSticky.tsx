@@ -1,11 +1,39 @@
 import { useMediaQuery } from 'react-responsive';
-import cornerSvg from '../../assets/corner.svg';
 import logoImg from '../../assets/images/logo.png';
 import noiseImg from '../../assets/images/noise.webp';
 import globalImage from '../../assets/images/global.webp';
 import ScrollProgress from '../../components/ScrollProgress';
 import Calendar from '../../components/Calendar';
 import { autoRotateTexts } from '../../constants';
+
+// Inline Corner SVG Component
+const CornerSVG = ({
+  className = '',
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) => (
+  <svg
+    width="40"
+    height="40"
+    viewBox="0 0 40 40"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={`corner-svg ${className}`}
+    style={style}
+  >
+    <path
+      d="M40 20L40 40L20 40C20 40 27.2434 38.2101 33.0695 33.7639C38.8957 29.3176 40 20 40 20Z"
+      fill="black"
+    />
+    <path
+      d="M20 40C22.6264 40 25.2272 39.4827 27.6537 38.4776C30.0802 37.4725 32.285 35.9993 34.1421 34.1421C35.9993 32.285 37.4725 30.0802 38.4776 27.6537C39.4827 25.2272 40 22.6264 40 20L37.7599 20C37.7599 22.3323 37.3005 24.6417 36.408 26.7964C35.5154 28.9511 34.2073 30.909 32.5581 32.5581C30.909 34.2073 28.9511 35.5154 26.7964 36.408C24.6417 37.3005 22.3323 37.7599 20 37.7599L20 40Z"
+      fill="white"
+      className="corner-stroke-path"
+    />
+  </svg>
+);
 
 const HomeSticky = () => {
   // Responsive fade distance: 90px for xl screens (≥1280px), 70px for lg screens (≥1024px)
@@ -206,10 +234,8 @@ const HomeSticky = () => {
       />
       {/* Corner SVGs at each intersection where borders connect - positioned more inside */}
       {/* Top-left corner - faces outward from top-left */}
-      <img
-        src={cornerSvg}
-        alt=""
-        className="corner-svg absolute max-lg:z-10"
+      <CornerSVG
+        className="absolute max-lg:z-10"
         style={{
           left: `${isLg ? topLeft - borderWidth / 20 : topLeft - borderWidth / 3}px`,
           top: `${isLg ? leftTop - borderWidth / 80 : leftTop - borderWidth + 67.5}px`,
@@ -219,10 +245,8 @@ const HomeSticky = () => {
         }}
       />
       {/* Top-right corner - faces outward from top-right */}
-      <img
-        src={cornerSvg}
-        alt=""
-        className="corner-svg absolute"
+      <CornerSVG
+        className="absolute"
         style={{
           right: `${isLg ? topRight - borderWidth / 20 : topRight - borderWidth / 4}px`,
           top: `${leftTop - borderWidth / 80}px`,
@@ -232,10 +256,8 @@ const HomeSticky = () => {
         }}
       />
       {/* Bottom-left corner - faces outward from bottom-left */}
-      <img
-        src={cornerSvg}
-        alt=""
-        className="corner-svg absolute"
+      <CornerSVG
+        className="absolute"
         style={{
           left: `${isLg ? topLeft - borderWidth / 20 : topLeft - borderWidth / 3}px`,
           bottom: `${isLg ? leftBottom - borderWidth / 150 : leftBottom - borderWidth / 7 + 1}px`,
@@ -245,10 +267,8 @@ const HomeSticky = () => {
         }}
       />
       {/* Bottom-right corner - faces outward from bottom-right */}
-      <img
-        src={cornerSvg}
-        alt=""
-        className="corner-svg absolute"
+      <CornerSVG
+        className="absolute"
         style={{
           right: `${isLg ? topRight - borderWidth / 20 : topRight - borderWidth / 4}px`,
           bottom: `${isLg ? leftBottom - borderWidth / 150 : leftBottom - borderWidth / 7 + 1}px`,
@@ -273,10 +293,8 @@ const HomeSticky = () => {
 
         {/* Corner SVGs at all corners of logo container */}
         {/* Top-left corner */}
-        <img
-          src={cornerSvg}
-          alt=""
-          className="corner-svg absolute hidden lg:block"
+        <CornerSVG
+          className="absolute hidden lg:block"
           style={{
             left: `${-borderWidth + 1}px`,
             top: `${-borderWidth / 80}px`,
@@ -287,10 +305,8 @@ const HomeSticky = () => {
         />
 
         {/* Top-right corner */}
-        <img
-          src={cornerSvg}
-          alt=""
-          className="corner-svg absolute"
+        <CornerSVG
+          className="absolute"
           style={{
             right: `${-borderWidth + 1 + (isLg ? 0 : -26)}px`,
             top: `${-borderWidth / 80 + (isLg ? 0 : -1)}px`,
@@ -301,10 +317,8 @@ const HomeSticky = () => {
         />
 
         {/* Bottom-left corner */}
-        <img
-          src={cornerSvg}
-          alt=""
-          className="corner-svg absolute hidden lg:block"
+        <CornerSVG
+          className="absolute hidden lg:block"
           style={{
             left: `${-borderWidth / 13}px`,
             bottom: `${-borderWidth / 20}px`,
@@ -315,10 +329,8 @@ const HomeSticky = () => {
         />
 
         {/* Bottom-right corner */}
-        <img
-          src={cornerSvg}
-          alt=""
-          className="corner-svg absolute -z-2"
+        <CornerSVG
+          className="absolute -z-2"
           style={{
             right: `${-borderWidth / 20 + (isLg ? 0 : -1.1)}px`,
             bottom: `${-borderWidth / 13 + (isLg ? 0 : -0.8)}px`,

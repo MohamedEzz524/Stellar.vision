@@ -3,17 +3,12 @@ import { Canvas, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
-import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { FlakesTexture } from '../assets/js/FlakesTexture';
 import { gsap } from 'gsap';
 import { registerModel3DRef, getModel3DRef } from '../utils/revealAnimation';
+import { HDREnvironment } from './HDREnvironmentDefault';
 import starModelUrl from '../assets/models/starr.glb?url';
-// Load HDR from public folder to prevent bundling (reduces bundle size)
-const hdrTextureUrl = '/citrus_orchard_road_puresky_1k.hdr';
-
-// HDR rotation on Y-axis: 0.0 = 0°, 0.25 = 90°, 0.5 = 180°, 0.75 = 270°
-const HDR_ROTATION_Y = 0.25; // Adjust this value to rotate the HDR environment
 
 interface Hero3DModelProps {
   onModelReady?: (modelRef: React.RefObject<THREE.Group | null>) => void;
@@ -25,15 +20,13 @@ const StarModel = ({
   onModelReady?: (modelRef: React.RefObject<THREE.Group | null>) => void;
 }) => {
   const groupRef = useRef<THREE.Group>(null);
-  const meshRef = useRef<THREE.Mesh>(null);
   const clonedObjRef = useRef<THREE.Object3D | null>(null);
   const loaderRef = useRef<{
     loader: GLTFLoader;
     dracoLoader: DRACOLoader;
   } | null>(null);
   const materialReadyRef = useRef(false);
-  const { gl, scene } = useThree();
-  const [envMap, setEnvMap] = useState<THREE.Texture | null>(null);
+  const { scene } = useThree();
   const [materialReady, setMaterialReady] = useState(false);
   const [gltf, setGltf] = useState<GLTF | null>(null);
 
@@ -64,95 +57,6 @@ const StarModel = ({
     };
   }, []);
 
-  // Load HDR texture and set as scene environment for IBL lighting
-  useEffect(() => {
-    console.log('Starting HDR load from:', hdrTextureUrl);
-    const loader = new HDRLoader();
-
-    loader.load(
-      hdrTextureUrl,
-      (texture: THREE.DataTexture) => {
-        console.log('HDR texture loaded:', {
-          width: texture.image?.width,
-          height: texture.image?.height,
-          type: texture.type,
-          format: texture.format,
-        });
-
-        // RGBELoader already sets the correct mapping for HDR
-        texture.mapping = THREE.EquirectangularReflectionMapping;
-        texture.flipY = false;
-        // Rotate HDRI on Y axis (horizontal offset for equirectangular)
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.offset.x = HDR_ROTATION_Y; // Rotate HDR on Y-axis
-
-        try {
-          // Convert to PMREM for optimized IBL - this is crucial for proper lighting
-          console.log('Converting to PMREM...');
-          const pmremGenerator = new THREE.PMREMGenerator(gl);
-          pmremGenerator.compileEquirectangularShader();
-          const envMapResult = pmremGenerator.fromEquirectangular(texture);
-          const envMapTexture = envMapResult.texture;
-
-          console.log('PMREM conversion complete:', {
-            envMapType: envMapTexture?.type,
-            envMapFormat: envMapTexture?.format,
-            hasImage: !!envMapTexture?.image,
-          });
-
-          // Set as scene environment - provides IBL lighting to all materials
-          scene.environment = envMapTexture;
-
-          // Don't dispose envMapResult - it contains the texture we need
-          // Only dispose the generator and original texture
-          pmremGenerator.dispose();
-          texture.dispose();
-
-          setEnvMap(envMapTexture);
-          console.log('HDR environment map loaded successfully', {
-            hasEnvironment: !!scene.environment,
-            envMapType: envMapTexture?.type,
-            envMapFormat: envMapTexture?.format,
-            sceneHasEnv: !!scene.environment,
-          });
-        } catch (pmremError) {
-          console.error(
-            'PMREM conversion failed, using texture directly:',
-            pmremError,
-          );
-          // Rotation already applied above
-          scene.environment = texture;
-          setEnvMap(texture);
-        }
-      },
-      (progress) => {
-        if (progress.lengthComputable) {
-          const percentComplete = (progress.loaded / progress.total) * 100;
-          console.log(
-            'HDR loading progress:',
-            percentComplete.toFixed(2) + '%',
-          );
-        }
-      },
-      (error: unknown) => {
-        console.error('Error loading HDR texture:', error);
-        console.error('HDR URL was:', hdrTextureUrl);
-      },
-    );
-  }, [gl, scene]);
-
-  // Cleanup: clear scene environment and dispose textures
-  useEffect(() => {
-    return () => {
-      if (scene.environment === envMap) {
-        scene.environment = null;
-      }
-      if (envMap) {
-        envMap.dispose();
-      }
-    };
-  }, [envMap, scene]);
-
   // Generate flakes texture for material normal map
   const flakesTexture = useMemo(() => {
     const canvas = new FlakesTexture(512, 512);
@@ -163,21 +67,9 @@ const StarModel = ({
     return texture;
   }, []);
 
-  // Apply metallic material to mesh when model and envMap are ready
+  // Apply metallic material to mesh when model and environment are ready
   useEffect(() => {
-    if (
-      gltf &&
-      groupRef.current &&
-      envMap &&
-      scene.environment &&
-      !materialReady
-    ) {
-      console.log('Creating material with environment map', {
-        hasEnvMap: !!envMap,
-        hasSceneEnv: !!scene.environment,
-        envMapType: envMap?.type,
-      });
-
+    if (gltf && groupRef.current && scene.environment && !materialReady) {
       // Dispose previous clone if exists (only if we're re-initializing)
       if (clonedObjRef.current && groupRef.current) {
         clonedObjRef.current.traverse((child: THREE.Object3D) => {
@@ -200,32 +92,23 @@ const StarModel = ({
 
       clonedObj.traverse((child: THREE.Object3D) => {
         if (child instanceof THREE.Mesh) {
-          meshRef.current = child;
-
           // Mirror-like material: perfect reflection with environment map
           const ballMaterial = new THREE.MeshPhysicalMaterial({
             clearcoat: 1.0,
             clearcoatRoughness: 0.0,
             metalness: 1.0,
-            roughness: 0.0, // Perfect mirror - reflects environment
+            roughness: 0.0,
             color: 0xffffff,
             normalMap: flakesTexture,
             normalScale: new THREE.Vector2(0.15, 0.15),
-            envMap: scene.environment, // Use scene.environment which is the PMREM texture
-            envMapIntensity: 12, // Slightly reduced to prevent overexposure
+            envMap: scene.environment,
+            envMapIntensity: 2.5,
           });
 
           // Explicitly set envMap after creation to ensure it's applied
           ballMaterial.envMap = scene.environment;
-          ballMaterial.envMapIntensity = 0.4; // Ensure intensity is set
+          ballMaterial.envMapIntensity = 2.5;
           ballMaterial.needsUpdate = true;
-
-          console.log('Material created', {
-            hasEnvMap: !!ballMaterial.envMap,
-            envMapIntensity: ballMaterial.envMapIntensity,
-            metalness: ballMaterial.metalness,
-            roughness: ballMaterial.roughness,
-          });
 
           (child as THREE.Mesh).material = ballMaterial;
         }
@@ -246,7 +129,7 @@ const StarModel = ({
         onModelReady(groupRef);
       }
     }
-  }, [gltf, envMap, materialReady, flakesTexture, onModelReady, scene]);
+  }, [gltf, materialReady, flakesTexture, onModelReady, scene]);
 
   // Separate cleanup effect that only runs on unmount
   useEffect(() => {
@@ -461,10 +344,10 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
   const RendererConfig = () => {
     const { gl } = useThree();
     useEffect(() => {
-      // Use outputColorSpace instead of deprecated outputEncoding (Three.js r152+)
-      gl.outputColorSpace = THREE.SRGBColorSpace;
+      // @ts-expect-error - outputEncoding exists in this version of Three.js
+      gl.outputEncoding = THREE.sRGBEncoding;
       gl.toneMapping = THREE.ACESFilmicToneMapping;
-      gl.toneMappingExposure = 0.2; // Reduced exposure to prevent overexposure
+      gl.toneMappingExposure = 12; // Reduced exposure to prevent overexposure
     }, [gl]);
     return null;
   };
@@ -487,7 +370,8 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
           style={{ width: '100%', height: '100%', maxHeight: '100%' }}
         >
           <RendererConfig />
-          {/* Add lights for better visibility - HDR provides main IBL via scene.environment */}
+          <HDREnvironment rotationY={0.25} rotationX={0.25} />
+          {/* <HDREnvironment rotationY={0.5} rotationX={0.0} /> */}
           <StarModel
             onModelReady={(ref) => {
               groupRef.current = ref.current;

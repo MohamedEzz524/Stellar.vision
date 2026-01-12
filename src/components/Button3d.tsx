@@ -26,35 +26,34 @@ export const Model = forwardRef<THREE.Group, any>((props, ref) => {
     return texture;
   }, []);
 
-  // Apply mirror-like material to all meshes when environment is ready
+  // Apply material to all meshes (works with HDR environment)
   useEffect(() => {
-    if (scene.environment && !materialReadyRef.current) {
+    if (!materialReadyRef.current) {
       gltfScene.traverse((child: THREE.Object3D) => {
         if (child instanceof THREE.Mesh) {
-          // Mirror-like material: perfect reflection with environment map (same as star)
+          // Material optimized for HDR environment map
           const buttonMaterial = new THREE.MeshPhysicalMaterial({
             clearcoat: 1.0,
-            clearcoatRoughness: 0.0,
+            clearcoatRoughness: 0.1,
             metalness: 1.0,
-            roughness: 0.0, // Perfect mirror - reflects environment
+            roughness: 0.0,
             color: 0xffffff,
             normalMap: flakesTexture,
             normalScale: new THREE.Vector2(0.15, 0.15),
             envMap: scene.environment,
-            envMapIntensity: 0.4, // Same as star
+            envMapIntensity: 0.8,
           });
 
           // Explicitly set envMap after creation to ensure it's applied
           buttonMaterial.envMap = scene.environment;
-          buttonMaterial.envMapIntensity = 0.4;
+          buttonMaterial.envMapIntensity = 0.8;
           buttonMaterial.needsUpdate = true;
-
           child.material = buttonMaterial;
         }
       });
       materialReadyRef.current = true;
     }
-  }, [scene.environment, gltfScene, flakesTexture]);
+  }, [gltfScene, flakesTexture, scene]);
 
   return <primitive ref={ref} object={gltfScene} {...props} dispose={null} />;
 });

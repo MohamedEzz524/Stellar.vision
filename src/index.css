@@ -183,8 +183,19 @@ html:active .custom-cursor {
   display: inline-block;
   will-change: transform;
 }
-.corner-svg path {
-  fill: #000 !important;
+.select-timezone::after {
+  content: '';
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  z-index: 2;
+  pointer-events: none;
+  border-top: 8px solid white;
+  border-right: 4px solid transparent;
+  border-left: 4px solid transparent;
 }
 
 .corner-svg path[stroke] {

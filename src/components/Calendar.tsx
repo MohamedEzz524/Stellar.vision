@@ -1521,9 +1521,7 @@ const Calendar = () => {
       <div className="relative h-auto flex-1 pb-4">
         <div
           className={`pointer-events-none absolute inset-0 -z-1 bg-black ${
-            state.viewState === 0
-              ? 'opacity-0 transition-opacity duration-800'
-              : 'opacity-100'
+            state.viewState === 0 ? 'opacity-0' : 'opacity-100'
           }`}
         />
         {/* Start Now Button - Always visible */}
@@ -1531,19 +1529,7 @@ const Calendar = () => {
           ref={startButtonRef}
           className="relative z-10 flex h-[77px] items-center justify-center bg-transparent"
         >
-          <div className="h-full w-full max-w-[240px] lg:max-w-[320px]">
-            {/* <button
-              onClick={() => {
-                if (state.viewState === 0) {
-                  dispatch({ type: 'START_CALENDAR' });
-                } else {
-                  dispatch({ type: 'CLOSE_CALENDAR' });
-                }
-              }}
-              className="font-grid mt-2 w-full rounded-full border border-white bg-gradient-to-br from-white via-gray-500 to-transparent px-3 py-2 text-xl tracking-normal whitespace-nowrap text-white uppercase transition-transform lg:px-4 lg:text-3xl"
-            >
-              {state.viewState === 0 ? 'Start Now' : 'Return to view'}
-            </button> */}
+          <div className="h-full w-full max-w-[300px] lg:max-w-[320px]">
             <Button3dWrapper
               onClick={() => {
                 if (state.viewState === 0) {
@@ -1568,7 +1554,7 @@ const Calendar = () => {
                 {(state.viewState === 3 || state.viewState === 4) && (
                   <button
                     onClick={handleBack}
-                    className="absolute left-0 text-[10px] font-normal uppercase hover:underline lg:text-lg"
+                    className="absolute left-4 text-sm font-normal uppercase hover:underline lg:left-0 lg:text-lg"
                   >
                     &lt; BACK
                   </button>
@@ -1577,7 +1563,7 @@ const Calendar = () => {
                 {(state.viewState === 1 || state.viewState === 2) && (
                   <h2
                     key="select-day-title"
-                    className="mx-auto inline-block rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-black uppercase lg:px-3 lg:py-1 lg:text-sm"
+                    className="mx-auto inline-block rounded-full bg-white px-3 py-1 text-xs font-bold text-black uppercase lg:text-sm"
                   >
                     {getTitle()}
                   </h2>
@@ -1669,7 +1655,7 @@ const Calendar = () => {
                               ease: 'easeOut',
                             },
                           }}
-                          className="rounded-xl text-center text-[9px] font-bold uppercase shadow-[inset_1px_0_0_0_rgba(255,255,255,0.1),inset_-1px_0_0_0_rgba(255,255,255,0.1),inset_0_4px_6px_rgba(255,255,255,0.6)] lg:text-sm"
+                          className="rounded-xl text-center text-[11.2px] font-bold uppercase shadow-[inset_1px_0_0_0_rgba(255,255,255,0.1),inset_-1px_0_0_0_rgba(255,255,255,0.1),inset_0_4px_6px_rgba(255,255,255,0.6)] lg:text-sm"
                         >
                           {day}
                         </motion.div>
@@ -1703,7 +1689,7 @@ const Calendar = () => {
                               day !== null && !isDisabled && handleDayClick(day)
                             }
                             disabled={day === null || isDisabled}
-                            className={`aspect-square rounded-md text-center text-xs font-bold md:rounded-xl lg:text-xl ${
+                            className={`aspect-square rounded-md text-center text-lg font-bold md:rounded-xl lg:text-xl ${
                               day === null
                                 ? 'cursor-default opacity-0'
                                 : isDisabled
@@ -1724,19 +1710,13 @@ const Calendar = () => {
                 {/* Timezone Selector */}
                 <div className="mx-auto mt-2 flex w-fit items-center gap-1 lg:gap-2">
                   <GlobeIcon />
-                  <div className="relative">
+                  <div className="select-timezone relative">
                     <select
                       value={state.timezone}
                       onChange={handleTimezoneChange}
                       aria-label="Select timezone"
                       title="Select timezone"
-                      className="bg-bgPrimary w-fit appearance-none rounded-md px-4 py-3 pr-12 text-[10px] text-white uppercase focus:outline-none lg:text-base"
-                      style={{
-                        backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='12' height='8' fill='white'/%3E%3C/svg%3E")`,
-                        backgroundRepeat: 'no-repeat',
-                        backgroundPosition: 'right 12px center',
-                        backgroundSize: '12px 8px',
-                      }}
+                      className="bg-bgPrimary select-timezone relative w-fit appearance-none rounded-md px-4 py-3 pr-12 text-[12px] text-white uppercase focus:outline-none lg:text-base"
                     >
                       {timezones.map((tz) => (
                         <option
@@ -1756,7 +1736,7 @@ const Calendar = () => {
                 <div className="border-textPrimary relative mx-auto mt-4 h-12 w-[240px] overflow-hidden rounded-md border-2 lg:h-17 lg:w-lg lg:border-3">
                   <div className="relative h-full w-full">
                     <div
-                      className="noise-move-slow-animation absolute inset-0 z-0"
+                      className="noise-move-slow-animation absolute inset-0 z-0 opacity-20"
                       style={{
                         backgroundImage: `url(${noiseImg})`,
                         backgroundRepeat: 'repeat',
@@ -1813,7 +1793,7 @@ const Calendar = () => {
                               ease: 'easeOut',
                             }}
                             onClick={() => handleTimeClick(time)}
-                            className="time-button w-full rounded-md bg-[#333] px-4 py-3 text-center text-xs shadow-[inset_3px_0_0_rgba(255,255,255,0.04),inset_-3px_0_0_0px_rgba(255,255,255,0.04),inset_0_2px_4px_rgba(255,255,255,0.6)] lg:rounded-xl lg:py-3 lg:text-sm"
+                            className="time-button w-full rounded-md bg-[#333] px-4 py-3 text-center text-xs shadow-[inset_3px_0_0_rgba(255,255,255,0.04),inset_-3px_0_0_0px_rgba(255,255,255,0.04),inset_0_2px_4px_rgba(255,255,255,0.6)] lg:rounded-xl lg:py-3 lg:text-base"
                           >
                             {time}
                           </motion.button>
