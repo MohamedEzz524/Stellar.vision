@@ -1,7 +1,7 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { animateTextRandomization } from '../../utils/textSplitting';
 import Hero3DModel from '../../components/Hero3DModel';
-import { autoRotateTexts } from '../../constants';
+import { autoRotateTexts, heroSectionParagraph } from '../../constants';
 
 // Move utility functions outside component to avoid recreation
 const getOrdinalSuffix = (day: number): string => {
@@ -138,7 +138,10 @@ const HeroSection = () => {
             </div>
           </div>
           {/* row-2 */}
-          <div className="flex overflow-hidden lg:justify-end">
+          <span className="font-grid relative -mb-4 block text-[11px] uppercase lg:hidden">
+            THE BEST
+          </span>
+          <div className="relative flex overflow-hidden lg:justify-end">
             <h2>WEB DESIGN</h2>
           </div>
           {/* row-3 */}
@@ -164,12 +167,7 @@ const HeroSection = () => {
                 id="hero-vertical-bar"
                 className="bg-textPrimary absolute top-0 left-2 h-full w-1 origin-bottom lg:left-4 lg:w-2"
               />
-              <p className="max-w-[480px]">
-                Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et
-                massa mi. Aliquam in hendrerit urna. Pellentesque sit amet
-                sapien fringilla, mattis ligula consectetur, ultrices mauris.
-                Maecenas vitae mattis tellus..
-              </p>
+              <p className="max-w-[480px]">{heroSectionParagraph}</p>
             </div>
             <div className="mb-12 flex justify-end overflow-hidden lg:mb-0 lg:justify-start">
               <h2>MENA REGION</h2>

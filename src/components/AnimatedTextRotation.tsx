@@ -27,17 +27,24 @@ const AnimatedTextRotation = ({
     const container = textContainerRef.current;
     let currentElement: HTMLDivElement | null = null;
     let currentSplit: SplitText | null = null;
+    let currentAllChars: HTMLElement[] = [];
     let nextElement: HTMLDivElement | null = null;
     let nextSplit: SplitText | null = null;
+    let nextAllChars: HTMLElement[] = [];
 
     const createTextElement = (
       text: string,
       isNext: boolean = false,
-    ): { element: HTMLDivElement; split: SplitText } => {
+    ): {
+      element: HTMLDivElement;
+      split: SplitText;
+      allChars: HTMLElement[];
+    } => {
       const div = document.createElement('div');
       div.className =
         'absolute inset-0 justify-end text-nowrap flex items-center';
       div.style.visibility = isNext ? 'hidden' : 'visible';
+      div.style.whiteSpace = 'pre';
       div.setAttribute('aria-label', text);
       div.textContent = text;
 
@@ -47,13 +54,36 @@ const AnimatedTextRotation = ({
       const split = SplitText.create(div, {
         type: 'chars',
         charsClass: 'char',
+        reduceWhiteSpace: false,
       });
 
       splitInstancesRef.current.push(split);
 
       const letterElements = Array.from(split.chars) as HTMLElement[];
 
-      letterElements.forEach((span) => {
+      // Handle any text nodes that SplitText didn't wrap (spaces)
+      const walker = document.createTreeWalker(div, NodeFilter.SHOW_TEXT, null);
+      let textNode: Text | null;
+      const unwrappedSpaces: HTMLSpanElement[] = [];
+      while ((textNode = walker.nextNode() as Text | null)) {
+        if (
+          textNode.textContent?.trim() === '' &&
+          textNode.textContent !== ''
+        ) {
+          // This is a whitespace-only text node, wrap it
+          const span = document.createElement('span');
+          span.className = 'char';
+          span.style.display = 'inline-block';
+          span.textContent = textNode.textContent;
+          textNode.parentNode?.replaceChild(span, textNode);
+          unwrappedSpaces.push(span);
+        }
+      }
+
+      // Combine all character elements
+      const allElements = [...letterElements, ...unwrappedSpaces];
+
+      allElements.forEach((span) => {
         span.style.display = 'inline-block';
 
         if (isNext) {
@@ -67,7 +97,7 @@ const AnimatedTextRotation = ({
         }
       });
 
-      return { element: div, split };
+      return { element: div, split, allChars: allElements };
     };
 
     const animateTextRotation = () => {
@@ -89,6 +119,7 @@ const AnimatedTextRotation = ({
         const currentResult = createTextElement(currentText, false);
         currentElement = currentResult.element;
         currentSplit = currentResult.split;
+        currentAllChars = currentResult.allChars;
       } else {
         // Reset current element's letters to starting state (visible, ready to animate out)
         // This is needed when currentElement was previously nextElement
@@ -122,25 +153,29 @@ const AnimatedTextRotation = ({
           const currentResult = createTextElement(elementText, false);
           currentElement = currentResult.element;
           currentSplit = currentResult.split;
+          currentAllChars = currentResult.allChars;
         } else if (currentSplit) {
           // Reset letters to visible starting state
-          const resetLetters = Array.from(currentSplit.chars) as HTMLElement[];
+          // Get all char elements including wrapped spaces
+          const resetLetters = currentElement.querySelectorAll('.char');
           resetLetters.forEach((span) => {
-            span.style.display = 'inline-block';
-            span.style.transformOrigin = 'bottom';
+            (span as HTMLElement).style.display = 'inline-block';
+            (span as HTMLElement).style.transformOrigin = 'bottom';
             gsap.killTweensOf(span);
             gsap.set(span, { rotationX: 0 });
           });
+          currentAllChars = Array.from(resetLetters) as HTMLElement[];
         }
       }
       const nextResult = createTextElement(nextText, true);
       nextElement = nextResult.element;
       nextSplit = nextResult.split;
+      nextAllChars = nextResult.allChars;
       nextElement.style.visibility = 'visible';
 
-      // Get letter elements directly from SplitText instances
-      const currentLetters = Array.from(currentSplit!.chars) as HTMLElement[];
-      const nextLetters = Array.from(nextSplit!.chars) as HTMLElement[];
+      // Use allChars arrays that include wrapped spaces
+      const currentLetters = currentAllChars;
+      const nextLetters = nextAllChars;
 
       // Safety check: ensure we have valid letters
       if (currentLetters.length === 0 || nextLetters.length === 0) {
@@ -172,8 +207,10 @@ const AnimatedTextRotation = ({
           // Move next to current for next cycle
           currentElement = nextElement;
           currentSplit = nextSplit;
+          currentAllChars = nextAllChars;
           nextElement = null;
           nextSplit = null;
+          nextAllChars = [];
           currentTextIndex.current = nextTextIndex;
 
           setTimeout(() => animateTextRotation(), 500);
@@ -212,6 +249,7 @@ const AnimatedTextRotation = ({
     const initialResult = createTextElement(texts[0], false);
     currentElement = initialResult.element;
     currentSplit = initialResult.split;
+    currentAllChars = initialResult.allChars;
 
     // Start animation after a short delay
     const timeoutId = setTimeout(() => {

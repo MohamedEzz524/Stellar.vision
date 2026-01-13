@@ -1,12 +1,12 @@
 import AnimatedTextRotation from '../../components/AnimatedTextRotation';
 import AnimatedText from '../../components/AnimatedText';
-import { texts } from '../../constants';
+import { texts, homeHeaderParagraphs } from '../../constants';
 
 const HomeHeader = () => {
   return (
     <div className="home-header bg-bgPrimary border-border overflow-hidden border-t pt-8">
       <div className="container">
-        <div className="text-textPrimary border-border flex flex-col justify-between gap-8 border-b px-8 pb-8 lg:flex-row lg:items-center lg:gap-4 lg:px-0">
+        <div className="text-textPrimary border-border flex flex-col justify-between gap-8 border-b px-4 pb-6 lg:flex-row lg:items-center lg:gap-4 lg:px-0">
           {/* Left */}
           <div className="text-sm md:text-sm lg:text-lg">
             <AnimatedText
@@ -15,8 +15,7 @@ const HomeHeader = () => {
               stagger={0.3}
               duration={0.7}
             >
-              We specialize in creating emotional, animated interfaces and wow
-              websites that
+              {homeHeaderParagraphs.first}
             </AnimatedText>
             <AnimatedText
               type="slide"
@@ -24,19 +23,16 @@ const HomeHeader = () => {
               stagger={0.3}
               duration={0.7}
             >
-              make complex SaaS products more human and appealing to use while
-              ensuring great UX.
+              {homeHeaderParagraphs.second}
             </AnimatedText>
           </div>
           {/* Right */}
           <div className="flex flex-1 flex-col items-end gap-4 text-right">
-            <div className="flex items-start gap-8">
-              <p className="text-base md:text-lg lg:text-xl 2xl:text-2xl">
-                WE DO
-              </p>
+            <div className="flex items-start gap-4 lg:gap-8">
+              <p className="text-lg lg:text-xl 2xl:text-2xl">WE DO</p>
               <AnimatedText
                 type="flip"
-                className="text-textPrimary/60 text-4xl leading-none font-semibold tracking-tight md:text-7xl lg:text-7xl lg:leading-24 2xl:text-9xl"
+                className="text-textPrimary/60 text-[2.5rem] leading-none font-semibold tracking-tight md:text-7xl lg:text-7xl lg:leading-24 2xl:text-9xl"
                 stagger={0.08}
                 duration={0.7}
               >
@@ -46,7 +42,7 @@ const HomeHeader = () => {
             {/* Animated text */}
             <AnimatedTextRotation
               texts={texts}
-              className="text-textPrimary relative h-12 w-full text-3xl font-semibold tracking-tight uppercase md:h-20 md:text-5xl lg:h-32 lg:text-6xl 2xl:text-8xl"
+              className="text-textPrimary relative h-12 w-full text-[2.5rem] font-semibold tracking-tight uppercase md:h-20 md:text-5xl lg:h-32 lg:text-6xl 2xl:text-8xl"
               initialDelay={1000}
             />
           </div>

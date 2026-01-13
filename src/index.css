@@ -197,13 +197,24 @@ html:active .custom-cursor {
   border-right: 4px solid transparent;
   border-left: 4px solid transparent;
 }
-
+.desktop-logo-corner path[stroke],
 .corner-svg path[stroke] {
   stroke-width: 1px;
 }
 
+.desktop-logo-corner path,
+.corner-svg path {
+  stroke-width: 1px;
+}
+
 @media (min-width: 1024px) {
+  .desktop-logo-corner path[stroke],
   .corner-svg path[stroke] {
+    stroke-width: 3px;
+  }
+
+  .desktop-logo-corner path,
+  .corner-svg path {
     stroke-width: 3px;
   }
 }

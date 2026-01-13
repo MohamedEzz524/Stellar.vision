@@ -355,7 +355,7 @@ const Hero3DModel = ({ onModelReady }: Hero3DModelProps) => {
   return (
     <div
       id="hero-image"
-      className="absolute top-1/2 left-1/2 z-10 flex h-[150px] max-h-[500px] w-[120%] max-w-[390px] -translate-x-1/2 -translate-y-[10rem] items-center justify-center lg:h-[100%] lg:max-h-full lg:w-[80%] lg:max-w-full lg:-translate-y-1/2"
+      className="absolute top-1/2 left-1/2 z-10 flex h-[150px] max-h-[500px] w-[120%] max-w-[390px] -translate-x-1/2 -translate-y-[9.5rem] items-center justify-center lg:h-[100%] lg:max-h-full lg:w-[80%] lg:max-w-full lg:-translate-y-1/2"
       style={{
         // Hide visually until preloader is done, but allow loading in background
         opacity: shouldRenderCanvas ? 1 : 0,

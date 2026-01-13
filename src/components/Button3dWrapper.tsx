@@ -19,7 +19,7 @@ const RendererConfig = () => {
     // @ts-expect-error - outputEncoding exists in this version of Three.js
     gl.outputEncoding = THREE.sRGBEncoding;
     gl.toneMapping = THREE.ACESFilmicToneMapping;
-    gl.toneMappingExposure = 6;
+    gl.toneMappingExposure = 14;
   }, [gl]);
   return null;
 };
@@ -56,7 +56,12 @@ const Button3dWrapper: React.FC<Button3dWrapperProps> = ({
         style={{ width: '100%', height: '100%' }}
       >
         <RendererConfig />
-        <HDREnvironment rotationY={0.25} rotationX={0.25} />
+        <HDREnvironment
+          rotationY={0.024}
+          rotationX={0.08}
+          rotationZ={0.033}
+          intensity={5.2}
+        />
         <Model ref={modelRef} scale={2.5} rotation={[Math.PI / 2, 0, 0]} />
       </Canvas>
       {text && (

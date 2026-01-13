@@ -449,10 +449,10 @@ const Preloader = () => {
         data-v-a05bfe24=""
         className="preloader pointer-events-none absolute top-0 left-0 z-10 flex h-screen w-screen flex-col items-center justify-center"
       >
-        <div data-v-a05bfe24="" className="relative w-full text-center">
+        <div data-v-a05bfe24="" className="relative flex w-full text-center">
           <div
             data-v-a05bfe24=""
-            className="relative mx-auto h-[300px] w-[300px] md:h-[600px] md:w-[600px]"
+            className="relative mx-auto h-[400px] max-md:flex-1 md:h-[600px] md:w-[600px]"
           >
             {/* First Preloader */}
             <div

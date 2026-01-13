@@ -23,6 +23,16 @@ export const text3D = [
   'Ninth multiline text that will scroll through Ninth multiline text that will scroll through',
   'Tenth multiline text that will scroll through Tenth multiline text that will scroll through',
 ];
+
+export const homeHeaderParagraphs = {
+  first:
+    'We specialize in creating emotional, animated interfaces and wow websites that',
+  second:
+    'make complex SaaS products more human and appealing to use while ensuring great UX.',
+};
+
+export const heroSectionParagraph =
+  'Lorem ipsum dolor sit amet consectetur adipiscing elit Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus..';
 export interface Project {
   id: string;
   title: string;

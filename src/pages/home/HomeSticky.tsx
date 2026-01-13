@@ -52,7 +52,7 @@ const HomeSticky = () => {
   const leftBottom = bottomHeight - 1.5; // End 1.5px before bottom border starts (extends 0.5px into bottom)
 
   return (
-    <section className="pointer-events-none fixed top-0 left-0 z-[9999] h-screen w-full">
+    <section className="pointer-events-none fixed top-0 left-0 z-[9999] h-[100dvh] w-full">
       {/* Top border container - fills corner, inner div has border */}
       <div
         className="bg-bgPrimary absolute top-0 right-0 left-0"
@@ -237,8 +237,8 @@ const HomeSticky = () => {
       <CornerSVG
         className="absolute max-lg:z-10"
         style={{
-          left: `${isLg ? topLeft - borderWidth / 20 : topLeft - borderWidth / 3}px`,
-          top: `${isLg ? leftTop - borderWidth / 80 : leftTop - borderWidth + 67.5}px`,
+          left: `${isLg ? borderWidth - 1.5 : 4}px`,
+          top: `${isLg ? borderWidth - 1.5 : 66}px`,
           width: `${isLg ? borderWidth : borderWidth + 24}px`,
           height: `${isLg ? borderWidth : borderWidth + 24}px`,
           transform: 'rotate(180deg)',
@@ -248,8 +248,8 @@ const HomeSticky = () => {
       <CornerSVG
         className="absolute"
         style={{
-          right: `${isLg ? topRight - borderWidth / 20 : topRight - borderWidth / 4}px`,
-          top: `${leftTop - borderWidth / 80}px`,
+          right: `${isLg ? borderWidth - 1.5 : 4}px`,
+          top: `${isLg ? borderWidth - 1.5 : 4}px`,
           width: `${isLg ? borderWidth : borderWidth + 26}px`,
           height: `${isLg ? borderWidth : borderWidth + 26}px`,
           transform: 'rotate(-90deg)',
@@ -259,8 +259,8 @@ const HomeSticky = () => {
       <CornerSVG
         className="absolute"
         style={{
-          left: `${isLg ? topLeft - borderWidth / 20 : topLeft - borderWidth / 3}px`,
-          bottom: `${isLg ? leftBottom - borderWidth / 150 : leftBottom - borderWidth / 7 + 1}px`,
+          left: `${isLg ? borderWidth - 1.5 : 4}px`,
+          bottom: `${isLg ? bottomHeight - 1.5 : bottomHeight - 1}px`,
           width: `${isLg ? borderWidth : borderWidth + 26}px`,
           height: `${isLg ? borderWidth : borderWidth + 26}px`,
           transform: 'rotate(90deg)',
@@ -270,8 +270,8 @@ const HomeSticky = () => {
       <CornerSVG
         className="absolute"
         style={{
-          right: `${isLg ? topRight - borderWidth / 20 : topRight - borderWidth / 4}px`,
-          bottom: `${isLg ? leftBottom - borderWidth / 150 : leftBottom - borderWidth / 7 + 1}px`,
+          right: `${isLg ? borderWidth - 1.5 : 4}px`,
+          bottom: `${isLg ? bottomHeight - 1.5 : bottomHeight - 1}px`,
           width: `${isLg ? borderWidth : borderWidth + 26}px`,
           height: `${isLg ? borderWidth : borderWidth + 26}px`,
           transform: 'rotate(0deg)',
@@ -279,7 +279,7 @@ const HomeSticky = () => {
       />
       {/* Logo at top center */}
       <div
-        className="bg-bgPrimary absolute left-0 z-3 flex w-38 translate-x-[4px] items-center justify-center border-1 border-white border-t-transparent max-lg:border-l-0 lg:left-1/2 lg:w-48 lg:-translate-x-1/2 lg:border-[3px]"
+        className="bg-bgPrimary absolute left-0 z-3 flex w-38 translate-x-[4px] items-center justify-center border-t-transparent max-lg:border-l-0 lg:left-1/2 lg:w-48 lg:-translate-x-1/2 lg:border-[3px]"
         style={{
           top: `${isLg ? borderWidth - borderSize - 1 : borderWidth - borderSize}px`,
         }}
@@ -292,53 +292,103 @@ const HomeSticky = () => {
         />
 
         {/* Corner SVGs at all corners of logo container */}
-        {/* Top-left corner */}
-        <CornerSVG
-          className="absolute hidden lg:block"
-          style={{
-            left: `${-borderWidth + 1}px`,
-            top: `${-borderWidth / 80}px`,
-            width: `${borderWidth}px`,
-            height: `${borderWidth}px`,
-            transform: 'rotate(-90deg)',
-          }}
-        />
 
-        {/* Top-right corner */}
-        <CornerSVG
-          className="absolute"
+        <svg
+          className="desktop-logo-corner absolute -z-2 hidden lg:block"
           style={{
-            right: `${-borderWidth + 1 + (isLg ? 0 : -26)}px`,
-            top: `${-borderWidth / 80 + (isLg ? 0 : -1)}px`,
-            width: `${isLg ? borderWidth : borderWidth + 26}px`,
-            height: `${isLg ? borderWidth : borderWidth + 26}px`,
-            transform: 'rotate(-180deg)',
-          }}
-        />
-
-        {/* Bottom-left corner */}
-        <CornerSVG
-          className="absolute hidden lg:block"
-          style={{
-            left: `${-borderWidth / 13}px`,
-            bottom: `${-borderWidth / 20}px`,
-            width: `${borderWidth}px`,
-            height: `${borderWidth}px`,
-            transform: 'rotate(90deg)',
-          }}
-        />
-
-        {/* Bottom-right corner */}
-        <CornerSVG
-          className="absolute -z-2"
-          style={{
-            right: `${-borderWidth / 20 + (isLg ? 0 : -1.1)}px`,
-            bottom: `${-borderWidth / 13 + (isLg ? 0 : -0.8)}px`,
-            width: `${borderWidth + (isLg ? 0 : 26)}px`,
-            height: `${borderWidth + (isLg ? 0 : 26)}px`,
+            right: `-50%`,
+            bottom: `-9%`,
+            width: `200%`,
+            height: `110%`,
             transform: 'rotate(0deg)',
           }}
-        />
+          xmlns="http://www.w3.org/2000/svg"
+          width="348"
+          height="79"
+          viewBox="0 0 348 79"
+          fill="none"
+        >
+          <defs>
+            <clipPath id="clip-top-stroke">
+              <rect x="0" y="2.5" width="348" height="76.5" />
+            </clipPath>
+          </defs>
+          <mask id="path-1-inside-1_2947_42" fill="white">
+            <path d="M29.4995 0.5H318.119V53.1812C318.119 66.9883 306.926 78.1812 293.119 78.1812H54.4995C40.6924 78.1812 29.4995 66.9883 29.4995 53.1812V0.5Z" />
+          </mask>
+          <path
+            d="M29.4995 0.5H318.119V53.1812C318.119 66.9883 306.926 78.1812 293.119 78.1812H54.4995C40.6924 78.1812 29.4995 66.9883 29.4995 53.1812V0.5Z"
+            fill="black"
+            stroke="white"
+            clipPath="url(#clip-top-stroke)"
+          />
+          <path
+            d="M29.4995 0.5H318.119H29.4995ZM319.119 53.1812C319.119 67.5406 307.478 79.1812 293.119 79.1812H54.4995C40.1401 79.1812 28.4995 67.5406 28.4995 53.1812H30.4995C30.4995 66.436 41.2447 77.1812 54.4995 77.1812H293.119C306.373 77.1812 317.119 66.436 317.119 53.1812H319.119ZM54.4995 79.1812C40.1401 79.1812 28.4995 67.5406 28.4995 53.1812V0.5H30.4995V53.1812C30.4995 66.436 41.2447 77.1812 54.4995 77.1812V79.1812ZM319.119 0.5V53.1812C319.119 67.5406 307.478 79.1812 293.119 79.1812V77.1812C306.373 77.1812 317.119 66.436 317.119 53.1812V0.5H319.119Z"
+            fill="white"
+            mask="url(#path-1-inside-1_2947_42)"
+          />
+          <path
+            d="M317.641 30.5L304.706 30.5L304.706 0.500057L347.641 0.500001C347.641 0.500001 334.711 2.02764 326.604 9.346C318.497 16.6644 317.641 30.5 317.641 30.5Z"
+            fill="black"
+          />
+          <path
+            d="M317.641 30.5C317.641 13.9315 331.072 0.5 347.641 0.5"
+            stroke="white"
+          />
+          <path
+            d="M29.9998 30.5L42.9346 30.5L42.9346 0.500057L-0.000168204 0.500001C-0.000168204 0.500001 12.9295 2.02764 21.0364 9.346C29.1433 16.6644 29.9998 30.5 29.9998 30.5Z"
+            fill="black"
+          />
+          <path
+            d="M30 30.5C30 13.9315 16.5685 0.5 -3.57746e-07 0.5"
+            stroke="white"
+          />
+        </svg>
+
+        <svg
+          className="desktop-logo-corner absolute -z-2 block lg:hidden"
+          style={{
+            right: `-20%`,
+            bottom: `-48%`,
+            width: `140%`,
+            height: `160%`,
+            transform: 'rotate(0deg)',
+          }}
+          xmlns="http://www.w3.org/2000/svg"
+          width="170"
+          height="82"
+          viewBox="0 0 170 82"
+          fill="none"
+        >
+          <mask id="path-1-inside-1_211_38" fill="white">
+            <path d="M0 0.0107422H146.777V38.5029C146.777 49.5486 137.823 58.5029 126.777 58.5029H0V0.0107422Z" />
+          </mask>
+          <path
+            d="M0 0.0107422H146.777V38.5029C146.777 49.5486 137.823 58.5029 126.777 58.5029H0V0.0107422Z"
+            fill="black"
+          />
+          <path
+            d="M0 0.0107422H146.777H0ZM147.777 38.5029C147.777 50.1009 138.375 59.5029 126.777 59.5029H0V57.5029H126.777C137.271 57.5029 145.777 48.9963 145.777 38.5029H147.777ZM0 58.5029V0.0107422V58.5029ZM147.777 0.0107422V38.5029C147.777 50.1009 138.375 59.5029 126.777 59.5029V57.5029C137.271 57.5029 145.777 48.9963 145.777 38.5029V0.0107422H147.777Z"
+            fill="white"
+            mask="url(#path-1-inside-1_211_38)"
+          />
+          <path
+            d="M146.275 30.8965L136.123 30.8965L136.123 0L169.823 4.01869e-07L169.822 7.34961C169.822 7.34961 159.674 8.54864 153.311 14.2928C146.948 20.037 146.275 30.8965 146.275 30.8965Z"
+            fill="black"
+          />
+          <path
+            d="M146.277 30.8965C146.277 17.8919 156.82 7.34961 169.824 7.34961"
+            stroke="white"
+          />
+          <path
+            d="M10.1532 81.5498L0.000781626 81.5498L4.01888e-07 54.5305L33.7001 54.5305L33.7001 58.0029C33.7001 58.0029 23.5516 59.202 17.1886 64.9461C10.8255 70.6903 10.1532 81.5498 10.1532 81.5498Z"
+            fill="black"
+          />
+          <path
+            d="M10.1543 81.5498C10.1543 68.5452 20.6966 58.0029 33.7012 58.0029"
+            stroke="white"
+          />
+        </svg>
       </div>
       <Calendar />
     </section>
