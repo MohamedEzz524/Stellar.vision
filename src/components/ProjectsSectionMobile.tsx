@@ -555,7 +555,7 @@ const ProjectsSectionMobile = ({
     const scrollTrigger = ScrollTrigger.create({
       trigger: sectionRef.current,
       start: 'top top',
-      end: () => `+=${Math.max(projects.length * 50, 100)}%`,
+      end: () => `+=${Math.max(projects.length * 100, 200)}%`,
       pin: true,
       pinSpacing: true,
       scrub: 1,

@@ -1571,7 +1571,7 @@ const Calendar = () => {
   return (
     <div
       ref={calendarRef}
-      className={`text-textPrimary pointer-events-auto absolute top-0 z-[99999] flex h-screen w-full flex-col overflow-visible bg-transparent transition-transform duration-800 outline-none ${
+      className={`text-textPrimary pointer-events-auto absolute top-0 z-[99999] flex h-[100dvh] w-full flex-col overflow-visible bg-transparent transition-transform duration-800 outline-none ${
         state.viewState === 0
           ? 'translate-y-[calc(100%-77px)]'
           : 'translate-y-0'

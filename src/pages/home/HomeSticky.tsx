@@ -52,7 +52,7 @@ const HomeSticky = () => {
   const leftBottom = bottomHeight - 1.5; // End 1.5px before bottom border starts (extends 0.5px into bottom)
 
   return (
-    <section className="pointer-events-none fixed top-0 left-0 z-[9999] h-[100vh] w-full">
+    <section className="pointer-events-none fixed top-0 left-0 z-[9999] h-[100dvh] w-full">
       {/* Top border container - fills corner, inner div has border */}
       <div
         className="bg-bgPrimary absolute top-0 right-0 left-0"
