@@ -21,7 +21,7 @@ const TestimonialsSection = () => {
 
   // Calculate card width and gap based on viewport width
   const getCardDimensions = useCallback(() => {
-    const gap = !isLg ? 1.5 * 16 : 3 * 16; // Convert rem to px (1rem = 16px)
+    const gap = !isLg ?  16 : 3 * 16; // Convert rem to px (1rem = 16px)
 
     // Card width is fixed at 55vw (55% of window width)
     const cardWidth = (window.innerWidth * 55) / 100;
@@ -36,7 +36,7 @@ const TestimonialsSection = () => {
   const getCardHeight = useCallback(
     (cardWidth: number, isActive: boolean = false) => {
       // Get base aspect ratio for mobile/desktop (width/height)
-      const baseAspectRatio = isLg ? 1.7 : 2 / 3;
+      const baseAspectRatio = isLg ? 1.7 : 9 / 16;
       // On mobile, active card is 10% taller (smaller aspect ratio means taller)
       const aspectRatio =
         !isLg && isActive ? baseAspectRatio / 1.1 : baseAspectRatio;

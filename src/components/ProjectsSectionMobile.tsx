@@ -56,11 +56,11 @@ const ProjectsSectionMobile = ({
     cardsSceneRef.current = cardsScene;
 
     const cardsCamera = new THREE.PerspectiveCamera(
-        50,
-        window.innerWidth / window.innerHeight,
-        0.1,
-        1000,
-      );
+      50,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000,
+    );
     cardsCamera.position.setZ(20);
     cardsCameraRef.current = cardsCamera;
 
@@ -296,31 +296,31 @@ const ProjectsSectionMobile = ({
         // Track which card is currently active (centered and clickable)
         let newActiveCardIndex: number | null = null;
 
-        meshes.forEach((mesh, index) => {
-          const points = particles[index];
-          const particleData = cardParticlePositionsRef.current[index];
-          if (!particleData || !points) return;
-
-          // Cards animate sequentially - no overlap
-          // Card 0 starts at 0, finishes at 1.0
-          // Card 1 starts at 1.0, finishes at 2.0
-          // Card 2 starts at 2.0, finishes at 3.0
+        // First pass: calculate each card's local progress
+        const cardProgresses: number[] = [];
+        meshes.forEach((_, index) => {
           const cardStartTime = index * cardPhaseRatio;
-          const cardEndTime = cardStartTime + cardPhaseRatio; // When card finishes
+          const cardEndTime = cardStartTime + cardPhaseRatio;
 
           let localProgress = 0;
           if (
             normalizedProgress >= cardStartTime &&
             normalizedProgress <= cardEndTime
           ) {
-            // Card is animating
             localProgress =
               (normalizedProgress - cardStartTime) / cardPhaseRatio;
           } else if (normalizedProgress > cardEndTime) {
-            // Card animation finished
             localProgress = 1;
           }
+          cardProgresses[index] = localProgress;
+        });
 
+        meshes.forEach((mesh, index) => {
+          const points = particles[index];
+          const particleData = cardParticlePositionsRef.current[index];
+          if (!particleData || !points) return;
+
+          const localProgress = cardProgresses[index];
           const positions = particleData.positions.array as Float32Array;
           const originalPositions = particleData.originalPositions;
           const scatterDirections = particleData.scatterDirections;
@@ -329,6 +329,20 @@ const ProjectsSectionMobile = ({
           ).array as Float32Array;
           const particleCount = originalPositions.length / 3;
           const meshMaterial = mesh.material as THREE.MeshBasicMaterial;
+
+          // Check if next card exists and its progress
+          const nextCardIndex = index + 1;
+          const hasNextCard = nextCardIndex < numCards;
+          const nextCardProgress = hasNextCard
+            ? cardProgresses[nextCardIndex]
+            : 0;
+          const nextCardMoveProgress = hasNextCard
+            ? nextCardProgress / movePhaseRatio
+            : 0;
+
+          // Threshold for when next card is "close enough" to trigger scatter
+          // When next card reaches 40% of its move phase, start current card's scatter
+          const nextCardTriggerThreshold = 0.4;
 
           if (localProgress === 0) {
             // Before animation starts: hidden at bottom
@@ -373,43 +387,87 @@ const ProjectsSectionMobile = ({
               newActiveCardIndex = index;
             }
           } else {
-            // Fade phase: stay at center, switch to particles and scatter
-            const fadeProgress =
-              (localProgress - movePhaseRatio) / fadePhaseRatio;
-            mesh.position.y = 0;
-            mesh.scale.set(0.8, 0.8, 1);
-            mesh.rotation.set(0, 0, 0);
-            // Hide mesh, show particles
-            mesh.visible = false;
-            points.visible = true;
-            points.position.y = 0;
-            const scale = lerp(0.8, 0.3, fadeProgress);
-            points.scale.set(scale, scale, 1);
-            points.rotation.set(0, 0, 0);
-            // Scatter particles outward
-            const scatterAmount = fadeProgress * fadeProgress * fadeProgress; // Cubic for acceleration
-            for (let i = 0; i < particleCount; i++) {
-              const origX = originalPositions[i * 3];
-              const origY = originalPositions[i * 3 + 1];
-              const origZ = originalPositions[i * 3 + 2];
-              const dirX = scatterDirections[i * 3];
-              const dirY = scatterDirections[i * 3 + 1];
-              const dirZ = scatterDirections[i * 3 + 2];
-              // Scatter outward from original position
-              positions[i * 3] =
-                origX + dirX * MAX_SCATTER_DISTANCE * scatterAmount;
-              positions[i * 3 + 1] =
-                origY + dirY * MAX_SCATTER_DISTANCE * scatterAmount;
-              positions[i * 3 + 2] =
-                origZ + dirZ * MAX_SCATTER_DISTANCE * scatterAmount;
-              opacityAttribute[i] = lerp(1, 0, fadeProgress);
-            }
-            particleData.positions.needsUpdate = true;
-            points.geometry.attributes.opacity.needsUpdate = true;
-            // Card is active during fade phase (at center, before fully scattered)
-            if (fadeProgress < 0.8) {
-              // Active until 80% of fade phase (before too scattered)
+            // After move phase: check if we should start fade/scatter
+            // Start scatter only when next card has reached the trigger threshold
+            // OR if this is the last card (no next card), start scatter immediately
+            const shouldStartScatter =
+              !hasNextCard || nextCardMoveProgress >= nextCardTriggerThreshold;
+
+            if (!shouldStartScatter) {
+              // Wait phase: stay at center, keep mesh visible, wait for next card
+              mesh.position.y = 0;
+              mesh.scale.set(0.8, 0.8, 1);
+              mesh.rotation.set(0, 0, 0);
+              mesh.visible = true;
+              meshMaterial.opacity = 1;
+              points.visible = false;
+              // Keep particles ready
+              for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = originalPositions[i * 3];
+                positions[i * 3 + 1] = originalPositions[i * 3 + 1];
+                positions[i * 3 + 2] = originalPositions[i * 3 + 2];
+                opacityAttribute[i] = 1;
+              }
+              particleData.positions.needsUpdate = true;
+              points.geometry.attributes.opacity.needsUpdate = true;
+              // Card is active during wait phase
               newActiveCardIndex = index;
+            } else {
+              // Fade phase: stay at center, switch to particles and scatter
+              // Calculate fade progress based on next card's progress
+              let fadeProgress = 0;
+              if (hasNextCard) {
+                // Scatter starts when next card reaches threshold (40% of move)
+                // Scatter completes when next card reaches center (100% of move)
+                // Map next card's progress from threshold to center (0.4 to 1.0) to fade progress (0 to 1)
+                const progressRange = 1.0 - nextCardTriggerThreshold; // 0.6 (from 0.4 to 1.0)
+                const progressBeyondThreshold =
+                  nextCardMoveProgress - nextCardTriggerThreshold;
+                fadeProgress = Math.max(
+                  0,
+                  Math.min(1, progressBeyondThreshold / progressRange),
+                );
+              } else {
+                // Last card: use normal fade progress based on local progress
+                const progressAfterMove = localProgress - movePhaseRatio;
+                fadeProgress = progressAfterMove / fadePhaseRatio;
+              }
+
+              mesh.position.y = 0;
+              mesh.scale.set(0.8, 0.8, 1);
+              mesh.rotation.set(0, 0, 0);
+              // Hide mesh, show particles
+              mesh.visible = false;
+              points.visible = true;
+              points.position.y = 0;
+              const scale = lerp(0.8, 0.3, fadeProgress);
+              points.scale.set(scale, scale, 1);
+              points.rotation.set(0, 0, 0);
+              // Scatter particles outward
+              const scatterAmount = fadeProgress * fadeProgress * fadeProgress; // Cubic for acceleration
+              for (let i = 0; i < particleCount; i++) {
+                const origX = originalPositions[i * 3];
+                const origY = originalPositions[i * 3 + 1];
+                const origZ = originalPositions[i * 3 + 2];
+                const dirX = scatterDirections[i * 3];
+                const dirY = scatterDirections[i * 3 + 1];
+                const dirZ = scatterDirections[i * 3 + 2];
+                // Scatter outward from original position
+                positions[i * 3] =
+                  origX + dirX * MAX_SCATTER_DISTANCE * scatterAmount;
+                positions[i * 3 + 1] =
+                  origY + dirY * MAX_SCATTER_DISTANCE * scatterAmount;
+                positions[i * 3 + 2] =
+                  origZ + dirZ * MAX_SCATTER_DISTANCE * scatterAmount;
+                opacityAttribute[i] = lerp(1, 0, fadeProgress);
+              }
+              particleData.positions.needsUpdate = true;
+              points.geometry.attributes.opacity.needsUpdate = true;
+              // Card is active during fade phase (at center, before fully scattered)
+              if (fadeProgress < 0.8) {
+                // Active until 80% of fade phase (before too scattered)
+                newActiveCardIndex = index;
+              }
             }
           }
         });
@@ -510,7 +568,7 @@ const ProjectsSectionMobile = ({
       if (cardsCameraRef.current) {
         cardsCameraRef.current.aspect = window.innerWidth / window.innerHeight;
         cardsCameraRef.current.updateProjectionMatrix();
-          }
+      }
 
       if (cardsRendererRef.current) {
         cardsRendererRef.current.setSize(window.innerWidth, window.innerHeight);
