@@ -5,6 +5,7 @@ import StarryBackground from '../../components/StarryBackground';
 import HomeHeader from './HomeHeader';
 import HeroSection from './HeroSection';
 import HomeSticky from './HomeSticky';
+import TestimonialsSection from '../../components/TestimonialsSection';
 
 const Home = () => {
   return (
@@ -13,6 +14,7 @@ const Home = () => {
       <HomeSticky />
       <HeroSection />
       <HomeHeader />
+      <TestimonialsSection />
       <ProjectsSection projects={ExampleProjects} sectionId="works" />
       <ScrollTrigger3DSection
         texts={text3D}

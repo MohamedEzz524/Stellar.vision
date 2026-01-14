@@ -1,0 +1,132 @@
+/* Testimonials Section Styles */
+.testimonials-section {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  padding: 4rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  overflow: hidden;
+}
+
+.testimonials-container {
+  width: 100%;
+  max-width: 100%;
+  position: relative;
+  padding: 0;
+}
+
+.testimonials-slider-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 400px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.testimonials-slider {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  will-change: transform;
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .testimonials-slider-wrapper {
+    padding: 0;
+  }
+  .testimonials-slider {
+    height: 650px;
+  }
+}
+
+.testimonial-card {
+  flex-shrink: 0;
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  transition:
+    box-shadow 0.3s ease,
+    height 0.8s ease;
+}
+@media screen and (min-width: 1024px) {
+  .testimonial-card {
+    border-radius: 16px;
+  }
+
+  .testimonial-card:hover {
+    box-shadow:
+      0 30px 80px rgba(0, 0, 0, 0.7),
+      0 0 0 2px rgba(74, 144, 226, 0.5),
+      0 0 40px rgba(74, 144, 226, 0.3);
+  }
+}
+
+.testimonial-video-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.testimonial-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Navigation overlay */
+.testimonials-navigation-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.testimonials-nav-area {
+  width: 50%;
+  height: 100%;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.testimonials-nav-left {
+  cursor: w-resize;
+}
+
+.testimonials-nav-right {
+  cursor: e-resize;
+}
+
+.testimonials-nav-area:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Mobile Styles */
+@media (max-width: 1023px) {
+  .testimonials-section {
+    padding: 3rem 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .testimonials-section {
+    padding: 2rem 0;
+    min-height: 80vh;
+  }
+}
