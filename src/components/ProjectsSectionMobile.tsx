@@ -154,7 +154,7 @@ const ProjectsSectionMobile = ({
       `;
 
       // Create particle system for each card
-      textures.forEach((texture) => {
+      textures.forEach((texture, textureIndex) => {
         // Reduce card width to add padding on left and right
         const cardWidth = 12 - CARD_HORIZONTAL_PADDING * 2;
         const cardHeight = 16;
@@ -184,9 +184,14 @@ const ProjectsSectionMobile = ({
           depthWrite: true,
         });
         const cardMesh = new THREE.Mesh(meshGeometry, meshMaterial);
-        cardMesh.position.set(0, -12, 0);
+        // Set z-position based on index: newer cards (higher index) are in front
+        // Use small increments to avoid depth fighting while ensuring proper layering
+        const zOffset = textureIndex * 0.01;
+        cardMesh.position.set(0, -12, zOffset);
         cardMesh.scale.set(0.8, 0.8, 1);
         cardMesh.rotation.set(0, 0, 0);
+        // Set renderOrder: higher index = higher renderOrder (renders last = on top)
+        cardMesh.renderOrder = textureIndex;
         cardMesh.visible = true;
         cardsSceneRef.current?.add(cardMesh);
         meshes.push(cardMesh);
@@ -254,9 +259,13 @@ const ProjectsSectionMobile = ({
 
         const points = new THREE.Points(geometry, material);
         // Start position: bottom center (below view)
-        points.position.set(0, -12, 0);
+        // Use same z-offset as corresponding mesh to maintain layering
+        const zOffset = textureIndex * 0.01;
+        points.position.set(0, -12, zOffset);
         points.scale.set(0.8, 0.8, 1);
         points.rotation.set(0, 0, 0);
+        // Set renderOrder: higher index = higher renderOrder (renders last = on top)
+        points.renderOrder = textureIndex;
         points.visible = false; // Hidden initially, only show during scatter phase
         cardsSceneRef.current?.add(points);
         particles.push(points);
@@ -344,15 +353,18 @@ const ProjectsSectionMobile = ({
           // When next card reaches 40% of its move phase, start current card's scatter
           const nextCardTriggerThreshold = 0.4;
 
+          // Maintain z-offset based on index (newer cards in front)
+          const zOffset = index * 0.01;
+
           if (localProgress === 0) {
             // Before animation starts: hidden at bottom
-            mesh.position.y = -12;
+            mesh.position.set(0, -12, zOffset);
             mesh.scale.set(0.8, 0.8, 1);
             mesh.rotation.set(0, 0, 0);
             mesh.visible = true;
             meshMaterial.opacity = 1;
             points.visible = false;
-            points.position.y = -12;
+            points.position.set(0, -12, zOffset);
             points.scale.set(0.8, 0.8, 1);
             points.rotation.set(0, 0, 0);
             // Reset particles to original positions
@@ -367,7 +379,7 @@ const ProjectsSectionMobile = ({
           } else if (localProgress <= movePhaseRatio) {
             // Moving phase: bottom to center with full opacity (use mesh for high quality)
             const moveProgress = localProgress / movePhaseRatio;
-            mesh.position.set(0, lerp(-12, 0, moveProgress), 0);
+            mesh.position.set(0, lerp(-12, 0, moveProgress), zOffset);
             mesh.scale.set(0.8, 0.8, 1);
             mesh.rotation.set(0, 0, 0);
             mesh.visible = true;
@@ -395,7 +407,7 @@ const ProjectsSectionMobile = ({
 
             if (!shouldStartScatter) {
               // Wait phase: stay at center, keep mesh visible, wait for next card
-              mesh.position.y = 0;
+              mesh.position.set(0, 0, zOffset);
               mesh.scale.set(0.8, 0.8, 1);
               mesh.rotation.set(0, 0, 0);
               mesh.visible = true;
@@ -433,13 +445,13 @@ const ProjectsSectionMobile = ({
                 fadeProgress = progressAfterMove / fadePhaseRatio;
               }
 
-              mesh.position.y = 0;
+              mesh.position.set(0, 0, zOffset);
               mesh.scale.set(0.8, 0.8, 1);
               mesh.rotation.set(0, 0, 0);
               // Hide mesh, show particles
               mesh.visible = false;
               points.visible = true;
-              points.position.y = 0;
+              points.position.set(0, 0, zOffset);
               const scale = lerp(0.8, 0.3, fadeProgress);
               points.scale.set(scale, scale, 1);
               points.rotation.set(0, 0, 0);
@@ -557,7 +569,15 @@ const ProjectsSectionMobile = ({
 
     scrollTriggerRef.current = scrollTrigger;
 
+    // Refresh ScrollTrigger after initialization to ensure Lenis integration
+    // Lenis is already initialized globally in App.tsx via useLenis hook
+    // and connected to ScrollTrigger in useLenis.ts, so smooth scrolling should work automatically
+    const timeoutId = setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 100);
+
     return () => {
+      clearTimeout(timeoutId);
       scrollTrigger.kill();
     };
   }, [projects.length]);
