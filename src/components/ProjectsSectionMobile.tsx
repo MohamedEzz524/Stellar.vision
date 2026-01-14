@@ -155,6 +155,10 @@ const ProjectsSectionMobile = ({
 
       // Create particle system for each card
       textures.forEach((texture, textureIndex) => {
+        // Set z-position based on index: newer cards (higher index) are in front
+        // Use small increments to avoid depth fighting while ensuring proper layering
+        const zOffset = textureIndex * 0.01;
+
         // Reduce card width to add padding on left and right
         const cardWidth = 12 - CARD_HORIZONTAL_PADDING * 2;
         const cardHeight = 16;
@@ -184,9 +188,6 @@ const ProjectsSectionMobile = ({
           depthWrite: true,
         });
         const cardMesh = new THREE.Mesh(meshGeometry, meshMaterial);
-        // Set z-position based on index: newer cards (higher index) are in front
-        // Use small increments to avoid depth fighting while ensuring proper layering
-        const zOffset = textureIndex * 0.01;
         cardMesh.position.set(0, -12, zOffset);
         cardMesh.scale.set(0.8, 0.8, 1);
         cardMesh.rotation.set(0, 0, 0);
@@ -260,7 +261,6 @@ const ProjectsSectionMobile = ({
         const points = new THREE.Points(geometry, material);
         // Start position: bottom center (below view)
         // Use same z-offset as corresponding mesh to maintain layering
-        const zOffset = textureIndex * 0.01;
         points.position.set(0, -12, zOffset);
         points.scale.set(0.8, 0.8, 1);
         points.rotation.set(0, 0, 0);
