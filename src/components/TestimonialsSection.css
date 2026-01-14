@@ -103,6 +103,10 @@
   pointer-events: auto;
   cursor: pointer;
   transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
 .testimonials-nav-left {
@@ -115,6 +119,46 @@
 
 .testimonials-nav-area:hover {
   background-color: rgba(255, 255, 255, 0.02);
+}
+
+.testimonials-nav-arrow {
+  width: 24px;
+  height: 32px;
+  opacity: 0.6;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+  pointer-events: none;
+  z-index: 11;
+}
+
+.testimonials-nav-arrow-left {
+  transform: scaleX(-1);
+}
+
+.testimonials-nav-area:hover .testimonials-nav-arrow {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.testimonials-nav-area:hover .testimonials-nav-arrow-left {
+  transform: scaleX(-1) scale(1.1);
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .testimonials-nav-arrow {
+    width: 20px;
+    height: 26px;
+  }
+
+  .testimonials-nav-left {
+    padding-left: 1rem;
+  }
+
+  .testimonials-nav-right {
+    padding-right: 1rem;
+  }
 }
 
 /* Mobile Styles */
