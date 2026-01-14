@@ -450,11 +450,11 @@ html:active .custom-cursor {
   cursor: not-allowed;
 }
 
-/* Preloader halves with ::before and ::after pseudo-elements */
+/* Preloader halves with 4 L shapes forming expand icon */
 .preloader-half {
   position: relative;
   width: 100px;
-  height: 60px; /* Shorter height */
+  height: 40px;
   margin: 0 10px;
 }
 
@@ -466,64 +466,83 @@ html:active .custom-cursor {
   transform-origin: center center;
 }
 
-/* Left half - vertical line on the left */
-.preloader-half-left::before {
-  content: '';
+/* Base L shape styling */
+.preloader-l-shape {
   position: absolute;
-  left: 0;
-  top: 0;
   width: 3px;
-  height: 100%; /* Shorter than container */
-  background: rgb(255, 255, 255);
-}
-
-/* Left half - horizontal lines */
-.preloader-half-left::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 10px;
   height: 3px;
   background: rgb(255, 255, 255);
-}
-.preloader-half-left-line {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 10px;
-  height: 3px;
-  background: rgb(255, 255, 255);
+  transform-origin: center center;
 }
 
-/* Right half - vertical line on the right */
-.preloader-half-right::before {
-  content: '';
-  position: absolute;
-  right: 0;
+/* Left top L shape (facing down) - vertical up, horizontal right */
+.preloader-l-top-left {
   top: 0;
+  left: 0;
   width: 3px;
-  height: 100%; /* Shorter than container */
-  background: rgb(255, 255, 255);
+  height: 15px; /* Vertical part */
 }
 
-/* Right half - horizontal lines */
-.preloader-half-right::after {
+.preloader-l-top-left::after {
   content: '';
   position: absolute;
-  right: 0;
   top: 0;
-  width: 10px;
+  left: 0;
+  width: 15px; /* Horizontal part */
   height: 3px;
   background: rgb(255, 255, 255);
 }
-.preloader-half-right-line {
+
+/* Left bottom L shape (facing up) - vertical down, horizontal right */
+.preloader-l-bottom-left {
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  height: 15px; /* Vertical part */
+}
+
+.preloader-l-bottom-left::after {
   content: '';
   position: absolute;
-  right: 0;
   bottom: 0;
-  width: 10px;
+  left: 0;
+  width: 15px; /* Horizontal part */
+  height: 3px;
+  background: rgb(255, 255, 255);
+}
+
+/* Right top L shape (facing down) - vertical up, horizontal left */
+.preloader-l-top-right {
+  top: 0;
+  right: 0;
+  width: 3px;
+  height: 15px; /* Vertical part */
+}
+
+.preloader-l-top-right::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 15px; /* Horizontal part */
+  height: 3px;
+  background: rgb(255, 255, 255);
+}
+
+/* Right bottom L shape (facing up) - vertical down, horizontal left */
+.preloader-l-bottom-right {
+  bottom: 0;
+  right: 0;
+  width: 3px;
+  height: 15px; /* Vertical part */
+}
+
+.preloader-l-bottom-right::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 15px; /* Horizontal part */
   height: 3px;
   background: rgb(255, 255, 255);
 }

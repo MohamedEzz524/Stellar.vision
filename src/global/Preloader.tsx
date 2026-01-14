@@ -84,15 +84,15 @@ const Preloader = () => {
           leftHalfGroupRef.current = leftHalf;
           rightHalfGroupRef.current = rightHalf;
 
-          // Set initial position immediately, even before visibility
-          // This prevents any jump when the element becomes visible
+          // Set initial position: not expanded (touching with gap-3)
+          // Compensate for margins (10px each) to make them appear touching with just gap-3
           gsap.set(leftHalf, {
-            x: 100,
+            x: 100, // Move right to compensate for right margin
             immediateRender: true,
             force3D: true,
           });
           gsap.set(rightHalf, {
-            x: -100,
+            x: -100, // Move left to compensate for left margin
             immediateRender: true,
             force3D: true,
           });
@@ -162,18 +162,43 @@ const Preloader = () => {
           // Ensure initial positions are set before making visible
           const leftHalf = leftHalfGroupRef.current;
           const rightHalf = rightHalfGroupRef.current;
+          const parentContainer = firstPreloaderRef.current;
 
-          if (leftHalf && rightHalf) {
-            // Double-check initial position is set (should already be set in useEffect)
+          if (leftHalf && rightHalf && parentContainer) {
+            // Set initial position: not expanded (touching with gap-3)
+            // Compensate for margins (10px each) to make them appear touching with just gap-3
             gsap.set(leftHalf, {
-              x: 100,
+              x: 100, // Move right to compensate for right margin
               immediateRender: true,
               force3D: true,
             });
             gsap.set(rightHalf, {
-              x: -100,
+              x: -100, // Move left to compensate for left margin
               immediateRender: true,
               force3D: true,
+            });
+            // Reset parent rotation
+            gsap.set(parentContainer, {
+              rotation: 0,
+              immediateRender: true,
+              force3D: true,
+              transformOrigin: 'center center',
+            });
+            // Set initial opacity for L shapes (they'll fade out during reveal)
+            const lShapes = [
+              leftHalf.querySelector('.preloader-l-top-left'),
+              leftHalf.querySelector('.preloader-l-bottom-left'),
+              rightHalf.querySelector('.preloader-l-top-right'),
+              rightHalf.querySelector('.preloader-l-bottom-right'),
+            ].filter(Boolean) as HTMLElement[];
+            lShapes.forEach((shape) => {
+              gsap.set(shape, {
+                opacity: 1,
+                x: 0,
+                y: 0,
+                immediateRender: true,
+                force3D: true,
+              });
             });
           }
         })
@@ -182,52 +207,37 @@ const Preloader = () => {
         .call(() => {
           const leftHalf = leftHalfGroupRef.current;
           const rightHalf = rightHalfGroupRef.current;
+          const parentContainer = firstPreloaderRef.current;
+
+          if (leftHalf && rightHalf && parentContainer) {
+            // Step 1: Rotate parent 360deg FIRST (before expansion)
+            gsap.to(parentContainer, {
+              rotation: 360,
+              duration: 1.2,
+              ease: 'power2.inOut',
+              force3D: true,
+            });
+          }
+        })
+        .to({}, { duration: 1.2 }) // Wait for rotation to complete
+        .call(() => {
+          const leftHalf = leftHalfGroupRef.current;
+          const rightHalf = rightHalfGroupRef.current;
 
           if (leftHalf && rightHalf) {
-            // Step 2: Expand to default positions (x: 0 for both)
+            // Step 2: Expand AFTER rotation completes (move left/right apart to reveal second loader)
             gsap.to(leftHalf, {
-              x: 0,
+              x: 10,
               duration: 0.6,
               ease: 'power2.out',
               force3D: true,
             });
             gsap.to(rightHalf, {
-              x: 0,
+              x: -10,
               duration: 0.6,
               ease: 'power2.out',
               force3D: true,
             });
-          } else {
-            // If refs still not ready, retry after delay
-            console.warn('Preloader refs not ready, retrying...');
-            setTimeout(() => {
-              const leftHalf = leftHalfGroupRef.current;
-              const rightHalf = rightHalfGroupRef.current;
-              if (leftHalf && rightHalf) {
-                gsap.set(leftHalf, {
-                  x: 100,
-                  immediateRender: true,
-                  force3D: true,
-                });
-                gsap.set(rightHalf, {
-                  x: -100,
-                  immediateRender: true,
-                  force3D: true,
-                });
-                gsap.to(leftHalf, {
-                  x: 0,
-                  duration: 0.6,
-                  ease: 'power2.out',
-                  force3D: true,
-                });
-                gsap.to(rightHalf, {
-                  x: 0,
-                  duration: 0.6,
-                  ease: 'power2.out',
-                  force3D: true,
-                });
-              }
-            }, 100);
           }
         })
         // Step 2: Show second preloader immediately after expansion
@@ -300,38 +310,111 @@ const Preloader = () => {
               undefined,
               fillEndTime,
             )
-              // Shift first preloader groups back together (X-axis only)
+              // Step 4: Close (move left/right back to not expanded state)
               .call(() => {
                 const leftHalf = leftHalfGroupRef.current;
                 const rightHalf = rightHalfGroupRef.current;
                 if (leftHalf && rightHalf) {
-                  // Shift left half right, right half left (toward center)
+                  // Move back to not expanded state (far apart)
                   gsap.to(leftHalf, {
                     x: 100,
                     duration: 0.8,
                     ease: 'power2.out',
+                    force3D: true,
                   });
                   gsap.to(rightHalf, {
                     x: -100,
                     duration: 0.8,
                     ease: 'power2.out',
+                    force3D: true,
                   });
                 }
               })
               .to({}, { duration: 0.8 }) // Wait for closing animation
-              // Hide first preloader
+              // Step 5: Move all 4 L shapes simultaneously away from viewport center
+              // AND start reveal animation at the same time
               .call(() => {
-                updateState({
-                  firstPreloaderVisible: false,
-                });
-              })
-              // Wait for 3D model to be ready, then start reveal animation
-              .call(() => {
+                const leftHalf = leftHalfGroupRef.current;
+                const rightHalf = rightHalfGroupRef.current;
+                const parentContainer = firstPreloaderRef.current;
+
+                if (leftHalf && rightHalf && parentContainer) {
+                  const lShapes = [
+                    leftHalf.querySelector('.preloader-l-top-left'),
+                    leftHalf.querySelector('.preloader-l-bottom-left'),
+                    rightHalf.querySelector('.preloader-l-top-right'),
+                    rightHalf.querySelector('.preloader-l-bottom-right'),
+                  ].filter(Boolean) as HTMLElement[];
+
+                  // Calculate viewport center
+                  const viewportCenterX = window.innerWidth / 2;
+                  const viewportCenterY = window.innerHeight / 2;
+                  const vh20 = window.innerHeight * 0.2;
+
+                  // Angles matching the shapes array order:
+                  // [left-top (135°), left-bottom (225°), right-top (45°), right-bottom (315°)]
+                  const angles = [225, 135, 315, 45];
+
+                  // Calculate target positions for each L shape from viewport center
+                  const animations = lShapes
+                    .map((shape, index) => {
+                      if (!shape) return null;
+
+                      const angle = angles[index];
+                      const rad = (angle * Math.PI) / 180;
+
+                      // Get current position of the shape relative to viewport
+                      const rect = shape.getBoundingClientRect();
+                      const currentX = rect.left + rect.width / 2;
+                      const currentY = rect.top + rect.height / 2;
+
+                      // Calculate target position from viewport center
+                      const targetX = viewportCenterX + Math.cos(rad) * vh20;
+                      const targetY = viewportCenterY + Math.sin(rad) * vh20;
+
+                      // Calculate the delta needed to reach target
+                      const deltaX = targetX - currentX;
+                      const deltaY = targetY - currentY;
+
+                      return { shape, deltaX, deltaY };
+                    })
+                    .filter(Boolean) as Array<{
+                    shape: HTMLElement;
+                    deltaX: number;
+                    deltaY: number;
+                  }>;
+
+                  // Animate all L shapes simultaneously
+                  animations.forEach(({ shape, deltaX, deltaY }) => {
+                    gsap.set(shape, {
+                      transformOrigin: 'center center',
+                      force3D: true,
+                    });
+
+                    gsap.to(shape, {
+                      opacity: 0,
+                      x: `+=${deltaX}`,
+                      y: `+=${deltaY}`,
+                      duration: 1.2,
+                      ease: 'power2.out',
+                      force3D: true,
+                    });
+                  });
+                }
+
+                // Start reveal animation at the same time as L shapes move
                 updateState({ isRevealing: true });
                 // Wait for 3D model to be loaded before starting reveal animation
                 waitForModel3D(() => {
                   // Trigger reveal animation for hero section
                   revealAnimationCleanupRef.current = playRevealAnimation();
+                });
+              })
+              .to({}, { duration: 1.2 }) // Wait for L shapes animation and reveal to start
+              // Hide first preloader
+              .call(() => {
+                updateState({
+                  firstPreloaderVisible: false,
                 });
               })
               // Hide preloader after reveal animation
@@ -458,7 +541,7 @@ const Preloader = () => {
             <div
               ref={firstPreloaderRef}
               data-v-a05bfe24=""
-              className="absolute inset-0 flex items-center justify-center"
+              className="absolute inset-0 flex items-center justify-center gap-3"
               style={{
                 opacity: state.firstPreloaderVisible ? 1 : 0,
                 visibility: state.firstPreloaderVisible ? 'visible' : 'hidden',
@@ -471,14 +554,20 @@ const Preloader = () => {
                 id="left-half-group"
                 className="preloader-half preloader-half-left"
               >
-                <div className="preloader-half-left-line" />
+                {/* Top L shape (facing up) */}
+                <div className="preloader-l-shape preloader-l-top-left" />
+                {/* Bottom L shape (facing down) */}
+                <div className="preloader-l-shape preloader-l-bottom-left" />
               </div>
               {/* Right Half */}
               <div
                 id="right-half-group"
                 className="preloader-half preloader-half-right"
               >
-                <div className="preloader-half-right-line" />
+                {/* Top L shape (facing up) */}
+                <div className="preloader-l-shape preloader-l-top-right" />
+                {/* Bottom L shape (facing down) */}
+                <div className="preloader-l-shape preloader-l-bottom-right" />
               </div>
             </div>
 
