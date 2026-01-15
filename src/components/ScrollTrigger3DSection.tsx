@@ -723,7 +723,7 @@ const ScrollTrigger3DSection = ({
       {/* Text Wrapper Track */}
       <div
         ref={textTrackRef}
-        className="font-grid relative lg:px-0 px-3 text-balance z-20 mx-auto max-w-[344px] will-change-transform lg:max-w-[1000px]"
+        className="font-grid relative lg:px-0 px-1.5 z-20 mx-auto max-w-[344px] will-change-transform lg:max-w-[1000px]"
       >
         <div ref={textContainerRef} className="relative z-20">
           {texts.map((text, index) => (
