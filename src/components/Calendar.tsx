@@ -398,8 +398,8 @@ const Calendar = () => {
     };
   }, []);
 
-  const calendarRef = useRef<HTMLElement>(null);
-  useTouchScroll(calendarRef);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  useTouchScroll(calendarRef as React.RefObject<HTMLElement>);
   const startButtonRef = useRef<HTMLDivElement>(null);
   const timeButtonsRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const gsapAnimationsRef = useRef<gsap.core.Tween[]>([]);
