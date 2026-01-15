@@ -188,7 +188,6 @@ const TestimonialsSection = () => {
     const video = videoRefs.current[index];
     if (video && videoLoadedRef.current[index]) {
       // try to play immediately if visible enough (1 means fully in view)
-      const intersectionRatio = video.getBoundingClientRect().bottom > 0 ? 1 : 0;
       const isActive = index === currentIndexRef.current;
       if (isActive) video.play().catch(() => {});
     }
