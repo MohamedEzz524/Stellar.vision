@@ -4,173 +4,60 @@ import { TestimonialVideos } from '../constants';
 import './TestimonialsSection.css';
 import { useMediaQuery } from 'react-responsive';
 import arrowRightIcon from '../assets/arrow-right.svg';
-
-const INITIAL_INDEX = Math.ceil(TestimonialVideos.length / 2);
+import projectorImage from '../assets/images/projector.webp';
 
 const TestimonialsSection = () => {
   const isLg = useMediaQuery({ minWidth: 1024 });
-  const sliderRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const videoWrapperRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(INITIAL_INDEX);
-  const [videoLoadingStates, setVideoLoadingStates] = useState<boolean[]>(() =>
-    new Array(TestimonialVideos.length).fill(false),
-  );
-
-  const isAnimatingRef = useRef(false);
-  const isInitializedRef = useRef(false);
-  const currentIndexRef = useRef(INITIAL_INDEX);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const currentIndexRef = useRef(0);
   const videoLoadedRef = useRef<boolean[]>(
     new Array(TestimonialVideos.length).fill(false),
   );
   const videoLoadingRef = useRef<boolean[]>(
     new Array(TestimonialVideos.length).fill(false),
   );
-  const hasLoadedIndex0Ref = useRef(false);
+  const [videoLoadingStates, setVideoLoadingStates] = useState<boolean[]>(() =>
+    new Array(TestimonialVideos.length).fill(false),
+  );
 
-  const getCardDimensions = useCallback(() => {
-    const gap = isLg ? window.innerWidth * 0.06 : 10;
-    const widthPercentage = isLg ? 33 : 55;
-    const cardWidth = (window.innerWidth * widthPercentage) / 100;
-    return { cardWidth, gap };
+  // Video wrapper dimensions
+  const getVideoWrapperDimensions = useCallback(() => {
+    if (isLg) {
+      return {
+        width: Math.min(window.innerWidth * 0.23, 400), // 20% of viewport or max 800px
+        aspectRatio: 2 / 3.3,
+      };
+    }
+    return {
+      width: window.innerWidth * 0.9, // 90% of viewport on mobile
+      aspectRatio: 2 / 2.5,
+    };
   }, [isLg]);
 
-  const getCardHeight = useCallback(
-    (cardWidth: number, isActive: boolean = false) => {
-      const baseAspectRatio = isLg ? 1 : 9 / 16;
-      const aspectRatio =
-        !isLg && isActive ? baseAspectRatio / 1.1 : baseAspectRatio;
-      return cardWidth / aspectRatio;
-    },
-    [isLg],
-  );
+  // Load videos as needed
+  const loadVideoIfNeeded = useCallback((index: number) => {
+    const video = videoRefs.current[index];
+    if (
+      !video ||
+      videoLoadedRef.current[index] ||
+      videoLoadingRef.current[index]
+    )
+      return;
 
-  const getSliderPositionForCard = useCallback(
-    (cardIndex: number) => {
-      const { cardWidth, gap } = getCardDimensions();
-      const viewportWidth = window.innerWidth;
-      const centerX = viewportWidth / 2 - cardWidth / 2;
-      const offset = cardWidth + gap;
-      const totalCardsWidth =
-        TestimonialVideos.length * cardWidth +
-        (TestimonialVideos.length - 1) * gap;
-      const containerOffset = (viewportWidth - totalCardsWidth) / 2;
-      return centerX - containerOffset - cardIndex * offset;
-    },
-    [getCardDimensions],
-  );
+    videoLoadingRef.current[index] = true;
+    setVideoLoadingStates((prev) => {
+      const newStates = [...prev];
+      newStates[index] = true;
+      return newStates;
+    });
 
-  useEffect(() => {
-    if (!sliderRef.current) return;
+    video.load();
+  }, []);
 
-    const updateSlider = () => {
-      const { cardWidth, gap } = getCardDimensions();
-
-      cardRefs.current.forEach((card, index) => {
-        if (card) {
-          const isActive = index === currentIndex;
-          card.style.width = `${cardWidth}px`;
-          card.style.height = `${getCardHeight(cardWidth, isActive)}px`;
-          card.style.marginRight =
-            index < TestimonialVideos.length - 1 ? `${gap}px` : '0';
-        }
-      });
-
-      if (!isInitializedRef.current && sliderRef.current) {
-        requestAnimationFrame(() => {
-          if (sliderRef.current) {
-            const startPosition = getSliderPositionForCard(INITIAL_INDEX);
-            gsap.set(sliderRef.current, { x: startPosition });
-            isInitializedRef.current = true;
-            setCurrentIndex(INITIAL_INDEX);
-            currentIndexRef.current = INITIAL_INDEX;
-          }
-        });
-      }
-    };
-
-    updateSlider();
-    window.addEventListener('resize', updateSlider);
-    return () => window.removeEventListener('resize', updateSlider);
-  }, [
-    getSliderPositionForCard,
-    getCardDimensions,
-    getCardHeight,
-    currentIndex,
-  ]);
-
-  useEffect(() => {
-    currentIndexRef.current = currentIndex;
-  }, [currentIndex]);
-
-  const navigate = useCallback(
-    (direction: 'prev' | 'next') => {
-      if (isAnimatingRef.current || !sliderRef.current) return;
-
-      isAnimatingRef.current = true;
-      const currentIdx = currentIndexRef.current;
-      const newIndex =
-        direction === 'next'
-          ? (currentIdx + 1) % TestimonialVideos.length
-          : (currentIdx - 1 + TestimonialVideos.length) %
-            TestimonialVideos.length;
-
-      gsap.to(sliderRef.current, {
-        x: getSliderPositionForCard(newIndex),
-        duration: 0.6,
-        ease: 'power2.inOut',
-        onComplete: () => {
-          isAnimatingRef.current = false;
-          setCurrentIndex(newIndex);
-        },
-      });
-    },
-    [getSliderPositionForCard],
-  );
-
-  const updateVideoLoadingState = useCallback(
-    (index: number, isLoading: boolean) => {
-      videoLoadingRef.current[index] = isLoading;
-      setVideoLoadingStates((prev) => {
-        const newStates = [...prev];
-        newStates[index] = isLoading;
-        return newStates;
-      });
-    },
-    [],
-  );
-
-  const loadVideoIfNeeded = useCallback(
-    (index: number) => {
-      const video = videoRefs.current[index];
-      if (
-        !video ||
-        videoLoadedRef.current[index] ||
-        videoLoadingRef.current[index]
-      )
-        return;
-
-      updateVideoLoadingState(index, true);
-      video.load();
-    },
-    [updateVideoLoadingState],
-  );
-
-  useEffect(() => {
-    loadVideoIfNeeded(currentIndex);
-    const prevIndex =
-      (currentIndex - 1 + TestimonialVideos.length) % TestimonialVideos.length;
-    const nextIndex = (currentIndex + 1) % TestimonialVideos.length;
-    loadVideoIfNeeded(prevIndex);
-    loadVideoIfNeeded(nextIndex);
-    // Ensure index 0 is loaded on initial mount to prevent stuck loading state
-    if (!hasLoadedIndex0Ref.current && currentIndex !== 0) {
-      loadVideoIfNeeded(0);
-      hasLoadedIndex0Ref.current = true;
-    }
-  }, [currentIndex, loadVideoIfNeeded]);
-
+  // Play active video
   const playActiveVideo = useCallback((index: number) => {
     const video = videoRefs.current[index];
     if (
@@ -183,90 +70,180 @@ const TestimonialsSection = () => {
     }
   }, []);
 
-  useEffect(() => {
+  // Pause all videos except current
+  const pauseOtherVideos = useCallback((currentIndex: number) => {
     videoRefs.current.forEach((video, index) => {
-      if (!video) return;
-
-      if (index === currentIndex) {
-        playActiveVideo(index);
-      } else {
-        if (!video.paused) video.pause();
-        if (video.currentTime > 0) video.currentTime = 0;
+      if (video && index !== currentIndex) {
+        if (!video.paused) {
+          video.pause();
+        }
       }
     });
-  }, [currentIndex, playActiveVideo]);
-
-  useEffect(() => {
-    if (!videoRefs.current.length) return;
-
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const video = entry.target as HTMLVideoElement;
-          const videoIndex = videoRefs.current.indexOf(video);
-          const isActive = videoIndex === currentIndexRef.current;
-
-          if (entry.intersectionRatio < 0.5) {
-            if (!video.paused) video.pause();
-          } else if (
-            isActive &&
-            videoLoadedRef.current[videoIndex] &&
-            video.readyState >= 2 &&
-            video.paused
-          ) {
-            video.play().catch(() => {});
-          } else if (!isActive && !video.paused) {
-            video.pause();
-            if (video.currentTime > 0) video.currentTime = 0;
-          }
-        });
-      },
-      { threshold: [0, 0.5, 1], rootMargin: '0px' },
-    );
-
-    videoRefs.current.forEach((video) => {
-      if (video) observerRef.current?.observe(video);
-    });
-
-    return () => {
-      observerRef.current?.disconnect();
-    };
   }, []);
 
+  // Handle video loaded
   const handleVideoLoaded = useCallback(
     (index: number) => {
       videoLoadedRef.current[index] = true;
-      updateVideoLoadingState(index, false);
+      videoLoadingRef.current[index] = false;
+      setVideoLoadingStates((prev) => {
+        const newStates = [...prev];
+        newStates[index] = false;
+        return newStates;
+      });
+
       if (index === currentIndexRef.current) {
         playActiveVideo(index);
       }
     },
-    [updateVideoLoadingState, playActiveVideo],
+    [playActiveVideo],
   );
 
-  const handleVideoLoadStart = useCallback(
-    (index: number) => {
-      if (!videoLoadingRef.current[index]) {
-        updateVideoLoadingState(index, true);
+  // Animation for switching videos
+  const animateVideoTransition = useCallback(
+    (direction: 'next' | 'prev', newIndex: number) => {
+      if (isAnimating || !videoWrapperRef.current) return;
+
+      setIsAnimating(true);
+      const currentVideo = videoRefs.current[currentIndexRef.current];
+      const nextVideo = videoRefs.current[newIndex];
+
+      if (!currentVideo || !nextVideo) return;
+
+      // Initial z-index setup
+      currentVideo.style.zIndex = '2';
+      nextVideo.style.zIndex = '3';
+
+      // Determine animation direction
+      const fromTop = direction === 'next';
+      const startClipPath = fromTop
+        ? 'inset(0% 0% 100% 0%)' // Fully clipped from top
+        : 'inset(100% 0% 0% 0%)'; // Fully clipped from bottom
+      const endClipPath = 'inset(0% 0% 0% 0%)'; // Fully visible
+
+      // Set initial state for next video
+      gsap.set(nextVideo, {
+        clipPath: startClipPath,
+      });
+
+      // Load next video if needed
+      if (!videoLoadedRef.current[newIndex]) {
+        loadVideoIfNeeded(newIndex);
       }
+
+      // Animate transition
+      const tl = gsap.timeline({
+        onComplete: () => {
+          // Update state
+          currentIndexRef.current = newIndex;
+          setCurrentIndex(newIndex);
+
+          // Update z-indices
+          currentVideo.style.zIndex = '1';
+          nextVideo.style.zIndex = '2';
+
+          // Play new video
+          playActiveVideo(newIndex);
+          pauseOtherVideos(newIndex);
+
+          // Reset clipping
+          gsap.set(currentVideo, { clipPath: 'inset(0% 0% 0% 0%)' });
+
+          setIsAnimating(false);
+        },
+      });
+
+      // Animate current video out and next video in
+      tl.to(currentVideo, {
+        clipPath: fromTop ? 'inset(100% 0% 0% 0%)' : 'inset(0% 0% 100% 0%)',
+        duration: 0.5,
+        ease: 'power2.inOut',
+      }).to(
+        nextVideo,
+        {
+          clipPath: endClipPath,
+          duration: 0.5,
+          ease: 'power2.inOut',
+        },
+        '-=0.5',
+      ); // Overlap animations
     },
-    [updateVideoLoadingState],
+    [isAnimating, loadVideoIfNeeded, playActiveVideo, pauseOtherVideos],
   );
 
-  const handleVideoPlay = useCallback((index: number) => {
-    if (index !== currentIndexRef.current) {
-      const video = videoRefs.current[index];
-      if (video) {
-        video.pause();
-        video.currentTime = 0;
-      }
-    }
-  }, []);
+  // Navigation handler
+  const navigate = useCallback(
+    (direction: 'prev' | 'next') => {
+      if (isAnimating) return;
 
+      const currentIdx = currentIndexRef.current;
+      let newIndex: number;
+
+      if (direction === 'next') {
+        newIndex = (currentIdx + 1) % TestimonialVideos.length;
+      } else {
+        newIndex =
+          (currentIdx - 1 + TestimonialVideos.length) %
+          TestimonialVideos.length;
+      }
+
+      animateVideoTransition(direction, newIndex);
+    },
+    [isAnimating, animateVideoTransition],
+  );
+
+  // Initialize and load first video
+  useEffect(() => {
+    loadVideoIfNeeded(0);
+    currentIndexRef.current = 0;
+  }, [loadVideoIfNeeded]);
+
+  // Handle video wrapper resize
+  useEffect(() => {
+    const updateVideoWrapper = () => {
+      if (!videoWrapperRef.current) return;
+
+      const { width, aspectRatio } = getVideoWrapperDimensions();
+      const height = width / aspectRatio;
+
+      videoWrapperRef.current.style.width = `${width}px`;
+      videoWrapperRef.current.style.height = `${height}px`;
+    };
+
+    updateVideoWrapper();
+    window.addEventListener('resize', updateVideoWrapper);
+    return () => window.removeEventListener('resize', updateVideoWrapper);
+  }, [getVideoWrapperDimensions]);
+
+  // Intersection observer to pause video when out of view
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            const activeVideo = videoRefs.current[currentIndexRef.current];
+            if (activeVideo && !activeVideo.paused) {
+              activeVideo.pause();
+            }
+          } else {
+            const activeVideo = videoRefs.current[currentIndexRef.current];
+            if (activeVideo && activeVideo.paused) {
+              playActiveVideo(currentIndexRef.current);
+            }
+          }
+        });
+      },
+      { threshold: 0.5 },
+    );
+
+    if (videoWrapperRef.current) {
+      observer.observe(videoWrapperRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [playActiveVideo]);
+
+  // Navigation buttons
   const navigationButtons = useMemo(
     () => (
       <div className="testimonials-navigation-overlay">
@@ -278,7 +255,7 @@ const TestimonialsSection = () => {
           <img
             src={arrowRightIcon}
             alt="Previous"
-            className="testimonials-nav-arrow testimonials-nav-arrow-left relative -left-15"
+            className="testimonials-nav-arrow testimonials-nav-arrow-left"
           />
         </div>
         <div
@@ -289,7 +266,7 @@ const TestimonialsSection = () => {
           <img
             src={arrowRightIcon}
             alt="Next"
-            className="testimonials-nav-arrow testimonials-nav-arrow-right relative -right-15"
+            className="testimonials-nav-arrow testimonials-nav-arrow-right"
           />
         </div>
       </div>
@@ -299,18 +276,22 @@ const TestimonialsSection = () => {
 
   return (
     <section className="testimonials-section">
-      <div className="testimonials-container">
-        <div className="testimonials-slider-wrapper">
-          <div ref={sliderRef} className="testimonials-slider">
-            {TestimonialVideos.map((testimonial, index) => (
-              <div
-                key={testimonial.id}
-                ref={(el) => {
-                  cardRefs.current[index] = el;
-                }}
-                className="testimonial-card"
-              >
-                <div className="testimonial-video-wrapper">
+      <div className="testimonials-container container">
+        <div className="testimonials-projector-wrapper">
+          {/* Left projector image */}
+          <div className="testimonials-projector-side">
+            <img
+              src={projectorImage}
+              alt="Projector"
+              className="testimonials-projector-img testimonials-projector-left"
+            />
+          </div>
+
+          {/* Center video wrapper */}
+          <div className="testimonials-video-container">
+            <div ref={videoWrapperRef} className="testimonials-video-wrapper">
+              {TestimonialVideos.map((testimonial, index) => (
+                <div key={testimonial.id} className="testimonial-video-item">
                   {videoLoadingStates[index] && (
                     <div className="testimonial-video-preloader">
                       <div className="testimonial-preloader-spinner"></div>
@@ -325,21 +306,37 @@ const TestimonialsSection = () => {
                     loop
                     playsInline
                     preload="none"
-                    onLoadStart={() => handleVideoLoadStart(index)}
                     onLoadedData={() => handleVideoLoaded(index)}
                     onCanPlay={() => handleVideoLoaded(index)}
                     onError={() => {
                       videoLoadedRef.current[index] = true;
-                      updateVideoLoadingState(index, false);
+                      videoLoadingRef.current[index] = false;
+                      setVideoLoadingStates((prev) => {
+                        const newStates = [...prev];
+                        newStates[index] = false;
+                        return newStates;
+                      });
                     }}
-                    onPlay={() => handleVideoPlay(index)}
+                    style={{
+                      zIndex: index === currentIndex ? 2 : 1,
+                    }}
                   />
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-          {navigationButtons}
+
+          {/* Right projector image */}
+          <div className="testimonials-projector-side">
+            <img
+              src={projectorImage}
+              alt="Projector"
+              className="testimonials-projector-img testimonials-projector-right"
+            />
+          </div>
         </div>
+
+        {navigationButtons}
       </div>
     </section>
   );

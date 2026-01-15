@@ -283,8 +283,8 @@ const ScrollTrigger3DSection = ({
     const vhToPx = (vh: number) => (vh * window.innerHeight) / 100;
     // const offsetPx = vhToPx(100);
     const sectionHeight = section.offsetHeight;
-    const row1InitialTop = (sectionHeight * 105) / 100 ;
-    const row2InitialTop = (sectionHeight * 170) / 100 ;
+    const row1InitialTop = (sectionHeight * 105) / 100;
+    const row2InitialTop = (sectionHeight * 170) / 100;
     // const row1InitialTop = (sectionHeight * 105) / 100 - offsetPx;
     // const row2InitialTop = (sectionHeight * 170) / 100 - offsetPx;
 
@@ -618,16 +618,16 @@ const ScrollTrigger3DSection = ({
               ref={(el) => {
                 objectContainerRefs.current[0] = el;
               }}
-              className="absolute left-0 xl:-left-80 rotate-45 z-[15] h-[150px] w-[120px] lg:h-[280px] lg:w-[250px]"
+              className="absolute left-0 z-[15] h-[150px] w-[120px] rotate-45 lg:h-[280px] lg:w-[250px] xl:-left-80"
             >
               <Canvas
                 camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
                 gl={{ antialias: true, alpha: true }}
                 style={{ width: '100%', height: '100%' }}
               >
-                <ambientLight intensity={0.5} />
-                <directionalLight position={[5, 5, 5]} intensity={1} />
-                <pointLight position={[-5, -5, -5]} intensity={0.5} />
+                <ambientLight intensity={1} />
+                <directionalLight position={[5, 5, 5]} intensity={2} />
+                <pointLight position={[-5, -5, -5]} intensity={1} />
                 <Model3D
                   scene={sharedModelScene}
                   position={[0, 0, 0]}
@@ -643,16 +643,16 @@ const ScrollTrigger3DSection = ({
               ref={(el) => {
                 objectContainerRefs.current[1] = el;
               }}
-              className="absolute -right-0 xl:-right-30 z-[15] h-[150px] w-[120px] lg:h-[180px] lg:w-[150px]"
+              className="absolute -right-0 z-[15] h-[150px] w-[120px] lg:h-[180px] lg:w-[150px] xl:-right-30"
             >
               <Canvas
                 camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
                 gl={{ antialias: true, alpha: true }}
                 style={{ width: '100%', height: '100%' }}
               >
-                <ambientLight intensity={0.5} />
-                <directionalLight position={[5, 5, 5]} intensity={1} />
-                <pointLight position={[-5, -5, -5]} intensity={0.5} />
+                <ambientLight intensity={1} />
+                <directionalLight position={[5, 5, 5]} intensity={2} />
+                <pointLight position={[-5, -5, -5]} intensity={1} />
                 <Model3D
                   scene={sharedModelScene}
                   position={[0, -2, 0]}
@@ -669,18 +669,16 @@ const ScrollTrigger3DSection = ({
               ref={(el) => {
                 objectContainerRefs.current[2] = el;
               }}
-              className="absolute xl:-left-40 -left-[20px] z-[5] h-[150px] w-[120px] lg:-left-[75px] lg:h-[180px] lg:w-[150px]"
+              className="absolute -left-[20px] z-[5] h-[150px] w-[120px] lg:-left-[75px] lg:h-[180px] lg:w-[150px] xl:-left-40"
             >
               <Canvas
                 camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
                 gl={{ antialias: true, alpha: true }}
                 style={{ width: '100%', height: '100%' }}
               >
-
-
-            <ambientLight intensity={1} />       
-            <directionalLight position={[5, 5, 5]} intensity={2} />  
-            <pointLight position={[-5, -5, -5]} intensity={1} />     
+                <ambientLight intensity={1} />
+                <directionalLight position={[5, 5, 5]} intensity={2} />
+                <pointLight position={[-5, -5, -5]} intensity={1} />
 
                 <Model3D
                   scene={sharedModelScene}
@@ -697,16 +695,16 @@ const ScrollTrigger3DSection = ({
               ref={(el) => {
                 objectContainerRefs.current[3] = el;
               }}
-              className="absolute xl:-right-40 -right-[30px] z-[5] h-[120px] w-[120px] lg:-right-[75px] lg:h-[500px] lg:w-[500px]"
+              className="absolute -right-[30px] z-[5] h-[120px] w-[120px] lg:-right-[75px] lg:h-[500px] lg:w-[500px] xl:-right-40"
             >
               <Canvas
                 camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
                 gl={{ antialias: true, alpha: true }}
                 style={{ width: '100%', height: '100%' }}
               >
-                <ambientLight intensity={0.5} />
-                <directionalLight position={[5, 5, 5]} intensity={1} />
-                <pointLight position={[-2, -2, -2]} intensity={0.9} />
+                <ambientLight intensity={1} />
+                <directionalLight position={[5, 5, 5]} intensity={2} />
+                <pointLight position={[-5, -5, -5]} intensity={1} />
                 <Model3D
                   scene={sharedModelScene}
                   position={[0, -2, 0]}
@@ -723,14 +721,14 @@ const ScrollTrigger3DSection = ({
       {/* Text Wrapper Track */}
       <div
         ref={textTrackRef}
-        className="font-grid relative lg:px-0 px-1.5 z-20 mx-auto max-w-[344px] will-change-transform lg:max-w-[1000px]"
+        className="font-grid relative z-20 mx-auto max-w-[344px] px-1.5 will-change-transform sm:max-w-[600px] lg:max-w-[1000px] lg:px-0"
       >
         <div ref={textContainerRef} className="relative z-20">
           {texts.map((text, index) => (
             <div
               key={index}
               data-text-index={index}
-              className="mb-8 text-center text-2xl leading-tight font-bold whitespace-pre-line text-white lg:mb-16 lg:text-6xl lg:leading-tight"
+              className="mb-8 text-center text-lg leading-tight font-bold whitespace-pre-line text-white sm:text-xl lg:mb-16 lg:text-6xl lg:leading-tight"
             >
               {text}
             </div>

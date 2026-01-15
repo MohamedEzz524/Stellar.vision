@@ -21,13 +21,13 @@ export const text3D = [
 ];
 
 export const homeHeaderParagraphs = {
-  first:
-    'We’re marketers first — designers second.',
+  first: 'We’re marketers first — designers second.',
   second:
     'Our websites don’t just impress. They perform. We focus on behavior, psychology, funnels, and conversion paths — then we design around them.',
 };
 
-export const heroSectionParagraph = 'We design and build high-performance websites for brands that want more leads, more sales, and real growth. Marketing comes first. Design follows strategy. Results are the goal.';
+export const heroSectionParagraph =
+  'We design and build high-performance websites for brands that want more leads, more sales, and real growth. Marketing comes first. Design follows strategy. Results are the goal.';
 export interface Project {
   id: string;
   title: string;
@@ -93,7 +93,7 @@ export const Projects: Project[] = [
     image: gogaToysImg,
     imageAlt: 'Goga Toys ecommerce website and visual identity',
     href: 'https://gogatoys.stelllar.vision',
-  },  
+  },
   {
     id: 'project-13',
     title: 'Steelixe: Ecommerce Website',
@@ -112,7 +112,7 @@ export const Projects: Project[] = [
     imageAlt: 'Performance Marketing LP digital product website',
     href: 'https://performancemarketerlp.stelllar.vision',
   },
-  
+
   {
     id: 'project-5',
     title: 'Greennest Furniture:',
@@ -122,7 +122,7 @@ export const Projects: Project[] = [
     imageAlt: 'Ultraman Trimmer website',
     href: 'https://greennest.stelllar.vision',
   },
-  
+
   {
     id: 'project-15',
     title: 'Ultraman Trimmer',
@@ -197,7 +197,6 @@ export const Projects: Project[] = [
   },
 ];
 
-
 export interface TestimonialVideo {
   id: string;
   video: string;
@@ -207,21 +206,21 @@ export const TestimonialVideos: TestimonialVideo[] = [
   {
     id: 'testimonial-2',
     video:
-      'https://res.cloudinary.com/deqfby6bi/video/upload/v1768481760/asVideo_2026-01-14_at_10.30.55_AM_h79785.mp4',
+      'https://res.cloudinary.com/deqfby6bi/video/upload/v1768511505/Helal_Testimonial_1_vbqjna.mp4',
   },
   {
     id: 'testimonial-1',
     video:
-      'https://res.cloudinary.com/deqfby6bi/video/upload/v1768481762/WhatsApp_Video_2026-01-14_at_10.30as.55_AM_cfwwdu.mp4',
+      'https://res.cloudinary.com/deqfby6bi/video/upload/v1768511508/Meana_Testimonial_1_dtsxch.mp4',
   },
   {
     id: 'testimonial-3',
     video:
-      'https://res.cloudinary.com/deqfby6bi/video/upload/v1768481743/WhatsApp_Video_2026-01-14sdf_at_10.30.55_AM_cgz5ra.mp4',
+      'https://res.cloudinary.com/deqfby6bi/video/upload/v1768511514/Sigma_Testimonial_1_k8uipf.mp4',
   },
   {
     id: 'testimonial-4',
     video:
-      'https://res.cloudinary.com/deqfby6bi/video/upload/v1768481776/WhatsApp_Video_2026-01-14_at_10.30.55_AM_1_x6rccs.mp4',
+      'https://res.cloudinary.com/deqfby6bi/video/upload/v1768511523/nafas_testimonial_1_hsgych.mp4',
   },
 ];

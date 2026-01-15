@@ -1410,18 +1410,12 @@ const Calendar = () => {
     try {
       const bookingData = formatBookingData();
 
-      // Log the data being sent for debugging
-      console.log('Sending booking data:', bookingData);
-      console.log('Booking data JSON:', JSON.stringify(bookingData, null, 2));
-
       // Use proxy URL in development, full URL in production
       const isDevelopment = import.meta.env.DEV;
       const baseUrl = isDevelopment
         ? '/api'
         : 'https://calender-stellervision-production.up.railway.app/api';
       const url = `${baseUrl}/bookings/create`;
-
-      console.log('POST URL:', url);
 
       const response = await fetch(url, {
         method: 'POST',
@@ -1432,8 +1426,6 @@ const Calendar = () => {
         mode: 'cors',
         body: JSON.stringify(bookingData),
       });
-
-      console.log('Response status:', response.status, response.statusText);
 
       if (!response.ok) {
         // Try to parse as JSON first, otherwise use text
@@ -1462,9 +1454,6 @@ const Calendar = () => {
           `Failed to create booking: ${response.status} ${response.statusText}. ${errorDetails.substring(0, 200)}`,
         );
       }
-
-      const result = await response.json();
-      console.log('Booking created successfully:', result);
 
       // Store token in localStorage to persist successful submission
       localStorage.setItem(SUBMISSION_TOKEN_KEY, 'true');
@@ -1562,7 +1551,7 @@ const Calendar = () => {
       case 3:
         return 'SELECT A TIME';
       case 4:
-        return submitSuccess ? 'SUCCESS' : 'CONFIRM';
+        return submitSuccess ? 'SUCCESS' : 'FILL THE FORM';
       default:
         return '';
     }
@@ -1579,6 +1568,10 @@ const Calendar = () => {
       tabIndex={-1}
       onWheel={(e) => {
         // Ensure wheel events are handled by this container
+        e.stopPropagation();
+      }}
+      onTouchMove={(e) => {
+        // Prevent touch events from bubbling to body on mobile
         e.stopPropagation();
       }}
     >

@@ -35,19 +35,11 @@ export const HDREnvironment = ({
   const [envMap, setEnvMap] = useState<THREE.Texture | null>(null);
 
   useEffect(() => {
-    console.log('Starting HDR load from:', hdrUrl);
     const loader = new HDRLoader();
 
     loader.load(
       hdrUrl,
       (texture: THREE.DataTexture) => {
-        console.log('HDR texture loaded:', {
-          width: texture.image?.width,
-          height: texture.image?.height,
-          type: texture.type,
-          format: texture.format,
-        });
-
         texture.mapping = THREE.EquirectangularReflectionMapping;
         texture.flipY = false;
         texture.wrapS = THREE.RepeatWrapping;
@@ -55,17 +47,10 @@ export const HDREnvironment = ({
 
         try {
           // Convert to PMREM for optimized IBL - this is crucial for proper lighting
-          console.log('Converting to PMREM...');
           const pmremGenerator = new THREE.PMREMGenerator(gl);
           pmremGenerator.compileEquirectangularShader();
           const envMapResult = pmremGenerator.fromEquirectangular(texture);
           const envMapTexture = envMapResult.texture;
-
-          console.log('PMREM conversion complete:', {
-            envMapType: envMapTexture?.type,
-            envMapFormat: envMapTexture?.format,
-            hasImage: !!envMapTexture?.image,
-          });
 
           // Set as scene environment - provides IBL lighting to all materials
           scene.environment = envMapTexture;
@@ -86,12 +71,6 @@ export const HDREnvironment = ({
           texture.dispose();
 
           setEnvMap(envMapTexture);
-          console.log('HDR environment map loaded successfully', {
-            hasEnvironment: !!scene.environment,
-            envMapType: envMapTexture?.type,
-            envMapFormat: envMapTexture?.format,
-            sceneHasEnv: !!scene.environment,
-          });
         } catch (pmremError) {
           console.error(
             'PMREM conversion failed, using texture directly:',
@@ -106,15 +85,6 @@ export const HDREnvironment = ({
             'XYZ',
           );
           setEnvMap(texture);
-        }
-      },
-      (progress) => {
-        if (progress.lengthComputable) {
-          const percentComplete = (progress.loaded / progress.total) * 100;
-          console.log(
-            'HDR loading progress:',
-            percentComplete.toFixed(2) + '%',
-          );
         }
       },
       (error: unknown) => {
