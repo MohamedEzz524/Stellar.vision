@@ -345,7 +345,7 @@ const ScrollTrigger3DSection = ({
         trigger: section,
         start: 'top top',
         end: () => {
-          return `+=${trackHeight + window.innerHeight + 10}px`;
+          return `+=${trackHeight + window.innerHeight * 1.5}px`;
         },
         pin: section,
         pinSpacing: true,
@@ -418,7 +418,7 @@ const ScrollTrigger3DSection = ({
 
           // Animate object containers (Row 1 and Row 2) during pinned scroll
           // Objects reach end state after objectAnimationStartVh (row1: 70vh, row2: 110vh) of scroll
-          // Then continue to move back 20% of their path
+          // Then continue to move back 40% of their path
           const sectionHeight = section.offsetHeight;
           const row1StartTop = (sectionHeight * 110) / 100;
           const row1EndTop = 0;
@@ -428,7 +428,7 @@ const ScrollTrigger3DSection = ({
           const row2StartTop = (sectionHeight * 170) / 100;
           const row2EndTop = (sectionHeight * -20) / 100;
           const row2PathLength = row2StartTop - row2EndTop;
-          const row2BackTop = row2EndTop + (row2PathLength * 20) / 100;
+          const row2BackTop = row2EndTop + (row2PathLength * 40) / 100;
 
           // Calculate pixels scrolled after pinning using progress
           const totalScrollDistance = Number(self.end) - Number(self.start);
@@ -610,7 +610,7 @@ const ScrollTrigger3DSection = ({
               ref={(el) => {
                 objectContainerRefs.current[0] = el;
               }}
-              className="absolute left-0 z-[15] h-[120px] w-[120px] lg:h-[250px] lg:w-[250px]"
+              className="absolute left-0 xl:-left-80 rotate-45 z-[15] h-[150px] w-[120px] lg:h-[280px] lg:w-[250px]"
             >
               <Canvas
                 camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
@@ -635,7 +635,7 @@ const ScrollTrigger3DSection = ({
               ref={(el) => {
                 objectContainerRefs.current[1] = el;
               }}
-              className="absolute right-0 z-[15] h-[120px] w-[120px] lg:h-[150px] lg:w-[150px]"
+              className="absolute right-0 xl:-right-30 z-[15] h-[150px] w-[120px] lg:h-[180px] lg:w-[150px]"
             >
               <Canvas
                 camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
@@ -661,7 +661,7 @@ const ScrollTrigger3DSection = ({
               ref={(el) => {
                 objectContainerRefs.current[2] = el;
               }}
-              className="absolute -left-[20px] z-[5] h-[120px] w-[120px] lg:-left-[75px] lg:h-[500px] lg:w-[500px]"
+              className="absolute xl:-left-50 -left-[20px] z-[5] h-[150px] w-[120px] lg:-left-[75px] lg:h-[180px] lg:w-[150px]"
             >
               <Canvas
                 camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
@@ -686,7 +686,7 @@ const ScrollTrigger3DSection = ({
               ref={(el) => {
                 objectContainerRefs.current[3] = el;
               }}
-              className="absolute -right-[20px] z-[5] h-[120px] w-[120px] lg:-right-[75px] lg:h-[150px] lg:w-[150px]"
+              className="absolute xl:-right-40 -right-[20px] z-[5] h-[120px] w-[120px] lg:-right-[75px] lg:h-[500px] lg:w-[500px]"
             >
               <Canvas
                 camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}

@@ -899,7 +899,7 @@ const Calendar = () => {
         scrollableHeight > 0 ? (currentScroll / scrollableHeight) * 100 : 0;
 
       // If user is within 3% of the end (97% or more) and calendar is closed, open it
-      if (percentage >= 97 && state.viewState === 0) {
+      if (percentage >= 99 && state.viewState === 0) {
         dispatch({ type: 'START_CALENDAR' });
       }
     };

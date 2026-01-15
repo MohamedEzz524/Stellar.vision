@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import type { Project } from './ProjectsSection';
 import './ProjectsSectionMobile.css';
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
 interface ProjectsSectionMobileProps {
   projects: Project[];
@@ -44,6 +45,8 @@ const ProjectsSectionMobile = ({
   );
   const activeCardIndexRef = useRef<number | null>(null);
   const [activeCardIndex, setActiveCardIndex] = useState<number | null>(null);
+  const [showNavigation, setShowNavigation] = useState(false);
+  const navigationButtonsRef = useRef<HTMLDivElement>(null);
 
   const lerp = (start: number, end: number, t: number) =>
     start + (end - start) * t;
@@ -552,6 +555,13 @@ const ProjectsSectionMobile = ({
   useEffect(() => {
     if (!sectionRef.current) return;
 
+    const navEl = navigationButtonsRef.current;
+
+    // Initial hidden state
+    gsap.set(navEl, { autoAlpha: 0, y: -20 });
+
+    let isVisible = false;
+
     const scrollTrigger = ScrollTrigger.create({
       trigger: sectionRef.current,
       start: 'top top',
@@ -563,6 +573,25 @@ const ProjectsSectionMobile = ({
         const progress = self.progress;
         if (updateCardsAnimationRef.current) {
           updateCardsAnimationRef.current(progress);
+        }
+        if (progress >= 0.25 && !isVisible) {
+          isVisible = true;
+          gsap.to(navEl, {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.4,
+            ease: 'power2.out',
+          });
+        }
+
+        if (progress < 0.25 && isVisible) {
+          isVisible = false;
+          gsap.to(navEl, {
+            autoAlpha: 0,
+            y: -20,
+            duration: 0.3,
+            ease: 'power2.in',
+          });
         }
       },
     });
@@ -610,8 +639,60 @@ const ProjectsSectionMobile = ({
   const isExternalLink =
     activeProject?.href && activeProject.href.startsWith('http');
 
+  const scrollToSection = (direction: 'prev' | 'next') => {
+    if (!sectionRef.current) return;
+
+    let targetSection: HTMLElement | null = null;
+
+    if (direction === 'prev') {
+      // Find previous section (TestimonialsSection)
+      const allSections = Array.from(document.querySelectorAll('section'));
+      const currentIndex = allSections.indexOf(sectionRef.current);
+      if (currentIndex > 0) {
+        targetSection = allSections[currentIndex - 1];
+      }
+    } else {
+      // Find next section (ScrollTrigger3DSection)
+      const allSections = Array.from(document.querySelectorAll('section'));
+      const currentIndex = allSections.indexOf(sectionRef.current);
+      if (currentIndex < allSections.length - 1) {
+        targetSection = allSections[currentIndex + 1];
+      }
+    }
+
+    if (targetSection) {
+      const targetY =
+        targetSection.getBoundingClientRect().top + window.scrollY;
+      gsap.to(window, {
+        duration: 1.5,
+        scrollTo: targetY,
+        ease: 'power2.inOut',
+      });
+    }
+  };
+
   return (
     <section id={sectionId} ref={sectionRef} className="work-section-mobile">
+      {/* Navigation Buttons */}
+      <div
+        ref={navigationButtonsRef}
+        className="projects-mobile-navigation font-grid"
+      >
+        <button
+          onClick={() => scrollToSection('prev')}
+          className="projects-nav-button projects-nav-button-prev calendar-day-disabled"
+        >
+          Get Back
+        </button>
+
+        <button
+          onClick={() => scrollToSection('next')}
+          className="projects-nav-button projects-nav-button-next big calendar-day-available"
+        >
+          Skip to Next
+        </button>
+      </div>
+
       {activeProject && (
         <div className="card-link-overlay">
           {isExternalLink ? (

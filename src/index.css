@@ -197,26 +197,22 @@ html:active .custom-cursor {
   border-right: 4px solid transparent;
   border-left: 4px solid transparent;
 }
-.desktop-logo-corner path[stroke],
+.desktop-logo-corner path[stroke] {
+  stroke-width: 1px;
+}
 .corner-svg path[stroke] {
-  stroke-width: 1px;
+  stroke-width: 1.1px;
 }
 
-.desktop-logo-corner path,
-.corner-svg path {
-  stroke-width: 1px;
-}
 
-@media (min-width: 1024px) {
-  .desktop-logo-corner path[stroke],
+@media (min-width: 1024px) {  
+  .desktop-logo-corner path[stroke] {
+    stroke-width: 3px;
+  }
   .corner-svg path[stroke] {
-    stroke-width: 3px;
+    stroke-width: 2px;
   }
-
-  .desktop-logo-corner path,
-  .corner-svg path {
-    stroke-width: 3px;
-  }
+  
 }
 /* Flickering animation */
 @keyframes flicker {

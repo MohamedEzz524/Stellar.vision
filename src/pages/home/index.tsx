@@ -1,6 +1,6 @@
 import ProjectsSection from '../../components/ProjectsSection';
 import ScrollTrigger3DSection from '../../components/ScrollTrigger3DSection';
-import { ExampleProjects, text3D } from '../../constants';
+import { Projects, text3D } from '../../constants';
 import StarryBackground from '../../components/StarryBackground';
 import HomeHeader from './HomeHeader';
 import HeroSection from './HeroSection';
@@ -15,7 +15,7 @@ const Home = () => {
       <HeroSection />
       <HomeHeader />
       <TestimonialsSection />
-      <ProjectsSection projects={ExampleProjects} sectionId="works" />
+      <ProjectsSection projects={Projects} sectionId="works" />
       <ScrollTrigger3DSection
         texts={text3D}
         objectAnimationStartVh={{

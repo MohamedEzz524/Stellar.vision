@@ -14,24 +14,16 @@ const CornerSVG = ({
   className?: string;
   style?: React.CSSProperties;
 }) => (
-  <svg
-    width="40"
-    height="40"
-    viewBox="0 0 40 40"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={`corner-svg ${className}`}
-    style={style}
-  >
-    <path
-      d="M40 20L40 40L20 40C20 40 27.2434 38.2101 33.0695 33.7639C38.8957 29.3176 40 20 40 20Z"
-      fill="black"
-    />
-    <path
-      d="M20 40C22.6264 40 25.2272 39.4827 27.6537 38.4776C30.0802 37.4725 32.285 35.9993 34.1421 34.1421C35.9993 32.285 37.4725 30.0802 38.4776 27.6537C39.4827 25.2272 40 22.6264 40 20L37.7599 20C37.7599 22.3323 37.3005 24.6417 36.408 26.7964C35.5154 28.9511 34.2073 30.909 32.5581 32.5581C30.909 34.2073 28.9511 35.5154 26.7964 36.408C24.6417 37.3005 22.3323 37.7599 20 37.7599L20 40Z"
-      fill="white"
+
+
+  <svg 
+  className={`corner-svg ${className}`}
+  style={style}
+  xmlns="http://www.w3.org/2000/svg" width="27" height="28" viewBox="0 0 27 28" fill="none">
+  <path d="M20 0H26.3556V27.7343H0V20C0 20 7.2434 18.2101 13.0695 13.7639C18.8957 9.3176 20 0 20 0Z" fill="black"/>
+  <path 
       className="corner-stroke-path"
-    />
+      d="M18.8867 0C18.8867 11.9913 8.56192 18.9209 0.00195312 18.9209" stroke="white" stroke-width="2.2"/>
   </svg>
 );
 
@@ -53,6 +45,29 @@ const HomeSticky = () => {
 
   return (
     <section className="pointer-events-none fixed top-0 left-0 z-[9999] h-[100dvh] w-full">
+      <div
+        className="absolute top-1 right-1 -z-1 flex h-16 w-[calc(100%-150px)] items-center pl-4 text-base text-white lg:hidden"
+        style={{
+          background:
+            'linear-gradient(to bottom, #000 0%, #000 60%, rgba(0, 0, 0, 0.8) 75%, rgba(0, 0, 0, 0.6) 85%, rgba(0, 0, 0, 0.3) 92%, transparent 100%)',
+        }}
+      >
+        <div className="relative h-full w-full">
+          {/* AUTO ROTATE TEXT ANIMATION */}
+          <div className="font-grid absolute inset-0 z-0 overflow-hidden text-lg">
+            <div className="scroll-text-animation left-1/2 flex h-full w-fit flex-row items-center gap-[calc(99vw-150px)]">
+              {autoRotateTexts.map((text: string, index: number) => (
+                <div
+                  key={text.slice(0, 5) + index}
+                  className="text-textPrimary whitespace-nowrap"
+                >
+                  {text}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
       {/* Top border container - fills corner, inner div has border */}
       <div
         className="bg-bgPrimary absolute top-0 right-0 left-0"
@@ -117,7 +132,7 @@ const HomeSticky = () => {
             </div>
 
             {/* AUTO ROTATE TEXT */}
-            <div className="border-textPrimary relative h-full w-[16vw] overflow-hidden rounded-md border-3">
+            <div className="border-textPrimary relative h-full w-[20vw] overflow-hidden rounded-md border-3">
               <div className="relative h-full w-full">
                 <div
                   className="noise-glitch-slow-animation absolute inset-0 z-0"
@@ -129,7 +144,7 @@ const HomeSticky = () => {
                 />
                 {/* AUTO ROTATE TEXT ANIMATION */}
                 <div className="font-grid absolute inset-0 z-0 overflow-hidden text-4xl">
-                  <div className="scroll-text-animation left-1/2 flex h-full flex-row items-center gap-[16vw]">
+                  <div className="scroll-text-animation left-1/2 flex h-full flex-row items-center gap-[20vw]">
                     {autoRotateTexts.map((text: string, index: number) => (
                       <div
                         key={text.slice(0, 5) + index}
@@ -237,8 +252,8 @@ const HomeSticky = () => {
       <CornerSVG
         className="absolute max-lg:z-10"
         style={{
-          left: `${isLg ? borderWidth - 1.5 : 4}px`,
-          top: `${isLg ? borderWidth - 1.5 : 66}px`,
+          left: `${isLg ? borderWidth - 10 : -5}px`,
+          top: `${isLg ? borderWidth - 10.1 : 57.2}px`,
           width: `${isLg ? borderWidth : borderWidth + 24}px`,
           height: `${isLg ? borderWidth : borderWidth + 24}px`,
           transform: 'rotate(180deg)',
@@ -248,8 +263,8 @@ const HomeSticky = () => {
       <CornerSVG
         className="absolute"
         style={{
-          right: `${isLg ? borderWidth - 1.5 : 4}px`,
-          top: `${isLg ? borderWidth - 1.5 : 4}px`,
+          right: `${isLg ? borderWidth - 10 : -5}px`,
+          top: `${isLg ? borderWidth - 10 : -5}px`,
           width: `${isLg ? borderWidth : borderWidth + 26}px`,
           height: `${isLg ? borderWidth : borderWidth + 26}px`,
           transform: 'rotate(-90deg)',
@@ -259,8 +274,8 @@ const HomeSticky = () => {
       <CornerSVG
         className="absolute"
         style={{
-          left: `${isLg ? borderWidth - 1.5 : 4}px`,
-          bottom: `${isLg ? bottomHeight - 1.5 : bottomHeight - 1}px`,
+          left: `${isLg ? borderWidth - 10 : -5}px`,
+          bottom: `${isLg ? bottomHeight - 10 : bottomHeight - 9.5}px`,
           width: `${isLg ? borderWidth : borderWidth + 26}px`,
           height: `${isLg ? borderWidth : borderWidth + 26}px`,
           transform: 'rotate(90deg)',
@@ -270,8 +285,8 @@ const HomeSticky = () => {
       <CornerSVG
         className="absolute"
         style={{
-          right: `${isLg ? borderWidth - 1.5 : 4}px`,
-          bottom: `${isLg ? bottomHeight - 1.5 : bottomHeight - 1}px`,
+          right: `${isLg ? borderWidth - 10 : -5}px`,
+          bottom: `${isLg ? bottomHeight - 10 : bottomHeight - 9.8}px`,
           width: `${isLg ? borderWidth : borderWidth + 26}px`,
           height: `${isLg ? borderWidth : borderWidth + 26}px`,
           transform: 'rotate(0deg)',
@@ -349,7 +364,7 @@ const HomeSticky = () => {
           className="desktop-logo-corner absolute -z-2 block lg:hidden"
           style={{
             right: `-20%`,
-            bottom: `-48%`,
+            bottom: `-47%`,
             width: `140%`,
             height: `160%`,
             transform: 'rotate(0deg)',

@@ -93,24 +93,6 @@ const HeroSection = () => {
 
   return (
     <section id="hero-section" className="hero-section overflow-hidden">
-      <div className="absolute top-1 right-1 z-1 flex h-16 w-[calc(100%-150px)] items-center pl-4 text-base text-white lg:hidden">
-        <div className="relative h-full w-full">
-          {/* AUTO ROTATE TEXT ANIMATION */}
-          <div className="font-grid absolute inset-0 z-0 overflow-hidden text-lg">
-            <div className="scroll-text-animation left-1/2 flex h-full w-fit flex-row items-center gap-[calc(99vw-150px)]">
-              {autoRotateTexts.map((text: string, index: number) => (
-                <div
-                  key={text.slice(0, 5) + index}
-                  className="text-textPrimary whitespace-nowrap"
-                >
-                  {text}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="container">
         {/* row-1 */}
         <div className="font-grid -mt-8 flex h-full flex-col justify-center gap-4">

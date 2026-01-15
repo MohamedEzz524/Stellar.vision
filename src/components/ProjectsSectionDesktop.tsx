@@ -268,6 +268,7 @@ const ProjectsSectionDesktop = ({
                               src={project.image}
                               loading="eager"
                               alt={project.imageAlt}
+                              title={project.imageAlt}
                               sizes="100vw"
                               className="case-embed"
                             />
@@ -292,14 +293,14 @@ const ProjectsSectionDesktop = ({
                           </div>
                         </div>
                         <div className="case-text">
-                          <div className="flex-sides">
+                          {/* <div className="flex-sides">
                             <div className="additional-text">
                               {project.tags}
                             </div>
                             <div className="additional-text case-year">
                               {project.year}
                             </div>
-                          </div>
+                          </div> */}
                           <h3 className="p-large case-heading">
                             {project.title}
                           </h3>
@@ -316,6 +317,7 @@ const ProjectsSectionDesktop = ({
                               src={project.image}
                               loading="eager"
                               alt={project.imageAlt}
+                              title={project.imageAlt}
                               sizes="100vw"
                               className="case-embed"
                             />
