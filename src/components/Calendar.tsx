@@ -309,6 +309,52 @@ const calendarReducer = (
   }
 };
 
+// Add this custom hook
+const useTouchScroll = (ref: React.RefObject<HTMLElement>) => {
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    let startY = 0;
+    let scrollTop = 0;
+    let isScrolling = false;
+
+    const onTouchStart = (e: TouchEvent) => {
+      startY = e.touches[0].pageY;
+      scrollTop = element.scrollTop;
+      isScrolling = true;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isScrolling) return;
+
+      const y = e.touches[0].pageY;
+      const walk = startY - y;
+
+      element.scrollTop = scrollTop + walk;
+
+      // Prevent page scroll
+      if (element.scrollTop > 0) {
+        e.preventDefault();
+      }
+    };
+
+    const onTouchEnd = () => {
+      isScrolling = false;
+    };
+
+    element.addEventListener('touchstart', onTouchStart, { passive: true });
+    element.addEventListener('touchmove', onTouchMove, { passive: false });
+    element.addEventListener('touchend', onTouchEnd);
+
+    return () => {
+      element.removeEventListener('touchstart', onTouchStart);
+      element.removeEventListener('touchmove', onTouchMove);
+      element.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [ref]);
+};
+
 const Calendar = () => {
   const [state, dispatch] = useReducer(calendarReducer, initialState);
   const [availableDaysData, setAvailableDaysData] = useState<
@@ -353,6 +399,7 @@ const Calendar = () => {
   }, []);
 
   const calendarRef = useRef<HTMLDivElement>(null);
+  useTouchScroll(calendarRef);
   const startButtonRef = useRef<HTMLDivElement>(null);
   const timeButtonsRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const gsapAnimationsRef = useRef<gsap.core.Tween[]>([]);
@@ -1557,55 +1604,13 @@ const Calendar = () => {
     }
   };
 
-  // Add this custom hook
-const useTouchScroll = (ref: React.RefObject<HTMLElement>) => {
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-
-    let startY = 0;
-    let scrollTop = 0;
-    let isScrolling = false;
-
-    const onTouchStart = (e: TouchEvent) => {
-      startY = e.touches[0].pageY;
-      scrollTop = element.scrollTop;
-      isScrolling = true;
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (!isScrolling) return;
-      
-      const y = e.touches[0].pageY;
-      const walk = startY - y;
-      
-      element.scrollTop = scrollTop + walk;
-      
-      // Prevent page scroll
-      if (element.scrollTop > 0) {
-        e.preventDefault();
-      }
-    };
-
-    const onTouchEnd = () => {
-      isScrolling = false;
-    };
-
-    element.addEventListener('touchstart', onTouchStart, { passive: true });
-    element.addEventListener('touchmove', onTouchMove, { passive: false });
-    element.addEventListener('touchend', onTouchEnd);
-
-    return () => {
-      element.removeEventListener('touchstart', onTouchStart);
-      element.removeEventListener('touchmove', onTouchMove);
-      element.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [ref]);
-};
-
   return (
     <div
       ref={calendarRef}
+      style={{
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'contain',
+      }}
       className={`text-textPrimary pointer-events-auto absolute top-0 z-[99999] flex h-[100dvh] w-full flex-col overflow-visible bg-transparent transition-transform duration-800 outline-none ${
         state.viewState === 0
           ? 'translate-y-[calc(100%-77px)]'
