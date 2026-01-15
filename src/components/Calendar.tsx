@@ -398,7 +398,7 @@ const Calendar = () => {
     };
   }, []);
 
-  const calendarRef = useRef<HTMLDivElement>(null);
+  const calendarRef = useRef<HTMLElement>(null);
   useTouchScroll(calendarRef);
   const startButtonRef = useRef<HTMLDivElement>(null);
   const timeButtonsRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
