@@ -259,7 +259,7 @@ const HomeSticky = () => {
         className="absolute max-lg:z-10"
         style={{
           left: `${isLg ? borderWidth - 2 : 4}px`,
-          top: `${isLg ? borderWidth - 2 : 66}px`,
+          top: `${isLg ? borderWidth - 2 : 66.3}px`,
           width: `${isLg ? borderWidth : borderWidth + 24}px`,
           height: `${isLg ? borderWidth : borderWidth + 24}px`,
           transform: 'rotate(180deg)',
