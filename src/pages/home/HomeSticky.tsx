@@ -15,15 +15,21 @@ const CornerSVG = ({
   style?: React.CSSProperties;
 }) => (
 
-
   <svg 
   className={`corner-svg ${className}`}
   style={style}
-  xmlns="http://www.w3.org/2000/svg" width="27" height="28" viewBox="0 0 27 28" fill="none">
-  <path d="M20 0H26.3556V27.7343H0V20C0 20 7.2434 18.2101 13.0695 13.7639C18.8957 9.3176 20 0 20 0Z" fill="black"/>
+  xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
+  <g clip-path="url(#clip0_240_73)">
+  <path d="M40 20H46.3556V47.7343H20V40C20 40 27.2434 38.2101 33.0695 33.7639C38.8957 29.3176 40 20 40 20Z" fill="black"/>
   <path 
       className="corner-stroke-path"
-      d="M18.8867 0C18.8867 11.9913 8.56192 18.9209 0.00195312 18.9209" stroke="white" stroke-width="2.2"/>
+      d="M38.8867 -0.0556641V19.9997C38.8867 31.9909 28.5619 38.9206 20.002 38.9206H-0.101562" stroke="white"/>
+  </g>
+  <defs>
+  <clipPath id="clip0_240_73">
+  <rect width="40" height="40" fill="white"/>
+  </clipPath>
+  </defs>
   </svg>
 );
 
@@ -252,8 +258,8 @@ const HomeSticky = () => {
       <CornerSVG
         className="absolute max-lg:z-10"
         style={{
-          left: `${isLg ? borderWidth - 10 : -5}px`,
-          top: `${isLg ? borderWidth - 10.1 : 57.2}px`,
+          left: `${isLg ? borderWidth - 2 : 4}px`,
+          top: `${isLg ? borderWidth - 2 : 66}px`,
           width: `${isLg ? borderWidth : borderWidth + 24}px`,
           height: `${isLg ? borderWidth : borderWidth + 24}px`,
           transform: 'rotate(180deg)',
@@ -263,8 +269,8 @@ const HomeSticky = () => {
       <CornerSVG
         className="absolute"
         style={{
-          right: `${isLg ? borderWidth - 10 : -5}px`,
-          top: `${isLg ? borderWidth - 10 : -5}px`,
+          right: `${isLg ? borderWidth - 2 : 4}px`,
+          top: `${isLg ? borderWidth - 2 : 4}px`,
           width: `${isLg ? borderWidth : borderWidth + 26}px`,
           height: `${isLg ? borderWidth : borderWidth + 26}px`,
           transform: 'rotate(-90deg)',
@@ -274,8 +280,8 @@ const HomeSticky = () => {
       <CornerSVG
         className="absolute"
         style={{
-          left: `${isLg ? borderWidth - 10 : -5}px`,
-          bottom: `${isLg ? bottomHeight - 10 : bottomHeight - 9.5}px`,
+          left: `${isLg ? borderWidth - 2 : 4}px`,
+          bottom: `${isLg ? bottomHeight - 2 : bottomHeight - 1}px`,
           width: `${isLg ? borderWidth : borderWidth + 26}px`,
           height: `${isLg ? borderWidth : borderWidth + 26}px`,
           transform: 'rotate(90deg)',
@@ -285,8 +291,8 @@ const HomeSticky = () => {
       <CornerSVG
         className="absolute"
         style={{
-          right: `${isLg ? borderWidth - 10 : -5}px`,
-          bottom: `${isLg ? bottomHeight - 10 : bottomHeight - 9.8}px`,
+          right: `${isLg ? borderWidth - 2 : 4}px`,
+          bottom: `${isLg ? bottomHeight - 2 : bottomHeight - 1}px`,
           width: `${isLg ? borderWidth : borderWidth + 26}px`,
           height: `${isLg ? borderWidth : borderWidth + 26}px`,
           transform: 'rotate(0deg)',

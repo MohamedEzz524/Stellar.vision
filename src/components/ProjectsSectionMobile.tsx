@@ -70,6 +70,8 @@ const ProjectsSectionMobile = ({
       antialias: true,
       alpha: true,
     });
+
+
     cardsRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     cardsRenderer.setSize(window.innerWidth, window.innerHeight);
     cardsRenderer.setClearColor(0x000000, 0);
@@ -96,22 +98,19 @@ const ProjectsSectionMobile = ({
         new THREE.TextureLoader().load(
           url,
           (loadedTexture) => {
-            Object.assign(loadedTexture, {
-              generateMipmaps: true,
-              minFilter: THREE.LinearMipmapLinearFilter,
-              magFilter: THREE.LinearFilter,
-              anisotropy:
-                cardsRendererRef.current?.capabilities.getMaxAnisotropy() || 1,
-            });
+            loadedTexture.generateMipmaps = true;
+            loadedTexture.minFilter = THREE.LinearMipmapLinearFilter;
+            loadedTexture.magFilter = THREE.LinearFilter;
+            loadedTexture.anisotropy =
+              cardsRendererRef.current?.capabilities.getMaxAnisotropy() || 16;
+            loadedTexture.colorSpace = THREE.SRGBColorSpace; // <--- critical
             resolve(loadedTexture);
           },
           undefined,
-          (error) => {
-            console.error('Error loading image:', url, error);
-            reject(error);
-          },
+          (error) => reject(error),
         );
       });
+    
 
     // Load all project images
     const imagePromises = projects

@@ -159,7 +159,7 @@ const ProjectsSectionDesktop = ({
     track.style.height = `${trackHeight + 75}vh`;
 
     // Calculate scroll distance in pixels (track height in vh converted to px)
-    const scrollDistance = (trackHeight * window.innerHeight) / 100;
+    const scrollDistance = ((trackHeight * window.innerHeight) - window.innerWidth * 0.5) / 100;
 
     // Pre-calculate initial transforms for all cards
     const cardTransforms = projects.map((_, index) =>
@@ -293,14 +293,14 @@ const ProjectsSectionDesktop = ({
                           </div>
                         </div>
                         <div className="case-text">
-                          {/* <div className="flex-sides">
+                          <div className="flex-sides">
                             <div className="additional-text">
                               {project.tags}
                             </div>
                             <div className="additional-text case-year">
                               {project.year}
                             </div>
-                          </div> */}
+                          </div>
                           <h3 className="p-large case-heading">
                             {project.title}
                           </h3>

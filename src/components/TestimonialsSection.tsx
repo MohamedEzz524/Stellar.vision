@@ -30,8 +30,8 @@ const TestimonialsSection = () => {
   const hasLoadedIndex0Ref = useRef(false);
 
   const getCardDimensions = useCallback(() => {
-    const gap = isLg ? window.innerWidth * 0.06 : 10;
-    const widthPercentage = isLg ? 35 : 55;
+    const gap = isLg ? window.innerWidth * 0.065 : 10;
+    const widthPercentage = isLg ? 33 : 55;
     const cardWidth = (window.innerWidth * widthPercentage) / 100;
     return { cardWidth, gap };
   }, [isLg]);
@@ -184,58 +184,59 @@ const TestimonialsSection = () => {
   }, []);
 
   useEffect(() => {
-    videoRefs.current.forEach((video, index) => {
-      if (!video) return;
-
-      if (index === currentIndex) {
-        playActiveVideo(index);
-      } else {
-        if (!video.paused) video.pause();
-        if (video.currentTime > 0) video.currentTime = 0;
-      }
-    });
-  }, [currentIndex, playActiveVideo]);
+    const index = currentIndex;
+    const video = videoRefs.current[index];
+    if (video && videoLoadedRef.current[index]) {
+      // try to play immediately if visible enough (1 means fully in view)
+      const intersectionRatio = video.getBoundingClientRect().bottom > 0 ? 1 : 0;
+      const isActive = index === currentIndexRef.current;
+      if (isActive) video.play().catch(() => {});
+    }
+  }, [currentIndex]);
+  
 
   useEffect(() => {
     if (!videoRefs.current.length) return;
-
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
-
+  
+    if (observerRef.current) observerRef.current.disconnect();
+  
+    const tryPlayVideo = (index: number, intersectionRatio: number) => {
+      const video = videoRefs.current[index];
+      if (!video) return;
+  
+      const isActive = index === currentIndexRef.current;
+      const isLoaded = videoLoadedRef.current[index];
+  
+      if (isActive && isLoaded && intersectionRatio >= 0.5) {
+        if (video.paused) video.play().catch(() => {});
+      } else {
+        if (!video.paused) {
+          video.pause();
+          video.currentTime = 0;
+        }
+      }
+    };
+  
     observerRef.current = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          const video = entry.target as HTMLVideoElement;
-          const videoIndex = videoRefs.current.indexOf(video);
-          const isActive = videoIndex === currentIndexRef.current;
-
-          if (entry.intersectionRatio < 0.5) {
-            if (!video.paused) video.pause();
-          } else if (
-            isActive &&
-            videoLoadedRef.current[videoIndex] &&
-            video.readyState >= 2 &&
-            video.paused
-          ) {
-            video.play().catch(() => {});
-          } else if (!isActive && !video.paused) {
-            video.pause();
-            if (video.currentTime > 0) video.currentTime = 0;
-          }
+          const index = videoRefs.current.indexOf(entry.target as HTMLVideoElement);
+          if (index === -1) return;
+          tryPlayVideo(index, entry.intersectionRatio);
         });
       },
-      { threshold: [0, 0.5, 1], rootMargin: '0px' },
+      { threshold: [0, 0.5, 1] } // you can lower to 0.2 if needed
     );
-
+  
     videoRefs.current.forEach((video) => {
       if (video) observerRef.current?.observe(video);
     });
-
+  
     return () => {
       observerRef.current?.disconnect();
     };
   }, []);
+  
 
   const handleVideoLoaded = useCallback(
     (index: number) => {

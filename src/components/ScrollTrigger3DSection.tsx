@@ -10,6 +10,8 @@ import rockModelUrl from '../assets/models/rock2.compressed.glb?url';
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
 
+const START_OFFSET_VH = 50; // was effectively 150vh before
+
 interface Model3DProps {
   scene: Object3D | null;
   position: [number, number, number];
@@ -274,14 +276,17 @@ const ScrollTrigger3DSection = ({
     // Track: top 0%, translateY(150vh)
     // Row 1: top 110%
     // Row 2: top 170%
-    gsap.set(textTrack, { top: '0%', y: '150vh', x: '0%' });
-
+    gsap.set(textTrack, { top: '0%', y: `${START_OFFSET_VH}vh`, x: '0%' });
     // Set initial positions for object containers (relative to section height)
     // Row 1: top 110% of section height
     // Row 2: top 170% of section height
+    const vhToPx = (vh: number) => (vh * window.innerHeight) / 100;
+    const offsetPx = vhToPx(100);
     const sectionHeight = section.offsetHeight;
-    const row1InitialTop = (sectionHeight * 105) / 100; // 105% of section height
-    const row2InitialTop = (sectionHeight * 170) / 100; // 170% of section height
+    const row1InitialTop = (sectionHeight * 105) / 100 ;
+    const row2InitialTop = (sectionHeight * 170) / 100 ;
+    // const row1InitialTop = (sectionHeight * 105) / 100 - offsetPx;
+    // const row2InitialTop = (sectionHeight * 170) / 100 - offsetPx;
 
     // Object 0: add static offset down by 200% of its height
     if (objectContainerRefs.current[0]) {
@@ -334,7 +339,7 @@ const ScrollTrigger3DSection = ({
 
       // Single ScrollTrigger at top top
       // Initial state:
-      // - Track: top 0%, translateY(150vh)
+      // - Track: top 0%, translateY(50vh)
       // - Row 1: top 110%
       // - Row 2: top 170%
       // When pinned, animate:
@@ -345,7 +350,7 @@ const ScrollTrigger3DSection = ({
         trigger: section,
         start: 'top top',
         end: () => {
-          return `+=${trackHeight + window.innerHeight * 1.5}px`;
+          return `+=${trackHeight + window.innerHeight * 0.5}px`;
         },
         pin: section,
         pinSpacing: true,
@@ -359,8 +364,8 @@ const ScrollTrigger3DSection = ({
           lastUpdateTimeRef.current = now;
 
           const progress = self.progress;
-          const vhToPx = (vh: number) => (vh * window.innerHeight) / 100;
-          const trackStartY = vhToPx(150);
+
+          const trackStartY = vhToPx(START_OFFSET_VH);
           const trackEndY = -trackHeight + vhToPx(50);
           const trackCurrentY =
             trackStartY + (trackEndY - trackStartY) * progress;
@@ -419,12 +424,15 @@ const ScrollTrigger3DSection = ({
           // Animate object containers (Row 1 and Row 2) during pinned scroll
           // Objects reach end state after objectAnimationStartVh (row1: 70vh, row2: 110vh) of scroll
           // Then continue to move back 40% of their path
+          const offsetPx = vhToPx(100);
           const sectionHeight = section.offsetHeight;
+          // const row1StartTop = (sectionHeight * 110) / 100 - offsetPx;
           const row1StartTop = (sectionHeight * 110) / 100;
           const row1EndTop = 0;
           const row1PathLength = row1StartTop - row1EndTop;
           const row1BackTop = row1EndTop + (row1PathLength * 20) / 100;
 
+          // const row2StartTop = (sectionHeight * 170) / 100 - offsetPx;
           const row2StartTop = (sectionHeight * 170) / 100;
           const row2EndTop = (sectionHeight * -20) / 100;
           const row2PathLength = row2StartTop - row2EndTop;
@@ -635,7 +643,7 @@ const ScrollTrigger3DSection = ({
               ref={(el) => {
                 objectContainerRefs.current[1] = el;
               }}
-              className="absolute right-0 xl:-right-30 z-[15] h-[150px] w-[120px] lg:h-[180px] lg:w-[150px]"
+              className="absolute -right-0 xl:-right-30 z-[15] h-[150px] w-[120px] lg:h-[180px] lg:w-[150px]"
             >
               <Canvas
                 camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
@@ -661,16 +669,19 @@ const ScrollTrigger3DSection = ({
               ref={(el) => {
                 objectContainerRefs.current[2] = el;
               }}
-              className="absolute xl:-left-50 -left-[20px] z-[5] h-[150px] w-[120px] lg:-left-[75px] lg:h-[180px] lg:w-[150px]"
+              className="absolute xl:-left-40 -left-[20px] z-[5] h-[150px] w-[120px] lg:-left-[75px] lg:h-[180px] lg:w-[150px]"
             >
               <Canvas
                 camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
                 gl={{ antialias: true, alpha: true }}
                 style={{ width: '100%', height: '100%' }}
               >
-                <ambientLight intensity={0.5} />
-                <directionalLight position={[5, 5, 5]} intensity={1} />
-                <pointLight position={[-5, -5, -5]} intensity={0.5} />
+
+
+            <ambientLight intensity={1} />       
+            <directionalLight position={[5, 5, 5]} intensity={2} />  
+            <pointLight position={[-5, -5, -5]} intensity={1} />     
+
                 <Model3D
                   scene={sharedModelScene}
                   position={[0, 0, 0]}
@@ -686,7 +697,7 @@ const ScrollTrigger3DSection = ({
               ref={(el) => {
                 objectContainerRefs.current[3] = el;
               }}
-              className="absolute xl:-right-40 -right-[20px] z-[5] h-[120px] w-[120px] lg:-right-[75px] lg:h-[500px] lg:w-[500px]"
+              className="absolute xl:-right-40 -right-[30px] z-[5] h-[120px] w-[120px] lg:-right-[75px] lg:h-[500px] lg:w-[500px]"
             >
               <Canvas
                 camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
@@ -695,7 +706,7 @@ const ScrollTrigger3DSection = ({
               >
                 <ambientLight intensity={0.5} />
                 <directionalLight position={[5, 5, 5]} intensity={1} />
-                <pointLight position={[-5, -5, -5]} intensity={0.5} />
+                <pointLight position={[-2, -2, -2]} intensity={0.9} />
                 <Model3D
                   scene={sharedModelScene}
                   position={[0, -2, 0]}
@@ -712,7 +723,7 @@ const ScrollTrigger3DSection = ({
       {/* Text Wrapper Track */}
       <div
         ref={textTrackRef}
-        className="font-grid relative z-20 mx-auto max-w-[344px] will-change-transform lg:max-w-[1000px]"
+        className="font-grid relative lg:px-0 px-3 text-balance z-20 mx-auto max-w-[344px] will-change-transform lg:max-w-[1000px]"
       >
         <div ref={textContainerRef} className="relative z-20">
           {texts.map((text, index) => (
