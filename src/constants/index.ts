@@ -114,6 +114,16 @@ export const Projects: Project[] = [
   },
   
   {
+    id: 'project-5',
+    title: 'Greennest Furniture:',
+    year: '2025',
+    tags: 'Ecommerce Website',
+    image: furnitureImg,
+    imageAlt: 'Ultraman Trimmer website',
+    href: 'https://greennest.stelllar.vision',
+  },
+  
+  {
     id: 'project-15',
     title: 'Ultraman Trimmer',
     year: '2025',

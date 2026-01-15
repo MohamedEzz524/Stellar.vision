@@ -281,7 +281,7 @@ const ScrollTrigger3DSection = ({
     // Row 1: top 110% of section height
     // Row 2: top 170% of section height
     const vhToPx = (vh: number) => (vh * window.innerHeight) / 100;
-    const offsetPx = vhToPx(100);
+    // const offsetPx = vhToPx(100);
     const sectionHeight = section.offsetHeight;
     const row1InitialTop = (sectionHeight * 105) / 100 ;
     const row2InitialTop = (sectionHeight * 170) / 100 ;
@@ -424,7 +424,7 @@ const ScrollTrigger3DSection = ({
           // Animate object containers (Row 1 and Row 2) during pinned scroll
           // Objects reach end state after objectAnimationStartVh (row1: 70vh, row2: 110vh) of scroll
           // Then continue to move back 40% of their path
-          const offsetPx = vhToPx(100);
+          // const offsetPx = vhToPx(100);
           const sectionHeight = section.offsetHeight;
           // const row1StartTop = (sectionHeight * 110) / 100 - offsetPx;
           const row1StartTop = (sectionHeight * 110) / 100;
