@@ -1610,8 +1610,9 @@ const Calendar = () => {
       style={{
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'contain',
+        touchAction: 'pan-y', // Enable vertical touch scrolling
       }}
-      className={`text-textPrimary pointer-events-auto absolute top-0 z-[99999] flex h-[100dvh] w-full flex-col overflow-visible bg-transparent transition-transform duration-800 outline-none ${
+      className={`text-textPrimary pointer-events-auto absolute top-0 z-[99999] flex h-[100dvh] w-full flex-col overflow-y-auto bg-transparent transition-transform duration-800 outline-none ${
         state.viewState === 0
           ? 'translate-y-[calc(100%-77px)]'
           : 'translate-y-0'
@@ -1623,167 +1624,135 @@ const Calendar = () => {
       }}
       onTouchMove={(e) => {
         // Prevent touch events from bubbling to body on mobile
-        e.stopPropagation();
+        if (e.currentTarget.scrollHeight > e.currentTarget.clientHeight) {
+          e.stopPropagation();
+        }
       }}
     >
-      <div className="relative h-auto flex-1 overflow-hidden pb-4">
-        <div
-          className={`pointer-events-none absolute inset-0 -z-1 bg-black ${
-            state.viewState === 0 ? 'opacity-0' : 'opacity-100'
-          }`}
-        />
-        {/* Start Now Button - Always visible */}
-        <div
-          ref={startButtonRef}
-          className="relative z-10 flex h-[77px] items-center justify-center bg-transparent"
-        >
-          <div className="h-full w-full max-w-[300px] lg:max-w-[320px]">
-            <Button3dWrapper
-              onClick={() => {
-                if (state.viewState === 0) {
-                  dispatch({ type: 'START_CALENDAR' });
-                } else {
-                  dispatch({ type: 'CLOSE_CALENDAR' });
-                }
-              }}
-              viewState={state.viewState}
-            />
+      <div className="relative h-auto min-h-full flex-1 pb-4">
+        <div className="overflow-hidden">
+          <div
+            className={`pointer-events-none absolute inset-0 -z-1 bg-black ${
+              state.viewState === 0 ? 'opacity-0' : 'opacity-100'
+            }`}
+          />
+          {/* Start Now Button - Always visible */}
+          <div
+            ref={startButtonRef}
+            className="relative z-10 flex h-[77px] items-center justify-center bg-transparent"
+          >
+            <div className="h-full w-full max-w-[300px] lg:max-w-[320px]">
+              <Button3dWrapper
+                onClick={() => {
+                  if (state.viewState === 0) {
+                    dispatch({ type: 'START_CALENDAR' });
+                  } else {
+                    dispatch({ type: 'CLOSE_CALENDAR' });
+                  }
+                }}
+                viewState={state.viewState}
+              />
+            </div>
           </div>
-        </div>
-        <div>
-          <div className="mx-auto max-w-lg">
-            {/* Header Container - Title and Back Button */}
-            {(state.viewState === 1 ||
-              state.viewState === 2 ||
-              state.viewState === 3 ||
-              state.viewState === 4) && (
-              <div className="relative z-10 my-4 flex w-full items-center lg:my-8">
-                {/* Back Button - Left */}
-                {(state.viewState === 3 || state.viewState === 4) && (
-                  <button
-                    onClick={handleBack}
-                    className="absolute left-4 text-sm font-normal uppercase hover:underline lg:left-0 lg:text-lg"
-                  >
-                    &lt; BACK
-                  </button>
-                )}
-                {/* Title - Centered */}
-                {(state.viewState === 1 || state.viewState === 2) && (
-                  <h2
-                    key="select-day-title"
-                    className="mx-auto inline-block rounded-full bg-white px-3 py-1 text-xs font-bold text-black uppercase lg:text-sm"
-                  >
-                    {getTitle()}
-                  </h2>
-                )}
-                {(state.viewState === 3 || state.viewState === 4) && (
-                  <h2
-                    key="other-title"
-                    className="mx-auto inline-block rounded-full bg-white px-3 py-1 text-xs font-bold text-black uppercase lg:text-sm"
-                  >
-                    {getTitle()}
-                  </h2>
-                )}
-              </div>
-            )}
-
-            {/* State 2: Select Day */}
-            {(state.viewState === 1 || state.viewState === 2) && (
-              <div className="relative z-10 flex flex-1 flex-col p-4 lg:p-0">
-                {/* Month/Year Navigation */}
-                <div className="font-grid mb-4 flex items-center justify-center gap-4 lg:mb-6">
-                  <motion.button
-                    initial={{ x: -100 }}
-                    animate={{ x: 0 }}
-                    transition={{
-                      x: { duration: 0.4, delay: 0.4, ease: 'easeOut' },
-                    }}
-                    onClick={handlePreviousMonth}
-                    disabled={isPreviousMonthDisabled()}
-                    className="disabled:cursor-not-allowed disabled:opacity-30"
-                  >
-                    <img
-                      src={arrowRightIcon}
-                      alt="Previous"
-                      className="h-4 w-4 rotate-180 lg:h-8 lg:w-8"
-                    />
-                  </motion.button>
-                  <motion.span
-                    initial={{ y: 50, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{
-                      y: { duration: 0.4, delay: 0.4, ease: 'easeOut' },
-                      opacity: { duration: 0.4, delay: 0.4 },
-                    }}
-                    className="text-xl font-bold lg:text-3xl"
-                  >
-                    {getMonthName(state.currentMonth)} {state.currentYear}
-                  </motion.span>
-                  <motion.button
-                    initial={{ x: 100 }}
-                    animate={{ x: 0 }}
-                    transition={{
-                      x: { duration: 0.4, delay: 0.4, ease: 'easeOut' },
-                    }}
-                    onClick={handleNextMonth}
-                    disabled={isNextMonthDisabled()}
-                    className="disabled:cursor-not-allowed disabled:opacity-30"
-                  >
-                    <img
-                      src={arrowRightIcon}
-                      alt="Next"
-                      className="h-4 w-4 lg:h-8 lg:w-8"
-                    />
-                  </motion.button>
+          <div>
+            <div className="mx-auto max-w-lg">
+              {/* Header Container - Title and Back Button */}
+              {(state.viewState === 1 ||
+                state.viewState === 2 ||
+                state.viewState === 3 ||
+                state.viewState === 4) && (
+                <div className="relative z-10 my-4 flex w-full items-center lg:my-8">
+                  {/* Back Button - Left */}
+                  {(state.viewState === 3 || state.viewState === 4) && (
+                    <button
+                      onClick={handleBack}
+                      className="absolute left-4 text-sm font-normal uppercase hover:underline lg:left-0 lg:text-lg"
+                    >
+                      &lt; BACK
+                    </button>
+                  )}
+                  {/* Title - Centered */}
+                  {(state.viewState === 1 || state.viewState === 2) && (
+                    <h2
+                      key="select-day-title"
+                      className="mx-auto inline-block rounded-full bg-white px-3 py-1 text-xs font-bold text-black uppercase lg:text-sm"
+                    >
+                      {getTitle()}
+                    </h2>
+                  )}
+                  {(state.viewState === 3 || state.viewState === 4) && (
+                    <h2
+                      key="other-title"
+                      className="mx-auto inline-block rounded-full bg-white px-3 py-1 text-xs font-bold text-black uppercase lg:text-sm"
+                    >
+                      {getTitle()}
+                    </h2>
+                  )}
                 </div>
+              )}
 
-                {/* Calendar Grid */}
-                <div className="flex-1">
-                  <div className="w-full">
-                    {/* Weekday Headers */}
-                    <div className="mb-4 grid grid-cols-7 gap-2 lg:mb-6 lg:gap-4">
-                      {weekdays.map((day) => (
-                        <motion.div
-                          key={day}
-                          initial={{ y: -20, opacity: 0, scale: 0.8 }}
-                          animate={{ y: 0, opacity: 1, scale: 1 }}
-                          transition={{
-                            y: {
-                              duration: 0.4,
-                              delay: 0.4,
-                              ease: 'easeOut',
-                            },
-                            opacity: {
-                              duration: 0.4,
-                              delay: 0.4,
-                            },
-                            scale: {
-                              duration: 0.4,
-                              delay: 0.4,
-                              ease: 'easeOut',
-                            },
-                          }}
-                          className="rounded-xl text-center text-[11.2px] font-bold uppercase shadow-[inset_1px_0_0_0_rgba(255,255,255,0.1),inset_-1px_0_0_0_rgba(255,255,255,0.1),inset_0_4px_6px_rgba(255,255,255,0.6)] lg:text-sm"
-                        >
-                          {day}
-                        </motion.div>
-                      ))}
-                    </div>
+              {/* State 2: Select Day */}
+              {(state.viewState === 1 || state.viewState === 2) && (
+                <div className="relative z-10 flex flex-1 flex-col p-4 lg:p-0">
+                  {/* Month/Year Navigation */}
+                  <div className="font-grid mb-4 flex items-center justify-center gap-4 lg:mb-6">
+                    <motion.button
+                      initial={{ x: -100 }}
+                      animate={{ x: 0 }}
+                      transition={{
+                        x: { duration: 0.4, delay: 0.4, ease: 'easeOut' },
+                      }}
+                      onClick={handlePreviousMonth}
+                      disabled={isPreviousMonthDisabled()}
+                      className="disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <img
+                        src={arrowRightIcon}
+                        alt="Previous"
+                        className="h-4 w-4 rotate-180 lg:h-8 lg:w-8"
+                      />
+                    </motion.button>
+                    <motion.span
+                      initial={{ y: 50, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{
+                        y: { duration: 0.4, delay: 0.4, ease: 'easeOut' },
+                        opacity: { duration: 0.4, delay: 0.4 },
+                      }}
+                      className="text-xl font-bold lg:text-3xl"
+                    >
+                      {getMonthName(state.currentMonth)} {state.currentYear}
+                    </motion.span>
+                    <motion.button
+                      initial={{ x: 100 }}
+                      animate={{ x: 0 }}
+                      transition={{
+                        x: { duration: 0.4, delay: 0.4, ease: 'easeOut' },
+                      }}
+                      onClick={handleNextMonth}
+                      disabled={isNextMonthDisabled()}
+                      className="disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <img
+                        src={arrowRightIcon}
+                        alt="Next"
+                        className="h-4 w-4 lg:h-8 lg:w-8"
+                      />
+                    </motion.button>
+                  </div>
 
-                    {/* Days Grid */}
-                    <div className="grid grid-cols-7 gap-2 lg:gap-4">
-                      {calendarDays.map((day, index) => {
-                        const isDisabled = day !== null && isDayDisabled(day);
-                        return (
-                          <motion.button
-                            key={index}
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{
-                              scale: 1,
-                              opacity: day === null ? 0 : 1,
-                            }}
+                  {/* Calendar Grid */}
+                  <div className="flex-1">
+                    <div className="w-full">
+                      {/* Weekday Headers */}
+                      <div className="mb-4 grid grid-cols-7 gap-2 lg:mb-6 lg:gap-4">
+                        {weekdays.map((day) => (
+                          <motion.div
+                            key={day}
+                            initial={{ y: -20, opacity: 0, scale: 0.8 }}
+                            animate={{ y: 0, opacity: 1, scale: 1 }}
                             transition={{
-                              scale: {
+                              y: {
                                 duration: 0.4,
                                 delay: 0.4,
                                 ease: 'easeOut',
@@ -1792,374 +1761,416 @@ const Calendar = () => {
                                 duration: 0.4,
                                 delay: 0.4,
                               },
+                              scale: {
+                                duration: 0.4,
+                                delay: 0.4,
+                                ease: 'easeOut',
+                              },
                             }}
-                            onClick={() =>
-                              day !== null && !isDisabled && handleDayClick(day)
-                            }
-                            disabled={day === null || isDisabled}
-                            className={`aspect-square rounded-md text-center text-lg font-bold md:rounded-xl lg:text-xl ${
-                              day === null
-                                ? 'cursor-default opacity-0'
-                                : isDisabled
-                                  ? 'calendar-day-disabled cursor-not-allowed'
-                                  : 'calendar-day-available'
-                            }`}
+                            className="rounded-xl text-center text-[11.2px] font-bold uppercase shadow-[inset_1px_0_0_0_rgba(255,255,255,0.1),inset_-1px_0_0_0_rgba(255,255,255,0.1),inset_0_4px_6px_rgba(255,255,255,0.6)] lg:text-sm"
                           >
-                            {day !== null
-                              ? day.toString().padStart(2, '0')
-                              : ''}
-                          </motion.button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Timezone Selector */}
-                <div className="mx-auto mt-2 flex w-fit items-center gap-1 lg:gap-2">
-                  <GlobeIcon />
-                  <div className="select-timezone relative">
-                    <select
-                      value={state.timezone}
-                      onChange={handleTimezoneChange}
-                      aria-label="Select timezone"
-                      title="Select timezone"
-                      className="bg-bgPrimary select-timezone relative w-fit appearance-none rounded-md px-4 py-3 pr-12 text-[12px] text-white uppercase focus:outline-none lg:text-base"
-                    >
-                      {timezones.map((tz) => (
-                        <option
-                          key={tz}
-                          value={tz}
-                          className="bg-bgPrimary uppercase"
-                        >
-                          {getTimezoneDisplayName(tz)} (
-                          {getCurrentTimeInTimezone(tz)})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* AUTO ROTATE TEXT */}
-                <div className="border-textPrimary relative mx-auto mt-4 h-12 w-[240px] overflow-hidden rounded-md border-2 lg:h-17 lg:w-lg lg:border-3">
-                  <div className="relative h-full w-full">
-                    <div
-                      className="noise-move-slow-animation absolute inset-0 z-0 opacity-20"
-                      style={{
-                        backgroundImage: `url(${noiseImg})`,
-                        backgroundRepeat: 'repeat',
-                        backgroundSize: '100px 100px',
-                      }}
-                    />
-                    {/* AUTO ROTATE TEXT ANIMATION */}
-                    <div className="font-grid absolute inset-0 z-0 overflow-hidden text-2xl lg:text-4xl">
-                      <div className="scroll-text-animation gap:[240px] left-1/2 flex h-full flex-row items-center lg:gap-[32rem]">
-                        {autoRotateTexts.map((text: string, index: number) => (
-                          <div
-                            key={text.slice(0, 5) + index}
-                            className="text-textPrimary whitespace-nowrap"
-                          >
-                            {text}
-                          </div>
+                            {day}
+                          </motion.div>
                         ))}
                       </div>
+
+                      {/* Days Grid */}
+                      <div className="grid grid-cols-7 gap-2 lg:gap-4">
+                        {calendarDays.map((day, index) => {
+                          const isDisabled = day !== null && isDayDisabled(day);
+                          return (
+                            <motion.button
+                              key={index}
+                              initial={{ scale: 0, opacity: 0 }}
+                              animate={{
+                                scale: 1,
+                                opacity: day === null ? 0 : 1,
+                              }}
+                              transition={{
+                                scale: {
+                                  duration: 0.4,
+                                  delay: 0.4,
+                                  ease: 'easeOut',
+                                },
+                                opacity: {
+                                  duration: 0.4,
+                                  delay: 0.4,
+                                },
+                              }}
+                              onClick={() =>
+                                day !== null &&
+                                !isDisabled &&
+                                handleDayClick(day)
+                              }
+                              disabled={day === null || isDisabled}
+                              className={`aspect-square rounded-md text-center text-lg font-bold md:rounded-xl lg:text-xl ${
+                                day === null
+                                  ? 'cursor-default opacity-0'
+                                  : isDisabled
+                                    ? 'calendar-day-disabled cursor-not-allowed'
+                                    : 'calendar-day-available'
+                              }`}
+                            >
+                              {day !== null
+                                ? day.toString().padStart(2, '0')
+                                : ''}
+                            </motion.button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
 
-            {/* State 3: Select Time */}
-            {state.viewState === 3 && (
-              <div className="relative z-10 flex flex-col p-4 lg:p-0">
-                {/* Time Buttons */}
-                <div className="flex-1">
-                  <div className="space-y-3">
-                    {isLoadingSlots ? (
-                      <div className="py-8 text-center text-white">
-                        Loading available time slots...
-                      </div>
-                    ) : availableTimes.length === 0 ? (
-                      <div className="py-5 text-center text-white lg:py-8">
-                        No available time slots for this day.
-                      </div>
-                    ) : (
-                      availableTimes.map((time, index) => (
-                        <div
-                          key={time}
-                          ref={(el) => {
-                            timeButtonsRef.current[time] = el;
-                          }}
-                          className="flex gap-2 overflow-hidden"
-                        >
-                          <motion.button
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{
-                              duration: 0.4,
-                              delay: 0.05 * index,
-                              ease: 'easeOut',
-                            }}
-                            onClick={() => handleTimeClick(time)}
-                            className="time-button w-full rounded-md bg-[#333] px-4 py-3 text-center text-xs shadow-[inset_3px_0_0_rgba(255,255,255,0.04),inset_-3px_0_0_0px_rgba(255,255,255,0.04),inset_0_2px_4px_rgba(255,255,255,0.6)] lg:rounded-xl lg:py-3 lg:text-base"
+                  {/* Timezone Selector */}
+                  <div className="mx-auto mt-2 flex w-fit items-center gap-1 lg:gap-2">
+                    <GlobeIcon />
+                    <div className="select-timezone relative">
+                      <select
+                        value={state.timezone}
+                        onChange={handleTimezoneChange}
+                        aria-label="Select timezone"
+                        title="Select timezone"
+                        className="bg-bgPrimary select-timezone relative w-fit appearance-none rounded-md px-4 py-3 pr-12 text-[12px] text-white uppercase focus:outline-none lg:text-base"
+                      >
+                        {timezones.map((tz) => (
+                          <option
+                            key={tz}
+                            value={tz}
+                            className="bg-bgPrimary uppercase"
                           >
-                            {time}
-                          </motion.button>
-                          <button
-                            onClick={handleTimeNext}
-                            className="next-button calendar-day-available big w-0 overflow-hidden rounded-md py-3 text-center text-xs font-bold lg:rounded-xl lg:py-3 lg:text-sm"
-                          >
-                            NEXT
-                          </button>
+                            {getTimezoneDisplayName(tz)} (
+                            {getCurrentTimeInTimezone(tz)})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* AUTO ROTATE TEXT */}
+                  <div className="border-textPrimary relative mx-auto mt-4 h-12 w-[240px] overflow-hidden rounded-md border-2 lg:h-17 lg:w-lg lg:border-3">
+                    <div className="relative h-full w-full">
+                      <div
+                        className="noise-move-slow-animation absolute inset-0 z-0 opacity-20"
+                        style={{
+                          backgroundImage: `url(${noiseImg})`,
+                          backgroundRepeat: 'repeat',
+                          backgroundSize: '100px 100px',
+                        }}
+                      />
+                      {/* AUTO ROTATE TEXT ANIMATION */}
+                      <div className="font-grid absolute inset-0 z-0 overflow-hidden text-2xl lg:text-4xl">
+                        <div className="scroll-text-animation gap:[240px] left-1/2 flex h-full flex-row items-center lg:gap-[32rem]">
+                          {autoRotateTexts.map(
+                            (text: string, index: number) => (
+                              <div
+                                key={text.slice(0, 5) + index}
+                                className="text-textPrimary whitespace-nowrap"
+                              >
+                                {text}
+                              </div>
+                            ),
+                          )}
                         </div>
-                      ))
-                    )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* State 4: Confirm */}
-            {state.viewState === 4 && (
-              <div className="relative z-10 mt-[77px] flex w-full flex-col px-4 lg:px-0">
-                {/* Info Section */}
-                <div className="[&>img>path]:text-textPrimary mb-8 space-y-4 lg:space-y-2">
-                  <p className="flex items-center gap-2 text-sm lg:text-lg">
-                    <img
-                      src={timeSvg}
-                      alt="time"
-                      className="stroke-textPrimary h-6 w-6 lg:h-8 lg:w-8"
-                    />
-                    15 min
-                  </p>
-                  <p className="flex items-center gap-2 text-sm opacity-100">
-                    <img
-                      src={timeSvg}
-                      alt="time"
-                      className="h-6 w-6 lg:h-8 lg:w-8"
-                    />
-                    Web conferencing details provided upon confirmation.
-                  </p>
-                  <p className="flex items-center gap-2 text-sm font-bold lg:text-lg">
-                    <img
-                      src={timeSvg}
-                      alt="time"
-                      className="h-6 w-6 lg:h-8 lg:w-8"
-                    />
-                    {formatSelectedDateTime()}
-                  </p>
-                  <p className="flex items-center gap-2 text-sm lg:text-lg">
-                    <img
-                      src={timeSvg}
-                      alt="time"
-                      className="h-6 w-6 lg:h-8 lg:w-8"
-                    />
-                    {getTimezoneDisplayName(
-                      state.formData.timezone,
-                    ).toUpperCase()}
-                  </p>
-                </div>
-
-                {/* Success Message */}
-                {submitSuccess ? (
-                  <div className="w-full space-y-6">
-                    <h3 className="font-grid text-2xl font-bold uppercase lg:text-[2rem]">
-                      Booking confirmed!
-                    </h3>
-                    <div className="rounded-md border border-green-500 bg-green-500/20 px-4 py-6 text-white">
-                      <p className="mb-4 text-sm font-semibold lg:text-lg">
-                        Thank you for your booking!
-                      </p>
-                      <p className="mb-2 text-xs lg:text-sm">
-                        Your booking has been submitted successfully. We'll send
-                        you a confirmation email shortly.
-                      </p>
-                      <p className="text-xs opacity-80 lg:text-sm">
-                        Web conferencing details will be provided upon
-                        confirmation.
-                      </p>
+              {/* State 3: Select Time */}
+              {state.viewState === 3 && (
+                <div className="relative z-10 flex flex-col p-4 lg:p-0">
+                  {/* Time Buttons */}
+                  <div className="flex-1">
+                    <div className="space-y-3">
+                      {isLoadingSlots ? (
+                        <div className="py-8 text-center text-white">
+                          Loading available time slots...
+                        </div>
+                      ) : availableTimes.length === 0 ? (
+                        <div className="py-5 text-center text-white lg:py-8">
+                          No available time slots for this day.
+                        </div>
+                      ) : (
+                        availableTimes.map((time, index) => (
+                          <div
+                            key={time}
+                            ref={(el) => {
+                              timeButtonsRef.current[time] = el;
+                            }}
+                            className="flex gap-2 overflow-hidden"
+                          >
+                            <motion.button
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{
+                                duration: 0.4,
+                                delay: 0.05 * index,
+                                ease: 'easeOut',
+                              }}
+                              onClick={() => handleTimeClick(time)}
+                              className="time-button w-full rounded-md bg-[#333] px-4 py-3 text-center text-xs shadow-[inset_3px_0_0_rgba(255,255,255,0.04),inset_-3px_0_0_0px_rgba(255,255,255,0.04),inset_0_2px_4px_rgba(255,255,255,0.6)] lg:rounded-xl lg:py-3 lg:text-base"
+                            >
+                              {time}
+                            </motion.button>
+                            <button
+                              onClick={handleTimeNext}
+                              className="next-button calendar-day-available big w-0 overflow-hidden rounded-md py-3 text-center text-xs font-bold lg:rounded-xl lg:py-3 lg:text-sm"
+                            >
+                              NEXT
+                            </button>
+                          </div>
+                        ))
+                      )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => dispatch({ type: 'CLOSE_CALENDAR' })}
-                      className="calendar-day-available big mt-4 w-full rounded-md px-4 py-3 text-xs font-bold text-black uppercase lg:rounded-xl lg:px-6 lg:py-4 lg:text-lg"
-                    >
-                      Close
-                    </button>
                   </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="w-full space-y-6">
-                    <h3 className="font-grid text-xl font-bold uppercase lg:text-[2rem]">
-                      Enter details
-                    </h3>
+                </div>
+              )}
 
-                    {/* Name Input */}
-                    <div className="relative">
-                      <label
-                        htmlFor="name"
-                        className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs lg:text-sm"
-                      >
-                        name <span className="text-red-400">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value={state.formData.name}
-                        onChange={handleInputChange}
-                        onBlur={handleFieldBlur}
-                        required
-                        pattern="[a-zA-Z0-9 '-]{2,50}"
-                        className={`w-full rounded-sm border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none lg:rounded-md ${
-                          fieldErrors.name ? 'border-red-500' : 'border-white'
-                        }`}
-                        placeholder="Your name"
+              {/* State 4: Confirm */}
+              {state.viewState === 4 && (
+                <div className="relative z-10 mt-[77px] flex w-full flex-col px-4 lg:px-0">
+                  {/* Info Section */}
+                  <div className="[&>img>path]:text-textPrimary mb-8 space-y-4 lg:space-y-2">
+                    <p className="flex items-center gap-2 text-sm lg:text-lg">
+                      <img
+                        src={timeSvg}
+                        alt="time"
+                        className="stroke-textPrimary h-6 w-6 lg:h-8 lg:w-8"
                       />
-                      {fieldErrors.name && (
-                        <p className="mt-1 text-xs text-red-400">
-                          {fieldErrors.name}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Email Input */}
-                    <div className="relative">
-                      <label
-                        htmlFor="email"
-                        className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
-                      >
-                        email <span className="text-red-400">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={state.formData.email}
-                        onChange={handleInputChange}
-                        onBlur={handleFieldBlur}
-                        required
-                        pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
-                        className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
-                          fieldErrors.email ? 'border-red-500' : 'border-white'
-                        }`}
+                      15 min
+                    </p>
+                    <p className="flex items-center gap-2 text-sm opacity-100">
+                      <img
+                        src={timeSvg}
+                        alt="time"
+                        className="h-6 w-6 lg:h-8 lg:w-8"
                       />
-                      {fieldErrors.email && (
-                        <p className="mt-1 text-xs text-red-400">
-                          {fieldErrors.email}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Description Input */}
-                    <div className="relative">
-                      <label
-                        htmlFor="description"
-                        className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
-                      >
-                        description <span className="text-red-400">*</span>
-                      </label>
-                      <textarea
-                        id="description"
-                        name="description"
-                        value={state.formData.description}
-                        onChange={handleInputChange}
-                        onBlur={handleFieldBlur}
-                        required
-                        minLength={4}
-                        maxLength={500}
-                        rows={4}
-                        className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
-                          fieldErrors.description
-                            ? 'border-red-500'
-                            : 'border-white'
-                        }`}
+                      Web conferencing details provided upon confirmation.
+                    </p>
+                    <p className="flex items-center gap-2 text-sm font-bold lg:text-lg">
+                      <img
+                        src={timeSvg}
+                        alt="time"
+                        className="h-6 w-6 lg:h-8 lg:w-8"
                       />
-                      {fieldErrors.description && (
-                        <p className="mt-1 text-xs text-red-400">
-                          {fieldErrors.description}
+                      {formatSelectedDateTime()}
+                    </p>
+                    <p className="flex items-center gap-2 text-sm lg:text-lg">
+                      <img
+                        src={timeSvg}
+                        alt="time"
+                        className="h-6 w-6 lg:h-8 lg:w-8"
+                      />
+                      {getTimezoneDisplayName(
+                        state.formData.timezone,
+                      ).toUpperCase()}
+                    </p>
+                  </div>
+
+                  {/* Success Message */}
+                  {submitSuccess ? (
+                    <div className="w-full space-y-6">
+                      <h3 className="font-grid text-2xl font-bold uppercase lg:text-[2rem]">
+                        Booking confirmed!
+                      </h3>
+                      <div className="rounded-md border border-green-500 bg-green-500/20 px-4 py-6 text-white">
+                        <p className="mb-4 text-sm font-semibold lg:text-lg">
+                          Thank you for your booking!
                         </p>
-                      )}
-                    </div>
-
-                    {/* Hidden Start Time Input (Read-only, auto-filled from previous steps) */}
-                    <input
-                      type="hidden"
-                      id="startTime"
-                      name="startTime"
-                      value={state.formData.startTime}
-                      readOnly
-                      required
-                      pattern="^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?([+-]\d{2}:\d{2}|Z)$"
-                    />
-
-                    {/* Hidden Timezone Input (Read-only, auto-filled from previous steps) */}
-                    <input
-                      type="hidden"
-                      id="timezone"
-                      name="timezone"
-                      value={state.formData.timezone}
-                      readOnly
-                      required
-                      pattern="^[A-Za-z_][A-Za-z0-9_/+-]*$"
-                    />
-
-                    {/* TEMPORARY: Read-only inputs for testing (will be removed later) */}
-                    <div className="relative hidden opacity-50">
-                      <label
-                        htmlFor="startTime-test"
-                        className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs text-gray-400"
+                        <p className="mb-2 text-xs lg:text-sm">
+                          Your booking has been submitted successfully. We'll
+                          send you a confirmation email shortly.
+                        </p>
+                        <p className="text-xs opacity-80 lg:text-sm">
+                          Web conferencing details will be provided upon
+                          confirmation.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => dispatch({ type: 'CLOSE_CALENDAR' })}
+                        className="calendar-day-available big mt-4 w-full rounded-md px-4 py-3 text-xs font-bold text-black uppercase lg:rounded-xl lg:px-6 lg:py-4 lg:text-lg"
                       >
-                        startTime (readonly - testing)
-                      </label>
+                        Close
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSubmit} className="w-full space-y-6">
+                      <h3 className="font-grid text-xl font-bold uppercase lg:text-[2rem]">
+                        Enter details
+                      </h3>
+
+                      {/* Name Input */}
+                      <div className="relative">
+                        <label
+                          htmlFor="name"
+                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs lg:text-sm"
+                        >
+                          name <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="name"
+                          name="name"
+                          value={state.formData.name}
+                          onChange={handleInputChange}
+                          onBlur={handleFieldBlur}
+                          required
+                          pattern="[a-zA-Z0-9 '-]{2,50}"
+                          className={`w-full rounded-sm border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none lg:rounded-md ${
+                            fieldErrors.name ? 'border-red-500' : 'border-white'
+                          }`}
+                          placeholder="Your name"
+                        />
+                        {fieldErrors.name && (
+                          <p className="mt-1 text-xs text-red-400">
+                            {fieldErrors.name}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Email Input */}
+                      <div className="relative">
+                        <label
+                          htmlFor="email"
+                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                        >
+                          email <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          id="email"
+                          name="email"
+                          value={state.formData.email}
+                          onChange={handleInputChange}
+                          onBlur={handleFieldBlur}
+                          required
+                          pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                          className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                            fieldErrors.email
+                              ? 'border-red-500'
+                              : 'border-white'
+                          }`}
+                        />
+                        {fieldErrors.email && (
+                          <p className="mt-1 text-xs text-red-400">
+                            {fieldErrors.email}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Description Input */}
+                      <div className="relative">
+                        <label
+                          htmlFor="description"
+                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                        >
+                          description <span className="text-red-400">*</span>
+                        </label>
+                        <textarea
+                          id="description"
+                          name="description"
+                          value={state.formData.description}
+                          onChange={handleInputChange}
+                          onBlur={handleFieldBlur}
+                          required
+                          minLength={4}
+                          maxLength={500}
+                          rows={4}
+                          className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                            fieldErrors.description
+                              ? 'border-red-500'
+                              : 'border-white'
+                          }`}
+                        />
+                        {fieldErrors.description && (
+                          <p className="mt-1 text-xs text-red-400">
+                            {fieldErrors.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Hidden Start Time Input (Read-only, auto-filled from previous steps) */}
                       <input
-                        type="text"
-                        id="startTime-test"
-                        name="startTime-test"
+                        type="hidden"
+                        id="startTime"
+                        name="startTime"
                         value={state.formData.startTime}
                         readOnly
-                        disabled
-                        className="w-full cursor-not-allowed rounded-md border border-gray-600 bg-transparent px-4 py-3 text-sm text-gray-400"
-                        title="Start time in RFC3339 format with timezone offset (testing only)"
+                        required
+                        pattern="^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?([+-]\d{2}:\d{2}|Z)$"
                       />
-                    </div>
-                    <div className="relative hidden opacity-50">
-                      <label
-                        htmlFor="timezone-test"
-                        className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs text-gray-400"
-                      >
-                        timezone (readonly - testing)
-                      </label>
+
+                      {/* Hidden Timezone Input (Read-only, auto-filled from previous steps) */}
                       <input
-                        type="text"
-                        id="timezone-test"
-                        name="timezone-test"
+                        type="hidden"
+                        id="timezone"
+                        name="timezone"
                         value={state.formData.timezone}
                         readOnly
-                        disabled
-                        className="w-full cursor-not-allowed rounded-md border border-gray-600 bg-transparent px-4 py-3 text-sm text-gray-400"
-                        title="Timezone (testing only)"
+                        required
+                        pattern="^[A-Za-z_][A-Za-z0-9_/+-]*$"
                       />
-                    </div>
 
-                    {/* Error Message */}
-                    {submitError && (
-                      <div className="mt-4 rounded-sm border border-red-500 bg-red-500/20 px-4 py-3 text-xs text-red-200 lg:mt-6 lg:rounded-md lg:text-sm">
-                        {submitError}
+                      {/* TEMPORARY: Read-only inputs for testing (will be removed later) */}
+                      <div className="relative hidden opacity-50">
+                        <label
+                          htmlFor="startTime-test"
+                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs text-gray-400"
+                        >
+                          startTime (readonly - testing)
+                        </label>
+                        <input
+                          type="text"
+                          id="startTime-test"
+                          name="startTime-test"
+                          value={state.formData.startTime}
+                          readOnly
+                          disabled
+                          className="w-full cursor-not-allowed rounded-md border border-gray-600 bg-transparent px-4 py-3 text-sm text-gray-400"
+                          title="Start time in RFC3339 format with timezone offset (testing only)"
+                        />
                       </div>
-                    )}
+                      <div className="relative hidden opacity-50">
+                        <label
+                          htmlFor="timezone-test"
+                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs text-gray-400"
+                        >
+                          timezone (readonly - testing)
+                        </label>
+                        <input
+                          type="text"
+                          id="timezone-test"
+                          name="timezone-test"
+                          value={state.formData.timezone}
+                          readOnly
+                          disabled
+                          className="w-full cursor-not-allowed rounded-md border border-gray-600 bg-transparent px-4 py-3 text-sm text-gray-400"
+                          title="Timezone (testing only)"
+                        />
+                      </div>
 
-                    {/* Submit Button */}
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="calendar-day-available big mt-0 w-full rounded-md px-3 py-3 text-sm font-bold text-black uppercase disabled:cursor-not-allowed disabled:opacity-50 lg:mt-2 lg:rounded-xl lg:px-6 lg:py-4 lg:text-lg"
-                    >
-                      {isSubmitting ? 'Submitting...' : 'Submit'}
-                    </button>
-                  </form>
-                )}
-              </div>
-            )}
+                      {/* Error Message */}
+                      {submitError && (
+                        <div className="mt-4 rounded-sm border border-red-500 bg-red-500/20 px-4 py-3 text-xs text-red-200 lg:mt-6 lg:rounded-md lg:text-sm">
+                          {submitError}
+                        </div>
+                      )}
+
+                      {/* Submit Button */}
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="calendar-day-available big mt-0 w-full rounded-md px-3 py-3 text-sm font-bold text-black uppercase disabled:cursor-not-allowed disabled:opacity-50 lg:mt-2 lg:rounded-xl lg:px-6 lg:py-4 lg:text-lg"
+                      >
+                        {isSubmitting ? 'Submitting...' : 'Submit'}
+                      </button>
+                    </form>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
