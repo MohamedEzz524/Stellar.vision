@@ -1,7 +1,7 @@
 import { useEffect, useRef, useMemo } from 'react';
 import { animateTextRandomization } from '../../utils/textSplitting';
 import Hero3DModel from '../../components/Hero3DModel';
-import { autoRotateTexts, heroSectionParagraph } from '../../constants';
+import { heroSectionParagraph } from '../../constants';
 
 // Move utility functions outside component to avoid recreation
 const getOrdinalSuffix = (day: number): string => {

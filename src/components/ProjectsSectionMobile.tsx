@@ -45,7 +45,6 @@ const ProjectsSectionMobile = ({
   );
   const activeCardIndexRef = useRef<number | null>(null);
   const [activeCardIndex, setActiveCardIndex] = useState<number | null>(null);
-  const [showNavigation, setShowNavigation] = useState(false);
   const navigationButtonsRef = useRef<HTMLDivElement>(null);
 
   const lerp = (start: number, end: number, t: number) =>
