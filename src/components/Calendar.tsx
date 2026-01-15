@@ -1557,6 +1557,52 @@ const Calendar = () => {
     }
   };
 
+  // Add this custom hook
+const useTouchScroll = (ref: React.RefObject<HTMLElement>) => {
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    let startY = 0;
+    let scrollTop = 0;
+    let isScrolling = false;
+
+    const onTouchStart = (e: TouchEvent) => {
+      startY = e.touches[0].pageY;
+      scrollTop = element.scrollTop;
+      isScrolling = true;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isScrolling) return;
+      
+      const y = e.touches[0].pageY;
+      const walk = startY - y;
+      
+      element.scrollTop = scrollTop + walk;
+      
+      // Prevent page scroll
+      if (element.scrollTop > 0) {
+        e.preventDefault();
+      }
+    };
+
+    const onTouchEnd = () => {
+      isScrolling = false;
+    };
+
+    element.addEventListener('touchstart', onTouchStart, { passive: true });
+    element.addEventListener('touchmove', onTouchMove, { passive: false });
+    element.addEventListener('touchend', onTouchEnd);
+
+    return () => {
+      element.removeEventListener('touchstart', onTouchStart);
+      element.removeEventListener('touchmove', onTouchMove);
+      element.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [ref]);
+};
+
   return (
     <div
       ref={calendarRef}
@@ -1575,7 +1621,7 @@ const Calendar = () => {
         e.stopPropagation();
       }}
     >
-      <div className="relative h-auto flex-1 pb-4">
+      <div className="relative h-auto flex-1 overflow-hidden pb-4">
         <div
           className={`pointer-events-none absolute inset-0 -z-1 bg-black ${
             state.viewState === 0 ? 'opacity-0' : 'opacity-100'
