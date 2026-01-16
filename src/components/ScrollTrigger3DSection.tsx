@@ -334,7 +334,7 @@ const ScrollTrigger3DSection = ({
           const progress = self.progress;
 
           const trackStartY = vhToPx(START_OFFSET_VH);
-          const trackEndY = -trackHeight + vhToPx(25);
+          const trackEndY = -trackHeight + vhToPx(10);
           const trackCurrentY =
             trackStartY + (trackEndY - trackStartY) * progress;
           gsap.set(textTrack, { y: `${trackCurrentY}px` });

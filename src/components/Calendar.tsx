@@ -392,6 +392,7 @@ const Calendar = () => {
   const [availableDaysData, setAvailableDaysData] = useState<
     AvailableDaysData[]
   >([]);
+  const [openMethod, setOpenMethod] = useState<'click' | 'scroll' | null>(null);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1053,6 +1054,7 @@ const Calendar = () => {
 
       // If user is within 3% of the end (97% or more) and calendar is closed, open it
       if (percentage >= 99 && state.viewState === 0) {
+        setOpenMethod('scroll'); // Track that it was opened by scroll
         dispatch({ type: 'START_CALENDAR' });
       }
     };
@@ -1081,6 +1083,30 @@ const Calendar = () => {
           cancelAnimationFrame(scrollRafRef.current);
         }
       };
+    }
+  }, [state.viewState]);
+
+  // Update the button click handler
+  const handleStartCalendar = () => {
+    if (state.viewState === 0) {
+      setOpenMethod('click'); // Track that it was opened by click
+      dispatch({ type: 'START_CALENDAR' });
+    } else {
+      dispatch({ type: 'CLOSE_CALENDAR' });
+    }
+  };
+
+  // Calculate transition duration based on how it was opened
+  const getTransitionDuration = () => {
+    if (openMethod === 'click') return '800ms';
+    if (openMethod === 'scroll') return '2000ms';
+    return '800ms'; // default
+  };
+
+  // Reset openMethod when calendar closes
+  useEffect(() => {
+    if (state.viewState === 0) {
+      setOpenMethod(null);
     }
   }, [state.viewState]);
 
@@ -1770,8 +1796,9 @@ Website: ${website}
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'contain',
         touchAction: 'pan-y', // Enable vertical touch scrolling
+        transitionDuration: getTransitionDuration(), // Add this
       }}
-      className={`text-textPrimary pointer-events-auto absolute top-0 z-[99999] flex h-[100dvh] w-full flex-col overflow-y-auto transition-transform duration-800 outline-none ${
+      className={`text-textPrimary pointer-events-auto absolute top-0 z-[99999] flex h-[100dvh] w-full flex-col overflow-y-auto transition-transform outline-none ${
         state.viewState === 0
           ? 'translate-y-[calc(100%-77px)] bg-transparent'
           : 'translate-y-0 bg-black'
@@ -1797,13 +1824,7 @@ Website: ${website}
           >
             <div className="h-full w-full max-w-[300px] lg:max-w-[320px]">
               <Button3dWrapper
-                onClick={() => {
-                  if (state.viewState === 0) {
-                    dispatch({ type: 'START_CALENDAR' });
-                  } else {
-                    dispatch({ type: 'CLOSE_CALENDAR' });
-                  }
-                }}
+                onClick={handleStartCalendar}
                 viewState={state.viewState}
               />
             </div>
@@ -1984,7 +2005,7 @@ Website: ${website}
                         onChange={handleTimezoneChange}
                         aria-label="Select timezone"
                         title="Select timezone"
-                        className="bg-bgPrimary select-timezone relative w-fit appearance-none rounded-md px-4 py-3 pr-12 text-[12px] text-white uppercase focus:outline-none lg:text-base"
+                        className="bg-bgPrimary select-timezone relative mb-4 w-fit appearance-none rounded-md px-4 py-3 pr-12 text-[12px] text-white uppercase focus:outline-none lg:text-base"
                       >
                         {timezones.map((tz) => (
                           <option
