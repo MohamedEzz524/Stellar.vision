@@ -22,6 +22,12 @@ const TestimonialsSection = () => {
   const [videoLoadingStates, setVideoLoadingStates] = useState<boolean[]>(() =>
     new Array(TestimonialVideos.length).fill(false),
   );
+  // Add a ref to track if observer has triggered at least once
+  const observerTriggeredRef = useRef(false);
+  // Add a ref to track manual play attempts
+  const manualPlayAttemptedRef = useRef(false);
+  // Add a ref to track if component is in viewport
+  const isInViewRef = useRef(false);
 
   // Video wrapper dimensions
   const getVideoWrapperDimensions = useCallback(() => {
@@ -57,16 +63,50 @@ const TestimonialsSection = () => {
     video.load();
   }, []);
 
-  // Play active video
-  const playActiveVideo = useCallback((index: number) => {
+  // Play active video - Enhanced version
+  const playActiveVideo = useCallback((index: number, forcePlay = false) => {
     const video = videoRefs.current[index];
+    if (!video) return false;
+
+    // If video is already playing, no need to do anything
+    if (!video.paused && !forcePlay) return true;
+
+    // If video is loaded and ready
     if (
-      video &&
       videoLoadedRef.current[index] &&
       video.readyState >= 2 &&
       video.paused
     ) {
-      video.play().catch(() => {});
+      const playPromise = video.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log(`Video ${index} playing successfully`);
+            return true;
+          })
+          .catch((error) => {
+            console.warn(`Video ${index} autoplay failed:`, error);
+            // Try again with user gesture if on mobile
+            if (!isLg && !manualPlayAttemptedRef.current) {
+              // Store for manual playback attempt
+              manualPlayAttemptedRef.current = true;
+            }
+            return false;
+          });
+      }
+    }
+    return false;
+  }, [isLg]);
+
+  // Manual play attempt (triggered by user interaction)
+  const attemptManualPlay = useCallback(() => {
+    if (manualPlayAttemptedRef.current) {
+      const activeVideo = videoRefs.current[currentIndexRef.current];
+      if (activeVideo && activeVideo.paused) {
+        activeVideo.play().catch(() => {});
+        manualPlayAttemptedRef.current = false;
+      }
     }
   }, []);
 
@@ -92,8 +132,12 @@ const TestimonialsSection = () => {
         return newStates;
       });
 
-      if (index === currentIndexRef.current) {
-        playActiveVideo(index);
+      // If this is the current video and we're in view, try to play it
+      if (index === currentIndexRef.current && isInViewRef.current) {
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+          playActiveVideo(index, true);
+        }, 100);
       }
     },
     [playActiveVideo],
@@ -143,13 +187,16 @@ const TestimonialsSection = () => {
           nextVideo.style.zIndex = '2';
 
           // Play new video
-          playActiveVideo(newIndex);
+          playActiveVideo(newIndex, true);
           pauseOtherVideos(newIndex);
 
           // Reset clipping
           gsap.set(currentVideo, { clipPath: 'inset(0% 0% 0% 0%)' });
 
           setIsAnimating(false);
+          
+          // Reset manual play attempt flag since user interacted
+          manualPlayAttemptedRef.current = false;
         },
       });
 
@@ -175,6 +222,9 @@ const TestimonialsSection = () => {
   const navigate = useCallback(
     (direction: 'prev' | 'next') => {
       if (isAnimating) return;
+      
+      // Attempt manual play in case autoplay was blocked
+      attemptManualPlay();
 
       const currentIdx = currentIndexRef.current;
       let newIndex: number;
@@ -189,14 +239,24 @@ const TestimonialsSection = () => {
 
       animateVideoTransition(direction, newIndex);
     },
-    [isAnimating, animateVideoTransition],
+    [isAnimating, animateVideoTransition, attemptManualPlay],
   );
 
   // Initialize and load first video
   useEffect(() => {
     loadVideoIfNeeded(0);
     currentIndexRef.current = 0;
-  }, [loadVideoIfNeeded]);
+    
+    // Add a fallback to play the first video after a short delay
+    const fallbackTimer = setTimeout(() => {
+      if (isInViewRef.current && videoRefs.current[0]?.paused) {
+        console.log('Fallback: attempting to play first video');
+        playActiveVideo(0, true);
+      }
+    }, 1000);
+    
+    return () => clearTimeout(fallbackTimer);
+  }, [loadVideoIfNeeded, playActiveVideo]);
 
   // Handle video wrapper resize
   useEffect(() => {
@@ -215,25 +275,41 @@ const TestimonialsSection = () => {
     return () => window.removeEventListener('resize', updateVideoWrapper);
   }, [getVideoWrapperDimensions]);
 
-  // Intersection observer to pause video when out of view
+  // Intersection observer to pause video when out of view - Fixed version
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
+          isInViewRef.current = entry.isIntersecting;
+          observerTriggeredRef.current = true;
+          
           if (!entry.isIntersecting) {
+            // Pause when out of view
             const activeVideo = videoRefs.current[currentIndexRef.current];
             if (activeVideo && !activeVideo.paused) {
               activeVideo.pause();
             }
           } else {
-            const activeVideo = videoRefs.current[currentIndexRef.current];
+            // Play when in view - with better timing
+            const activeIndex = currentIndexRef.current;
+            const activeVideo = videoRefs.current[activeIndex];
+            
             if (activeVideo && activeVideo.paused) {
-              playActiveVideo(currentIndexRef.current);
+              // Small delay to ensure video is ready
+              setTimeout(() => {
+                // Double-check we're still in view
+                if (isInViewRef.current && activeVideo.paused) {
+                  playActiveVideo(activeIndex, true);
+                }
+              }, 200);
             }
           }
         });
       },
-      { threshold: 0.5 },
+      { 
+        threshold: 0.5,
+        rootMargin: '50px' // Add some margin to trigger earlier
+      },
     );
 
     if (videoWrapperRef.current) {
@@ -243,13 +319,36 @@ const TestimonialsSection = () => {
     return () => observer.disconnect();
   }, [playActiveVideo]);
 
-  // Navigation buttons
+  // Add a click handler to the entire section for manual play
+  useEffect(() => {
+    const handleSectionClick = () => {
+      if (manualPlayAttemptedRef.current && isInViewRef.current) {
+        attemptManualPlay();
+      }
+    };
+
+    const section = document.querySelector('.testimonials-section');
+    if (section) {
+      section.addEventListener('click', handleSectionClick);
+    }
+
+    return () => {
+      if (section) {
+        section.removeEventListener('click', handleSectionClick);
+      }
+    };
+  }, [attemptManualPlay]);
+
+  // Navigation buttons - Modified to ensure user interaction
   const navigationButtons = useMemo(
     () => (
       <div className="testimonials-navigation-overlay">
         <div
           className="testimonials-nav-area testimonials-nav-left"
-          onClick={() => navigate('prev')}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate('prev');
+          }}
           aria-label="Previous testimonial"
         >
           <img
@@ -260,7 +359,10 @@ const TestimonialsSection = () => {
         </div>
         <div
           className="testimonials-nav-area testimonials-nav-right"
-          onClick={() => navigate('next')}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate('next');
+          }}
           aria-label="Next testimonial"
         >
           <img
@@ -306,6 +408,7 @@ const TestimonialsSection = () => {
                     loop
                     playsInline
                     preload="none"
+                    muted={!isLg} // Mute on mobile to help autoplay
                     onLoadedData={() => handleVideoLoaded(index)}
                     onCanPlay={() => handleVideoLoaded(index)}
                     onError={() => {
