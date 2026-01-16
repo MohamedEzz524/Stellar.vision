@@ -64,40 +64,43 @@ const TestimonialsSection = () => {
   }, []);
 
   // Play active video - Enhanced version
-  const playActiveVideo = useCallback((index: number, forcePlay = false) => {
-    const video = videoRefs.current[index];
-    if (!video) return false;
+  const playActiveVideo = useCallback(
+    (index: number, forcePlay = false) => {
+      const video = videoRefs.current[index];
+      if (!video) return false;
 
-    // If video is already playing, no need to do anything
-    if (!video.paused && !forcePlay) return true;
+      // If video is already playing, no need to do anything
+      if (!video.paused && !forcePlay) return true;
 
-    // If video is loaded and ready
-    if (
-      videoLoadedRef.current[index] &&
-      video.readyState >= 2 &&
-      video.paused
-    ) {
-      const playPromise = video.play();
-      
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            console.log(`Video ${index} playing successfully`);
-            return true;
-          })
-          .catch((error) => {
-            console.warn(`Video ${index} autoplay failed:`, error);
-            // Try again with user gesture if on mobile
-            if (!isLg && !manualPlayAttemptedRef.current) {
-              // Store for manual playback attempt
-              manualPlayAttemptedRef.current = true;
-            }
-            return false;
-          });
+      // If video is loaded and ready
+      if (
+        videoLoadedRef.current[index] &&
+        video.readyState >= 2 &&
+        video.paused
+      ) {
+        const playPromise = video.play();
+
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log(`Video ${index} playing successfully`);
+              return true;
+            })
+            .catch((error) => {
+              console.warn(`Video ${index} autoplay failed:`, error);
+              // Try again with user gesture if on mobile
+              if (!isLg && !manualPlayAttemptedRef.current) {
+                // Store for manual playback attempt
+                manualPlayAttemptedRef.current = true;
+              }
+              return false;
+            });
+        }
       }
-    }
-    return false;
-  }, [isLg]);
+      return false;
+    },
+    [isLg],
+  );
 
   // Manual play attempt (triggered by user interaction)
   const attemptManualPlay = useCallback(() => {
@@ -194,7 +197,7 @@ const TestimonialsSection = () => {
           gsap.set(currentVideo, { clipPath: 'inset(0% 0% 0% 0%)' });
 
           setIsAnimating(false);
-          
+
           // Reset manual play attempt flag since user interacted
           manualPlayAttemptedRef.current = false;
         },
@@ -222,7 +225,7 @@ const TestimonialsSection = () => {
   const navigate = useCallback(
     (direction: 'prev' | 'next') => {
       if (isAnimating) return;
-      
+
       // Attempt manual play in case autoplay was blocked
       attemptManualPlay();
 
@@ -246,7 +249,7 @@ const TestimonialsSection = () => {
   useEffect(() => {
     loadVideoIfNeeded(0);
     currentIndexRef.current = 0;
-    
+
     // Add a fallback to play the first video after a short delay
     const fallbackTimer = setTimeout(() => {
       if (isInViewRef.current && videoRefs.current[0]?.paused) {
@@ -254,7 +257,7 @@ const TestimonialsSection = () => {
         playActiveVideo(0, true);
       }
     }, 1000);
-    
+
     return () => clearTimeout(fallbackTimer);
   }, [loadVideoIfNeeded, playActiveVideo]);
 
@@ -282,7 +285,7 @@ const TestimonialsSection = () => {
         entries.forEach((entry) => {
           isInViewRef.current = entry.isIntersecting;
           observerTriggeredRef.current = true;
-          
+
           if (!entry.isIntersecting) {
             // Pause when out of view
             const activeVideo = videoRefs.current[currentIndexRef.current];
@@ -293,7 +296,7 @@ const TestimonialsSection = () => {
             // Play when in view - with better timing
             const activeIndex = currentIndexRef.current;
             const activeVideo = videoRefs.current[activeIndex];
-            
+
             if (activeVideo && activeVideo.paused) {
               // Small delay to ensure video is ready
               setTimeout(() => {
@@ -306,9 +309,9 @@ const TestimonialsSection = () => {
           }
         });
       },
-      { 
+      {
         threshold: 0.5,
-        rootMargin: '50px' // Add some margin to trigger earlier
+        rootMargin: '50px', // Add some margin to trigger earlier
       },
     );
 
@@ -408,7 +411,6 @@ const TestimonialsSection = () => {
                     loop
                     playsInline
                     preload="none"
-                    muted={!isLg} // Mute on mobile to help autoplay
                     onLoadedData={() => handleVideoLoaded(index)}
                     onCanPlay={() => handleVideoLoaded(index)}
                     onError={() => {
