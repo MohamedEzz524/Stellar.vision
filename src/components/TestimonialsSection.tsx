@@ -20,6 +20,7 @@ const TestimonialsSection = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [hasUserStarted, setHasUserStarted] = useState(false);
   const [allVideosLoaded, setAllVideosLoaded] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
 
   /* ----------------------------- Dimensions ----------------------------- */
 
@@ -59,7 +60,7 @@ const TestimonialsSection = () => {
 
     const video = videoRefs.current[0];
     if (video) {
-      video.muted = false;
+      video.muted = true;
       video.play().catch(() => {});
     }
   }, [hasUserStarted]);
@@ -70,6 +71,12 @@ const TestimonialsSection = () => {
   }, [allVideosLoaded, hasUserStarted, handleInitialPlay]);
 
   /* ----------------------------- Unmute ----------------------------- */
+
+  const handleUnmute = useCallback(() => {
+    setIsMuted(false);
+    const video = videoRefs.current[currentIndexRef.current];
+    if (video) video.muted = false;
+  }, []);
 
   /* ----------------------------- Navigation ----------------------------- */
 
@@ -104,7 +111,7 @@ const TestimonialsSection = () => {
           currentIndexRef.current = newIndex;
           setCurrentIndex(newIndex);
 
-          nextVideo.muted = false;
+          nextVideo.muted = isMuted;
           nextVideo.play().catch(() => {});
 
           currentVideo.style.zIndex = '1';
@@ -135,7 +142,7 @@ const TestimonialsSection = () => {
         );
       }
     },
-    [isAnimating],
+    [isAnimating, isMuted],
   );
 
   const navigate = useCallback(
@@ -215,6 +222,14 @@ const TestimonialsSection = () => {
     <section className="testimonials-section">
       <div className="testimonials-container container">
         <div className="testimonials-projector-wrapper">
+          {hasUserStarted && isMuted && (
+            <button
+              onClick={handleUnmute}
+              className="absolute top-4 right-1/2 z-100 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md transition hover:bg-black/80"
+            >
+              🔊
+            </button>
+          )}
           <img
             src={projectorImage}
             alt="pic"
@@ -238,7 +253,7 @@ const TestimonialsSection = () => {
                   loop
                   playsInline
                   preload="auto"
-                  muted
+                  muted={isMuted || index !== currentIndex}
                   onLoadedData={() => {
                     loadedCountRef.current += 1;
                     if (loadedCountRef.current === TestimonialVideos.length) {
