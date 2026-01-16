@@ -109,12 +109,12 @@ const ProjectsSectionDesktop = ({
       { translate: 'translate(-50%, -70%)', z: -170 },
       { translate: 'translate(80%, -50%)', z: -350 },
       { translate: 'translate(-105%, 30%)', z: -530 },
-      { translate: 'translate(140%, 70%)', z: -710 },
+      { translate: 'translate(140%, 50%)', z: -710 },
       { translate: 'translate(-75%, 80%)', z: -890 },
       { translate: 'translate(-110%, -80%)', z: -1070 },
-      { translate: 'translate(100%, -70%)', z: -1250 },
-      { translate: 'translate(-42%, -50%)', z: -1430 },
-      { translate: 'translate(-50%, 30%)', z: -1610 },
+      { translate: 'translate(100%, -50%)', z: -1250 },
+      { translate: 'translate(-70%, -40%)', z: -1430 },
+      { translate: 'translate(-60%, 20%)', z: -1610 },
       { translate: 'translate(80%, 0%)', z: -1790 },
     ];
 
@@ -159,7 +159,8 @@ const ProjectsSectionDesktop = ({
     track.style.height = `${trackHeight + 75}vh`;
 
     // Calculate scroll distance in pixels (track height in vh converted to px)
-    const scrollDistance = ((trackHeight * window.innerHeight) - window.innerWidth * 0.5) / 100;
+    const scrollDistance =
+      (trackHeight * window.innerHeight - window.innerWidth * 0.5) / 100;
 
     // Pre-calculate initial transforms for all cards
     const cardTransforms = projects.map((_, index) =>

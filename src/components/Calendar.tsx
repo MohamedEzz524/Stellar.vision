@@ -56,6 +56,15 @@ interface CalendarState {
     startTime: string;
     timezone: string;
   };
+  additionalFields: {
+    businessStage: string; // Do you have a business or just starting out?
+    websiteNeed: string; // do you need to edit your website or create a new website?
+    salesConversion: string; // What is you last month sales & conversion rate of the website?
+    instagramId: string; // Could you share the Instagram ID of the business page?
+    decisionMaker: string; // Are you the owner or the main decision maker in the brand?
+    phoneNumber: string; // Phone Number (include the country code)
+    website: string; // website (leave blank if you don't have)
+  };
 }
 
 type CalendarAction =
@@ -69,6 +78,11 @@ type CalendarAction =
   | { type: 'GO_BACK' }
   | { type: 'NAVIGATE_MONTH'; direction: 'prev' | 'next' }
   | { type: 'UPDATE_FORM'; field: string; value: string }
+  | {
+      type: 'UPDATE_ADDITIONAL_FIELD';
+      field: keyof CalendarState['additionalFields'];
+      value: string;
+    }
   | { type: 'UPDATE_TIMEZONE'; timezone: string };
 
 // Format date to RFC3339 format with timezone offset
@@ -126,6 +140,15 @@ const initialState: CalendarState = {
     description: '',
     startTime: '',
     timezone: 'Africa/Cairo',
+  },
+  additionalFields: {
+    businessStage: '',
+    websiteNeed: '',
+    salesConversion: '',
+    instagramId: '',
+    decisionMaker: '',
+    phoneNumber: '',
+    website: '',
   },
 };
 
@@ -294,6 +317,15 @@ const calendarReducer = (
         },
       };
 
+    case 'UPDATE_ADDITIONAL_FIELD':
+      return {
+        ...state,
+        additionalFields: {
+          ...state.additionalFields,
+          [action.field]: action.value,
+        },
+      };
+
     case 'UPDATE_TIMEZONE':
       return {
         ...state,
@@ -371,6 +403,13 @@ const Calendar = () => {
     description?: string;
     startTime?: string;
     timezone?: string;
+    businessStage?: string;
+    websiteNeed?: string;
+    salesConversion?: string;
+    instagramId?: string;
+    decisionMaker?: string;
+    phoneNumber?: string;
+    website?: string;
   }>({});
 
   // Throttle function to limit how often a function can be called
@@ -417,6 +456,10 @@ const Calendar = () => {
     startTime:
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?([+-]\d{2}:\d{2}|Z)$/, // RFC3339 format
     timezone: /^[A-Za-z_][A-Za-z0-9_/+-]*$/, // Timezone format like "Africa/Cairo", "UTC", "America/New_York", etc.
+    salesConversion: /^(0|[1-9]\d*)(\.\d+)?$/, // Number (0 or positive, with optional decimal)
+    instagramId: /^@?[a-zA-Z0-9._]{1,30}$/, // Instagram ID (with optional @, 1-30 chars)
+    phoneNumber: /^\+?[1-9]\d{1,14}$/, // Phone number with optional +, 1-15 digits
+    website: /^$|^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i, // Optional URL pattern
   };
 
   // Validation error messages
@@ -426,11 +469,25 @@ const Calendar = () => {
     description: 'Description must be between 4 and 500 characters',
     startTime: 'Start time is required and must be in valid format',
     timezone: 'Timezone must be in valid format (e.g., Africa/Cairo or UTC)',
+    businessStage: 'Please select your business stage',
+    websiteNeed: 'Please select your website need',
+    salesConversion:
+      'Please enter a valid number (0 or positive) with currency (e.g., 1000 USD)',
+    instagramId: 'Please enter a valid Instagram ID (1-30 characters)',
+    decisionMaker: 'Please select your role',
+    phoneNumber: 'Please enter a valid phone number with country code',
+    website: 'Please enter a valid website URL or leave blank',
   };
 
   // Validate a single field
   const validateField = (field: string, value: string): string | undefined => {
-    if (!value || value.trim() === '') {
+    // For optional website field, allow empty
+    if (field === 'website' && (!value || value.trim() === '')) {
+      return undefined;
+    }
+
+    // For other required fields
+    if (field !== 'website' && (!value || value.trim() === '')) {
       return `${field.charAt(0).toUpperCase() + field.slice(1)} is required`;
     }
 
@@ -451,6 +508,7 @@ const Calendar = () => {
     const { name, email, description, startTime, timezone } = state.formData;
     const allErrors: Array<{ field: string; error: string }> = [];
 
+    // Validate original form fields
     const nameError = validateField('name', name);
     if (nameError) allErrors.push({ field: 'name', error: nameError });
 
@@ -469,11 +527,67 @@ const Calendar = () => {
     if (timezoneError)
       allErrors.push({ field: 'timezone', error: timezoneError });
 
-    // Only return visible field errors for UI display
+    // Validate additional fields
+    const businessStageError = validateField(
+      'businessStage',
+      state.additionalFields.businessStage,
+    );
+    if (businessStageError)
+      allErrors.push({ field: 'businessStage', error: businessStageError });
+
+    const websiteNeedError = validateField(
+      'websiteNeed',
+      state.additionalFields.websiteNeed,
+    );
+    if (websiteNeedError)
+      allErrors.push({ field: 'websiteNeed', error: websiteNeedError });
+
+    const salesConversionError = validateField(
+      'salesConversion',
+      state.additionalFields.salesConversion,
+    );
+    if (salesConversionError)
+      allErrors.push({ field: 'salesConversion', error: salesConversionError });
+
+    const instagramIdError = validateField(
+      'instagramId',
+      state.additionalFields.instagramId,
+    );
+    if (instagramIdError)
+      allErrors.push({ field: 'instagramId', error: instagramIdError });
+
+    const decisionMakerError = validateField(
+      'decisionMaker',
+      state.additionalFields.decisionMaker,
+    );
+    if (decisionMakerError)
+      allErrors.push({ field: 'decisionMaker', error: decisionMakerError });
+
+    const phoneNumberError = validateField(
+      'phoneNumber',
+      state.additionalFields.phoneNumber,
+    );
+    if (phoneNumberError)
+      allErrors.push({ field: 'phoneNumber', error: phoneNumberError });
+
+    const websiteError = validateField(
+      'website',
+      state.additionalFields.website,
+    );
+    if (websiteError) allErrors.push({ field: 'website', error: websiteError });
+
+    // Return all field errors for UI display
     const visibleErrors: typeof fieldErrors = {
       ...(nameError && { name: nameError }),
       ...(emailError && { email: emailError }),
       ...(descriptionError && { description: descriptionError }),
+      ...(businessStageError && { businessStage: businessStageError }),
+      ...(websiteNeedError && { websiteNeed: websiteNeedError }),
+      ...(salesConversionError && { salesConversion: salesConversionError }),
+      ...(instagramIdError && { instagramId: instagramIdError }),
+      ...(decisionMakerError && { decisionMaker: decisionMakerError }),
+      ...(phoneNumberError && { phoneNumber: phoneNumberError }),
+      ...(websiteError && { website: websiteError }),
     };
 
     return { visibleErrors, allErrors };
@@ -1371,9 +1485,32 @@ const Calendar = () => {
     }
   };
 
+  // Handle additional field change
+  const handleAdditionalFieldChange = (
+    field: keyof CalendarState['additionalFields'],
+    value: string,
+  ) => {
+    dispatch({
+      type: 'UPDATE_ADDITIONAL_FIELD',
+      field,
+      value,
+    });
+
+    // Clear error for this field when user starts typing
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+  };
+
   // Handle field blur (validate on blur)
   const handleFieldBlur = (
-    e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: React.FocusEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const fieldName = e.target.name;
     const value = e.target.value;
@@ -1390,10 +1527,39 @@ const Calendar = () => {
     dispatch({ type: 'UPDATE_TIMEZONE', timezone: e.target.value });
   };
 
+  // Format the description with all additional fields
+  const formatCompleteDescription = () => {
+    const { description } = state.formData;
+    const {
+      businessStage,
+      websiteNeed,
+      salesConversion,
+      instagramId,
+      decisionMaker,
+      phoneNumber,
+      website,
+    } = state.additionalFields;
+
+    const additionalInfo = `
+Additional Information:
+────────────────────
+Business Stage: ${businessStage}
+Website Need/Creation: ${websiteNeed}
+Last Month Sales & Conversion Rate: ${salesConversion}
+Instagram ID: ${instagramId}
+Role: ${decisionMaker}
+Phone Number: ${phoneNumber}
+Website: ${website}
+`;
+
+    // Combine original description with additional info
+    return description + '\n' + additionalInfo;
+  };
+
   // Format booking data for API
   // Returns only: name, email, description, slot_start_time, timezone
   const formatBookingData = () => {
-    const { name, email, description, startTime, timezone } = state.formData;
+    const { name, email, startTime, timezone } = state.formData;
 
     // Validate required fields
     if (!name || !email || !startTime) {
@@ -1412,12 +1578,15 @@ const Calendar = () => {
     // Convert to UTC ISO string format: "2026-01-15T11:15:00.000Z"
     const slot_start_time = date.toISOString();
 
+    // Get the complete description with all additional fields
+    const completeDescription = formatCompleteDescription();
+
     // Return only the required fields in the exact format
     return {
       name: name.trim(),
       email: email.trim(),
       slot_start_time,
-      description: description ? description.trim() : '',
+      description: completeDescription,
       timezone: timezone || 'UTC',
     };
   };
@@ -1612,10 +1781,10 @@ const Calendar = () => {
         overscrollBehavior: 'contain',
         touchAction: 'pan-y', // Enable vertical touch scrolling
       }}
-      className={`text-textPrimary pointer-events-auto absolute top-0 z-[99999] flex h-[100dvh] w-full flex-col overflow-y-auto bg-transparent transition-transform duration-800 outline-none ${
+      className={`text-textPrimary pointer-events-auto absolute top-0 z-[99999] flex h-[100dvh] w-full flex-col overflow-y-auto transition-transform duration-800 outline-none ${
         state.viewState === 0
-          ? 'translate-y-[calc(100%-77px)]'
-          : 'translate-y-0'
+          ? 'translate-y-[calc(100%-77px)] bg-transparent'
+          : 'translate-y-0 bg-black'
       }`}
       tabIndex={-1}
       onWheel={(e) => {
@@ -1631,11 +1800,6 @@ const Calendar = () => {
     >
       <div className="relative h-auto min-h-full flex-1 pb-4">
         <div className="overflow-hidden">
-          <div
-            className={`pointer-events-none absolute inset-0 -z-1 bg-black ${
-              state.viewState === 0 ? 'opacity-0' : 'opacity-100'
-            }`}
-          />
           {/* Start Now Button - Always visible */}
           <div
             ref={startButtonRef}
@@ -1655,7 +1819,7 @@ const Calendar = () => {
             </div>
           </div>
           <div>
-            <div className="mx-auto max-w-lg">
+            <div className="mx-auto max-w-2xl">
               {/* Header Container - Title and Back Button */}
               {(state.viewState === 1 ||
                 state.viewState === 2 ||
@@ -1882,47 +2046,45 @@ const Calendar = () => {
                 <div className="relative z-10 flex flex-col p-4 lg:p-0">
                   {/* Time Buttons */}
                   <div className="flex-1">
-                    <div className="space-y-3">
-                      {isLoadingSlots ? (
-                        <div className="py-8 text-center text-white">
-                          Loading available time slots...
-                        </div>
-                      ) : availableTimes.length === 0 ? (
-                        <div className="py-5 text-center text-white lg:py-8">
-                          No available time slots for this day.
-                        </div>
-                      ) : (
-                        availableTimes.map((time, index) => (
-                          <div
-                            key={time}
-                            ref={(el) => {
-                              timeButtonsRef.current[time] = el;
+                    {isLoadingSlots ? (
+                      <div className="py-8 text-center text-white">
+                        Loading available time slots...
+                      </div>
+                    ) : availableTimes.length === 0 ? (
+                      <div className="py-5 text-center text-white lg:py-8">
+                        No available time slots for this day.
+                      </div>
+                    ) : (
+                      availableTimes.map((time, index) => (
+                        <div
+                          key={time}
+                          ref={(el) => {
+                            timeButtonsRef.current[time] = el;
+                          }}
+                          className="mb-3 flex gap-2 overflow-hidden"
+                        >
+                          <motion.button
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{
+                              duration: 0.4,
+                              delay: 0.05 * index,
+                              ease: 'easeOut',
                             }}
-                            className="flex gap-2 overflow-hidden"
+                            onClick={() => handleTimeClick(time)}
+                            className="time-button w-full rounded-md bg-[#333] px-4 py-3 text-center text-xs shadow-[inset_3px_0_0_rgba(255,255,255,0.04),inset_-3px_0_0_0px_rgba(255,255,255,0.04),inset_0_2px_4px_rgba(255,255,255,0.6)] lg:rounded-xl lg:py-4 lg:text-base"
                           >
-                            <motion.button
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              transition={{
-                                duration: 0.4,
-                                delay: 0.05 * index,
-                                ease: 'easeOut',
-                              }}
-                              onClick={() => handleTimeClick(time)}
-                              className="time-button w-full rounded-md bg-[#333] px-4 py-3 text-center text-xs shadow-[inset_3px_0_0_rgba(255,255,255,0.04),inset_-3px_0_0_0px_rgba(255,255,255,0.04),inset_0_2px_4px_rgba(255,255,255,0.6)] lg:rounded-xl lg:py-3 lg:text-base"
-                            >
-                              {time}
-                            </motion.button>
-                            <button
-                              onClick={handleTimeNext}
-                              className="next-button calendar-day-available big w-0 overflow-hidden rounded-md py-3 text-center text-xs font-bold lg:rounded-xl lg:py-3 lg:text-sm"
-                            >
-                              NEXT
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
+                            {time}
+                          </motion.button>
+                          <button
+                            onClick={handleTimeNext}
+                            className="next-button calendar-day-available big w-0 overflow-hidden rounded-md py-3 text-center text-xs font-bold lg:rounded-xl lg:py-3 lg:text-sm"
+                          >
+                            NEXT
+                          </button>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               )}
@@ -1996,18 +2158,19 @@ const Calendar = () => {
                       </button>
                     </div>
                   ) : (
-                    <form onSubmit={handleSubmit} className="w-full space-y-6">
+                    <form onSubmit={handleSubmit} className="w-full space-y-8">
                       <h3 className="font-grid text-xl font-bold uppercase lg:text-[2rem]">
                         Enter details
                       </h3>
 
+                      {/* Original Form Fields */}
                       {/* Name Input */}
                       <div className="relative">
                         <label
                           htmlFor="name"
                           className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs lg:text-sm"
                         >
-                          name <span className="text-red-400">*</span>
+                          Full Name <span className="text-red-400">*</span>
                         </label>
                         <input
                           type="text"
@@ -2021,7 +2184,6 @@ const Calendar = () => {
                           className={`w-full rounded-sm border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none lg:rounded-md ${
                             fieldErrors.name ? 'border-red-500' : 'border-white'
                           }`}
-                          placeholder="Your name"
                         />
                         {fieldErrors.name && (
                           <p className="mt-1 text-xs text-red-400">
@@ -2036,7 +2198,7 @@ const Calendar = () => {
                           htmlFor="email"
                           className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
                         >
-                          email <span className="text-red-400">*</span>
+                          Email <span className="text-red-400">*</span>
                         </label>
                         <input
                           type="email"
@@ -2066,7 +2228,7 @@ const Calendar = () => {
                           htmlFor="description"
                           className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
                         >
-                          description <span className="text-red-400">*</span>
+                          Description <span className="text-red-400">*</span>
                         </label>
                         <textarea
                           id="description"
@@ -2077,7 +2239,7 @@ const Calendar = () => {
                           required
                           minLength={4}
                           maxLength={500}
-                          rows={4}
+                          rows={3}
                           className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
                             fieldErrors.description
                               ? 'border-red-500'
@@ -2087,6 +2249,266 @@ const Calendar = () => {
                         {fieldErrors.description && (
                           <p className="mt-1 text-xs text-red-400">
                             {fieldErrors.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Additional Required Fields */}
+
+                      {/* Business Stage */}
+                      <div className="relative">
+                        <label
+                          htmlFor="businessStage"
+                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                        >
+                          Do you have a business or just starting out?{' '}
+                          <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="businessStage"
+                          name="businessStage"
+                          value={state.additionalFields.businessStage}
+                          onChange={(e) =>
+                            handleAdditionalFieldChange(
+                              'businessStage',
+                              e.target.value,
+                            )
+                          }
+                          onBlur={handleFieldBlur}
+                          required
+                          className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                            fieldErrors.businessStage
+                              ? 'border-red-500'
+                              : 'border-white'
+                          }`}
+                        />
+                        {fieldErrors.businessStage && (
+                          <p className="mt-1 text-xs text-red-400">
+                            {fieldErrors.businessStage}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Website Need */}
+                      <div className="relative">
+                        <label
+                          htmlFor="websiteNeed"
+                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                        >
+                          Do you need to edit your website or create a new
+                          website? <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="websiteNeed"
+                          name="websiteNeed"
+                          value={state.additionalFields.websiteNeed}
+                          onChange={(e) =>
+                            handleAdditionalFieldChange(
+                              'websiteNeed',
+                              e.target.value,
+                            )
+                          }
+                          onBlur={handleFieldBlur}
+                          required
+                          className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                            fieldErrors.websiteNeed
+                              ? 'border-red-500'
+                              : 'border-white'
+                          }`}
+                        />
+                        {fieldErrors.websiteNeed && (
+                          <p className="mt-1 text-xs text-red-400">
+                            {fieldErrors.websiteNeed}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Sales & Conversion Rate */}
+                      <div className="relative">
+                        <label
+                          htmlFor="salesConversion"
+                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                        >
+                          What is your last month sales & conversion rate of the
+                          website? <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="salesConversion"
+                          name="salesConversion"
+                          value={state.additionalFields.salesConversion}
+                          onChange={(e) =>
+                            handleAdditionalFieldChange(
+                              'salesConversion',
+                              e.target.value,
+                            )
+                          }
+                          onBlur={handleFieldBlur}
+                          required
+                          pattern="^(0|[1-9]\d*)(\.\d+)?$"
+                          className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                            fieldErrors.salesConversion
+                              ? 'border-red-500'
+                              : 'border-white'
+                          }`}
+                          placeholder="Enter 0 if you're just starting out"
+                        />
+                        <p className="mt-1 text-xs text-gray-400">
+                          Enter a number (e.g., 0, 5000, 15000.50). Use 0 if
+                          you're just starting out.
+                        </p>
+                        {fieldErrors.salesConversion && (
+                          <p className="mt-1 text-xs text-red-400">
+                            {fieldErrors.salesConversion}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Instagram ID */}
+                      <div className="relative">
+                        <label
+                          htmlFor="instagramId"
+                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                        >
+                          Could you share the Instagram ID of the business page?{' '}
+                          <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="instagramId"
+                          name="instagramId"
+                          value={state.additionalFields.instagramId}
+                          onChange={(e) =>
+                            handleAdditionalFieldChange(
+                              'instagramId',
+                              e.target.value,
+                            )
+                          }
+                          onBlur={handleFieldBlur}
+                          required
+                          pattern="^@?[a-zA-Z0-9._]{1,30}$"
+                          className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                            fieldErrors.instagramId
+                              ? 'border-red-500'
+                              : 'border-white'
+                          }`}
+                          placeholder="@username or username"
+                        />
+                        {fieldErrors.instagramId && (
+                          <p className="mt-1 text-xs text-red-400">
+                            {fieldErrors.instagramId}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Decision Maker */}
+                      <div className="relative">
+                        <label
+                          htmlFor="decisionMaker"
+                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                        >
+                          Are you the owner or the main decision maker in the
+                          brand? <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="decisionMaker"
+                          name="decisionMaker"
+                          value={state.additionalFields.decisionMaker}
+                          onChange={(e) =>
+                            handleAdditionalFieldChange(
+                              'decisionMaker',
+                              e.target.value,
+                            )
+                          }
+                          onBlur={handleFieldBlur}
+                          required
+                          className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                            fieldErrors.decisionMaker
+                              ? 'border-red-500'
+                              : 'border-white'
+                          }`}
+                        />
+                        {fieldErrors.decisionMaker && (
+                          <p className="mt-1 text-xs text-red-400">
+                            {fieldErrors.decisionMaker}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Phone Number */}
+                      <div className="relative">
+                        <label
+                          htmlFor="phoneNumber"
+                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                        >
+                          Phone Number (include the country code){' '}
+                          <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="tel"
+                          id="phoneNumber"
+                          name="phoneNumber"
+                          value={state.additionalFields.phoneNumber}
+                          onChange={(e) =>
+                            handleAdditionalFieldChange(
+                              'phoneNumber',
+                              e.target.value,
+                            )
+                          }
+                          onBlur={handleFieldBlur}
+                          required
+                          pattern="^\+?[1-9]\d{1,14}$"
+                          className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                            fieldErrors.phoneNumber
+                              ? 'border-red-500'
+                              : 'border-white'
+                          }`}
+                          placeholder="+1234567890"
+                        />
+                        <p className="mt-1 text-xs text-gray-400">
+                          Include country code (e.g., +1 for US, +20 for Egypt)
+                        </p>
+                        {fieldErrors.phoneNumber && (
+                          <p className="mt-1 text-xs text-red-400">
+                            {fieldErrors.phoneNumber}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Website (Optional) */}
+                      <div className="relative">
+                        <label
+                          htmlFor="website"
+                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                        >
+                          Website (leave blank if you don't have)
+                        </label>
+                        <input
+                          type="url"
+                          id="website"
+                          name="website"
+                          value={state.additionalFields.website}
+                          onChange={(e) =>
+                            handleAdditionalFieldChange(
+                              'website',
+                              e.target.value,
+                            )
+                          }
+                          onBlur={handleFieldBlur}
+                          pattern="^$|^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$"
+                          className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                            fieldErrors.website
+                              ? 'border-red-500'
+                              : 'border-white'
+                          }`}
+                          placeholder="https://example.com"
+                        />
+                        {fieldErrors.website && (
+                          <p className="mt-1 text-xs text-red-400">
+                            {fieldErrors.website}
                           </p>
                         )}
                       </div>
@@ -2162,7 +2584,7 @@ const Calendar = () => {
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="calendar-day-available big mt-0 w-full rounded-md px-3 py-3 text-sm font-bold text-black uppercase disabled:cursor-not-allowed disabled:opacity-50 lg:mt-2 lg:rounded-xl lg:px-6 lg:py-4 lg:text-lg"
+                        className="calendar-day-available big mt-0 mb-4 w-full rounded-md px-3 py-3 text-sm font-bold text-black uppercase disabled:cursor-not-allowed disabled:opacity-50 lg:mt-2 lg:rounded-xl lg:px-6 lg:py-4 lg:text-lg"
                       >
                         {isSubmitting ? 'Submitting...' : 'Submit'}
                       </button>
