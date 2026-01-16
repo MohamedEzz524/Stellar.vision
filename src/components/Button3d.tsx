@@ -1,7 +1,6 @@
 import { forwardRef, useEffect, useMemo, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import { FlakesTexture } from '../assets/js/FlakesTexture';
 import btnModelUrl from '../assets/models/last button.compressed.glb?url';
 
 export const Model = forwardRef<THREE.Group, any>((props, ref) => {
