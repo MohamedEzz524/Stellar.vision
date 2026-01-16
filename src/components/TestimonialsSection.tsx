@@ -143,24 +143,6 @@ const TestimonialsSection = () => {
     });
   }, []);
 
-  // Manual play attempt (triggered by user interaction)
-  const attemptManualPlay = useCallback(() => {
-    userInteractedRef.current = true;
-    setShowUnmuteButton(false);
-
-    const activeVideo = videoRefs.current[currentIndexRef.current];
-    if (activeVideo && activeVideo.paused) {
-      // Try unmuted play on user interaction
-      activeVideo.muted = false;
-      activeVideo.play().catch((error) => {
-        console.warn('Manual play failed:', error);
-        // Fallback to muted
-        activeVideo.muted = true;
-        activeVideo.play().catch(() => {});
-      });
-    }
-  }, []);
-
   // Pause all videos except current
   const pauseOtherVideos = useCallback((currentIndex: number) => {
     videoRefs.current.forEach((video, index) => {
