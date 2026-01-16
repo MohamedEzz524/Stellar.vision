@@ -110,6 +110,8 @@
   height: 100%;
   object-fit: cover;
   clip-path: inset(0% 0% 0% 0%);
+  opacity: 1 !important; /* Force visibility */
+  visibility: visible !important;
 }
 
 .testimonial-video-preloader {
@@ -206,12 +208,27 @@
     opacity: 1;
   }
 }
+/* iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+  .testimonial-video {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform;
+  }
+
+  .testimonials-video-wrapper {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    isolation: isolate;
+  }
+}
 
 .testimonials-play-overlay {
   position: absolute;
   inset: 0;
   z-index: 30;
-  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -296,5 +313,8 @@
   .testimonials-nav-arrow {
     width: 30px;
     height: 30px;
+  }
+  .testimonial-video {
+    transition: none;
   }
 }

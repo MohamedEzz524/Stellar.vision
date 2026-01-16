@@ -229,10 +229,21 @@ const TestimonialsSection = () => {
                   playsInline
                   preload="auto"
                   muted
+                  // Update the video element's onLoadedData handler
                   onLoadedData={(e) => {
                     const video = e.currentTarget as HTMLVideoElement;
-                    video.currentTime = 0.1; // show first frame
+
+                    // Use 0 instead of 0.1 for better iOS compatibility
+                    video.currentTime = 0;
                     video.pause();
+
+                    // Force a redraw on iOS
+                    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                      video.style.opacity = '0.99';
+                      setTimeout(() => {
+                        video.style.opacity = '1';
+                      }, 50);
+                    }
                   }}
                   style={{ zIndex: index === currentIndex ? 2 : 1 }}
                 />
