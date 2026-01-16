@@ -5,6 +5,7 @@ import './TestimonialsSection.css';
 import { useMediaQuery } from 'react-responsive';
 import arrowRightIcon from '../assets/arrow-right.svg';
 import projectorImage from '../assets/images/projector.webp';
+import firstFrameImage from '../assets/images/first_frame.webp'; // Add your first frame image
 
 const TestimonialsSection = () => {
   const isLg = useMediaQuery({ minWidth: 1024 });
@@ -213,6 +214,11 @@ const TestimonialsSection = () => {
               {/* First Frame Image - Shows before play */}
               {!hasUserStarted && (
                 <>
+                  <img
+                    src={firstFrameImage}
+                    className="testimonial-first-frame"
+                    alt="Testimonial preview"
+                  />
                   <div
                     className="testimonials-play-overlay"
                     onClick={handleInitialPlay}
