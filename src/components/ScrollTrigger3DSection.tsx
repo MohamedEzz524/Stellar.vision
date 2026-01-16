@@ -350,7 +350,7 @@ const ScrollTrigger3DSection = ({
         trigger: section,
         start: 'top top',
         end: () => {
-          return `+=${trackHeight + window.innerHeight * 1.5}px`;
+          return `+=${trackHeight + window.innerHeight * 0.5}px`;
         },
         pin: section,
         pinSpacing: true,
