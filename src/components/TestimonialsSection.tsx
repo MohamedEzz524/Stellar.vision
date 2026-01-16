@@ -5,6 +5,7 @@ import './TestimonialsSection.css';
 import { useMediaQuery } from 'react-responsive';
 import arrowRightIcon from '../assets/arrow-right.svg';
 import projectorImage from '../assets/images/projector.webp';
+import unmuteIcon from '../assets/volume-up.svg'; // Add a volume icon
 
 const TestimonialsSection = () => {
   const isLg = useMediaQuery({ minWidth: 1024 });
@@ -24,10 +25,14 @@ const TestimonialsSection = () => {
   );
   // Add a ref to track if observer has triggered at least once
   const observerTriggeredRef = useRef(false);
-  // Add a ref to track manual play attempts
-  const manualPlayAttemptedRef = useRef(false);
+  // Add a ref to track if user has interacted
+  const userInteractedRef = useRef(false);
   // Add a ref to track if component is in viewport
   const isInViewRef = useRef(false);
+  // Add state for muted status
+  const [isMuted, setIsMuted] = useState(true);
+  // Add state for showing unmute button
+  const [showUnmuteButton, setShowUnmuteButton] = useState(false);
 
   // Video wrapper dimensions
   const getVideoWrapperDimensions = useCallback(() => {
@@ -72,6 +77,9 @@ const TestimonialsSection = () => {
       // If video is already playing, no need to do anything
       if (!video.paused && !forcePlay) return true;
 
+      // Set muted state based on user interaction
+      video.muted = isMuted && !userInteractedRef.current && !isLg;
+
       // If video is loaded and ready
       if (
         videoLoadedRef.current[index] &&
@@ -81,17 +89,31 @@ const TestimonialsSection = () => {
         const playPromise = video.play();
 
         if (playPromise !== undefined) {
-          playPromise
+          return playPromise
             .then(() => {
               console.log(`Video ${index} playing successfully`);
+
+              // If video is muted and we're on mobile, show unmute button
+              if (video.muted && !isLg && !userInteractedRef.current) {
+                setShowUnmuteButton(true);
+              }
+
               return true;
             })
             .catch((error) => {
               console.warn(`Video ${index} autoplay failed:`, error);
-              // Try again with user gesture if on mobile
-              if (!isLg && !manualPlayAttemptedRef.current) {
-                // Store for manual playback attempt
-                manualPlayAttemptedRef.current = true;
+
+              // If autoplay fails due to sound policy, try muted
+              if (error.name === 'NotAllowedError' && !isLg) {
+                console.log('Trying muted autoplay...');
+                video.muted = true;
+                return video
+                  .play()
+                  .then(() => {
+                    setShowUnmuteButton(true);
+                    return true;
+                  })
+                  .catch(() => false);
               }
               return false;
             });
@@ -99,17 +121,43 @@ const TestimonialsSection = () => {
       }
       return false;
     },
-    [isLg],
+    [isMuted, isLg],
   );
+
+  // Toggle mute/unmute
+  const toggleMute = useCallback(() => {
+    setIsMuted((prev) => {
+      const newMuted = !prev;
+
+      // Update current video
+      const currentVideo = videoRefs.current[currentIndexRef.current];
+      if (currentVideo) {
+        currentVideo.muted = newMuted;
+      }
+
+      // Mark user interaction
+      userInteractedRef.current = true;
+      setShowUnmuteButton(false);
+
+      return newMuted;
+    });
+  }, []);
 
   // Manual play attempt (triggered by user interaction)
   const attemptManualPlay = useCallback(() => {
-    if (manualPlayAttemptedRef.current) {
-      const activeVideo = videoRefs.current[currentIndexRef.current];
-      if (activeVideo && activeVideo.paused) {
+    userInteractedRef.current = true;
+    setShowUnmuteButton(false);
+
+    const activeVideo = videoRefs.current[currentIndexRef.current];
+    if (activeVideo && activeVideo.paused) {
+      // Try unmuted play on user interaction
+      activeVideo.muted = false;
+      activeVideo.play().catch((error) => {
+        console.warn('Manual play failed:', error);
+        // Fallback to muted
+        activeVideo.muted = true;
         activeVideo.play().catch(() => {});
-        manualPlayAttemptedRef.current = false;
-      }
+      });
     }
   }, []);
 
@@ -135,6 +183,12 @@ const TestimonialsSection = () => {
         return newStates;
       });
 
+      // Set initial mute state
+      const video = videoRefs.current[index];
+      if (video) {
+        video.muted = isMuted && !userInteractedRef.current && !isLg;
+      }
+
       // If this is the current video and we're in view, try to play it
       if (index === currentIndexRef.current && isInViewRef.current) {
         // Small delay to ensure DOM is ready
@@ -143,7 +197,7 @@ const TestimonialsSection = () => {
         }, 100);
       }
     },
-    [playActiveVideo],
+    [playActiveVideo, isMuted, isLg],
   );
 
   // Animation for switching videos
@@ -156,6 +210,10 @@ const TestimonialsSection = () => {
       const nextVideo = videoRefs.current[newIndex];
 
       if (!currentVideo || !nextVideo) return;
+
+      // Mark user interaction
+      userInteractedRef.current = true;
+      setShowUnmuteButton(false);
 
       // Initial z-index setup
       currentVideo.style.zIndex = '2';
@@ -189,6 +247,14 @@ const TestimonialsSection = () => {
           currentVideo.style.zIndex = '1';
           nextVideo.style.zIndex = '2';
 
+          // Set mute state for new video
+          if (nextVideo) {
+            // If user has interacted, use their preference, otherwise default
+            nextVideo.muted = userInteractedRef.current
+              ? isMuted
+              : isMuted && !isLg;
+          }
+
           // Play new video
           playActiveVideo(newIndex, true);
           pauseOtherVideos(newIndex);
@@ -197,9 +263,6 @@ const TestimonialsSection = () => {
           gsap.set(currentVideo, { clipPath: 'inset(0% 0% 0% 0%)' });
 
           setIsAnimating(false);
-
-          // Reset manual play attempt flag since user interacted
-          manualPlayAttemptedRef.current = false;
         },
       });
 
@@ -218,16 +281,20 @@ const TestimonialsSection = () => {
         '-=0.5',
       ); // Overlap animations
     },
-    [isAnimating, loadVideoIfNeeded, playActiveVideo, pauseOtherVideos],
+    [
+      isAnimating,
+      loadVideoIfNeeded,
+      playActiveVideo,
+      pauseOtherVideos,
+      isMuted,
+      isLg,
+    ],
   );
 
   // Navigation handler
   const navigate = useCallback(
     (direction: 'prev' | 'next') => {
       if (isAnimating) return;
-
-      // Attempt manual play in case autoplay was blocked
-      attemptManualPlay();
 
       const currentIdx = currentIndexRef.current;
       let newIndex: number;
@@ -242,7 +309,7 @@ const TestimonialsSection = () => {
 
       animateVideoTransition(direction, newIndex);
     },
-    [isAnimating, animateVideoTransition, attemptManualPlay],
+    [isAnimating, animateVideoTransition],
   );
 
   // Initialize and load first video
@@ -278,7 +345,7 @@ const TestimonialsSection = () => {
     return () => window.removeEventListener('resize', updateVideoWrapper);
   }, [getVideoWrapperDimensions]);
 
-  // Intersection observer to pause video when out of view - Fixed version
+  // Intersection observer to pause video when out of view
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -311,7 +378,7 @@ const TestimonialsSection = () => {
       },
       {
         threshold: 0.5,
-        rootMargin: '50px', // Add some margin to trigger earlier
+        rootMargin: '50px',
       },
     );
 
@@ -322,27 +389,44 @@ const TestimonialsSection = () => {
     return () => observer.disconnect();
   }, [playActiveVideo]);
 
-  // Add a click handler to the entire section for manual play
+  // Add click handlers for user interaction
   useEffect(() => {
-    const handleSectionClick = () => {
-      if (manualPlayAttemptedRef.current && isInViewRef.current) {
-        attemptManualPlay();
+    const handleUserInteraction = () => {
+      userInteractedRef.current = true;
+      setShowUnmuteButton(false);
+
+      // Try to play current video unmuted
+      const currentVideo = videoRefs.current[currentIndexRef.current];
+      if (currentVideo && currentVideo.paused) {
+        currentVideo.muted = false;
+        currentVideo.play().catch((error) => {
+          // If unmuted play fails, try muted
+          if (error.name === 'NotAllowedError') {
+            currentVideo.muted = true;
+            currentVideo.play().catch(() => {});
+          }
+        });
       }
     };
 
     const section = document.querySelector('.testimonials-section');
     if (section) {
-      section.addEventListener('click', handleSectionClick);
+      // Add multiple event types for better coverage
+      section.addEventListener('click', handleUserInteraction);
+      section.addEventListener('touchstart', handleUserInteraction, {
+        passive: true,
+      });
     }
 
     return () => {
       if (section) {
-        section.removeEventListener('click', handleSectionClick);
+        section.removeEventListener('click', handleUserInteraction);
+        section.removeEventListener('touchstart', handleUserInteraction);
       }
     };
-  }, [attemptManualPlay]);
+  }, []);
 
-  // Navigation buttons - Modified to ensure user interaction
+  // Navigation buttons
   const navigationButtons = useMemo(
     () => (
       <div className="testimonials-navigation-overlay">
@@ -378,6 +462,22 @@ const TestimonialsSection = () => {
     ),
     [navigate],
   );
+
+  // Unmute button for mobile
+  const unmuteButton = useMemo(() => {
+    if (!showUnmuteButton || isLg) return null;
+
+    return (
+      <button
+        className="testimonials-unmute-button"
+        onClick={toggleMute}
+        aria-label={isMuted ? 'Unmute video' : 'Mute video'}
+      >
+        <img src={unmuteIcon} alt="Unmute" />
+        <span>Tap to unmute</span>
+      </button>
+    );
+  }, [showUnmuteButton, isMuted, isLg, toggleMute]);
 
   return (
     <section className="testimonials-section">
@@ -428,6 +528,7 @@ const TestimonialsSection = () => {
                   />
                 </div>
               ))}
+              {unmuteButton}
             </div>
           </div>
 
