@@ -74,7 +74,7 @@ const TestimonialsSection = () => {
 
       // Set mute based on device and user interaction
       if (!isLg && !userInteractedRef.current) {
-        video.muted = true; // Start muted on mobile for autoplay
+        video.muted = false; // Start muted on mobile for autoplay
       }
 
       // Check if video is loaded and ready
@@ -87,7 +87,7 @@ const TestimonialsSection = () => {
 
             // If unmuted play fails on mobile, try muted
             if (error.name === 'NotAllowedError' && !video.muted) {
-              video.muted = true;
+              video.muted = false;
               video.play().catch(() => {});
             }
           });
@@ -356,32 +356,6 @@ const TestimonialsSection = () => {
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isLg, playActiveVideo]);
-
-  // Add a periodic check for mobile to ensure video plays
-  useEffect(() => {
-    if (isLg) return; // Only for mobile
-
-    const checkInterval = setInterval(() => {
-      if (isMountedRef.current) {
-        const activeVideo = videoRefs.current[currentIndexRef.current];
-        const wrapper = videoWrapperRef.current;
-
-        // Simple manual intersection check
-        if (wrapper && activeVideo && activeVideo.paused) {
-          const rect = wrapper.getBoundingClientRect();
-          const isInView =
-            rect.top < window.innerHeight * 0.8 &&
-            rect.bottom > window.innerHeight * 0.2;
-
-          if (isInView) {
-            playActiveVideo(currentIndexRef.current);
-          }
-        }
-      }
-    }, 1000); // Check every second
-
-    return () => clearInterval(checkInterval);
   }, [isLg, playActiveVideo]);
 
   // Navigation buttons
