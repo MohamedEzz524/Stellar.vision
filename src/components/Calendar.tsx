@@ -400,7 +400,6 @@ const Calendar = () => {
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
     email?: string;
-    description?: string;
     startTime?: string;
     timezone?: string;
     businessStage?: string;
@@ -452,7 +451,6 @@ const Calendar = () => {
   const validationPatterns = {
     name: /^[a-zA-Z0-9\s'-]{2,50}$/, // 2-50 characters, letters, numbers, spaces, hyphens, apostrophes
     email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, // Standard email format
-    description: /^[\s\S]{4,500}$/, // 4-500 characters, any text
     startTime:
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?([+-]\d{2}:\d{2}|Z)$/, // RFC3339 format
     timezone: /^[A-Za-z_][A-Za-z0-9_/+-]*$/, // Timezone format like "Africa/Cairo", "UTC", "America/New_York", etc.
@@ -466,7 +464,6 @@ const Calendar = () => {
   const validationMessages = {
     name: 'Name must be 2-50 characters and contain only letters, numbers, spaces, hyphens, and apostrophes',
     email: 'Please enter a valid email address',
-    description: 'Description must be between 4 and 500 characters',
     startTime: 'Start time is required and must be in valid format',
     timezone: 'Timezone must be in valid format (e.g., Africa/Cairo or UTC)',
     businessStage: 'Please select your business stage',
@@ -505,7 +502,7 @@ const Calendar = () => {
     visibleErrors: typeof fieldErrors;
     allErrors: Array<{ field: string; error: string }>;
   } => {
-    const { name, email, description, startTime, timezone } = state.formData;
+    const { name, email, startTime, timezone } = state.formData;
     const allErrors: Array<{ field: string; error: string }> = [];
 
     // Validate original form fields
@@ -514,10 +511,6 @@ const Calendar = () => {
 
     const emailError = validateField('email', email);
     if (emailError) allErrors.push({ field: 'email', error: emailError });
-
-    const descriptionError = validateField('description', description);
-    if (descriptionError)
-      allErrors.push({ field: 'description', error: descriptionError });
 
     const startTimeError = validateField('startTime', startTime);
     if (startTimeError)
@@ -580,7 +573,6 @@ const Calendar = () => {
     const visibleErrors: typeof fieldErrors = {
       ...(nameError && { name: nameError }),
       ...(emailError && { email: emailError }),
-      ...(descriptionError && { description: descriptionError }),
       ...(businessStageError && { businessStage: businessStageError }),
       ...(websiteNeedError && { websiteNeed: websiteNeedError }),
       ...(salesConversionError && { salesConversion: salesConversionError }),
@@ -1529,7 +1521,6 @@ const Calendar = () => {
 
   // Format the description with all additional fields
   const formatCompleteDescription = () => {
-    const { description } = state.formData;
     const {
       businessStage,
       websiteNeed,
@@ -1552,8 +1543,7 @@ Phone Number: ${phoneNumber}
 Website: ${website}
 `;
 
-    // Combine original description with additional info
-    return description + '\n' + additionalInfo;
+    return additionalInfo;
   };
 
   // Format booking data for API
@@ -2168,7 +2158,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="name"
-                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs lg:text-sm"
+                          className="bg-bgPrimary mb-2 text-sm"
                         >
                           Full Name <span className="text-red-400">*</span>
                         </label>
@@ -2196,7 +2186,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="email"
-                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary mb-2 text-sm"
                         >
                           Email <span className="text-red-400">*</span>
                         </label>
@@ -2222,44 +2212,13 @@ Website: ${website}
                         )}
                       </div>
 
-                      {/* Description Input */}
-                      <div className="relative">
-                        <label
-                          htmlFor="description"
-                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
-                        >
-                          Description <span className="text-red-400">*</span>
-                        </label>
-                        <textarea
-                          id="description"
-                          name="description"
-                          value={state.formData.description}
-                          onChange={handleInputChange}
-                          onBlur={handleFieldBlur}
-                          required
-                          minLength={4}
-                          maxLength={500}
-                          rows={3}
-                          className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
-                            fieldErrors.description
-                              ? 'border-red-500'
-                              : 'border-white'
-                          }`}
-                        />
-                        {fieldErrors.description && (
-                          <p className="mt-1 text-xs text-red-400">
-                            {fieldErrors.description}
-                          </p>
-                        )}
-                      </div>
-
                       {/* Additional Required Fields */}
 
                       {/* Business Stage */}
                       <div className="relative">
                         <label
                           htmlFor="businessStage"
-                          className="bg-bgPrimary word-spacing-[-4px] absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary word-spacing-[-4px] mb-2 text-sm"
                         >
                           Do you have a business or just starting out?{' '}
                           <span className="text-red-400">*</span>
@@ -2294,7 +2253,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="websiteNeed"
-                          className="bg-bgPrimary word-spacing-[-4px] absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary word-spacing-[-4px] mb-2 text-sm"
                         >
                           Do you need to edit your website or create a new
                           website? <span className="text-red-400">*</span>
@@ -2329,7 +2288,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="salesConversion"
-                          className="bg-bgPrimary word-spacing-[-4px] absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary word-spacing-[-4px] mb-2 text-sm"
                         >
                           What is your last month sales & conversion rate of the
                           website? <span className="text-red-400">*</span>
@@ -2370,7 +2329,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="instagramId"
-                          className="bg-bgPrimary word-spacing-[-4px] absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary word-spacing-[-4px] mb-2 text-sm"
                         >
                           Could you share the Instagram ID of the business page?{' '}
                           <span className="text-red-400">*</span>
@@ -2407,7 +2366,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="decisionMaker"
-                          className="bg-bgPrimary word-spacing-[-4px] absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary word-spacing-[-4px] mb-2 text-sm"
                         >
                           Are you the owner or the main decision maker in the
                           brand? <span className="text-red-400">*</span>
@@ -2442,7 +2401,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="phoneNumber"
-                          className="bg-bgPrimary word-spacing-[-4px] absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary word-spacing-[-4px] mb-2 text-sm"
                         >
                           Phone Number (include the country code){' '}
                           <span className="text-red-400">*</span>
@@ -2482,7 +2441,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="website"
-                          className="bg-bgPrimary word-spacing-[-4px] absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary word-spacing-[-4px] mb-2 text-sm"
                         >
                           Website (leave blank if you don't have)
                         </label>
@@ -2539,7 +2498,7 @@ Website: ${website}
                       <div className="relative hidden opacity-50">
                         <label
                           htmlFor="startTime-test"
-                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs text-gray-400"
+                          className="bg-bgPrimary text-xs text-gray-400"
                         >
                           startTime (readonly - testing)
                         </label>
@@ -2557,7 +2516,7 @@ Website: ${website}
                       <div className="relative hidden opacity-50">
                         <label
                           htmlFor="timezone-test"
-                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-xs text-gray-400"
+                          className="bg-bgPrimary text-xs text-gray-400"
                         >
                           timezone (readonly - testing)
                         </label>
