@@ -44,7 +44,6 @@ export const Model = forwardRef<THREE.Group>((props, ref) => {
 
           buttonMaterial.envMap = scene.environment;
           buttonMaterial.envMapIntensity = 8.0;
-          buttonMaterial.needsUpdate = true;
           child.material = buttonMaterial;
 
           // Set button to render FIRST (lower number)
@@ -99,15 +98,6 @@ export const Model = forwardRef<THREE.Group>((props, ref) => {
       }),
     [],
   );
-
-  // Apply text to cube material if needed
-  useEffect(() => {
-    // You can apply a texture or modify material for text here
-    if (cubeMeshRef.current && props.textTexture) {
-      cubeMeshRef.current.material.map = props.textTexture;
-      cubeMeshRef.current.material.needsUpdate = true;
-    }
-  }, [props.textTexture]);
 
   return (
     <group ref={ref} {...props}>
