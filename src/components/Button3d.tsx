@@ -90,8 +90,6 @@ export const Model = forwardRef<THREE.Group, any>((props, ref) => {
         color: 0xffffff, // white
         metalness: 0.0,
         roughness: 0.8,
-        transparent: true, // Add this
-        opacity: 0, // Make invisible but interactive
       }),
     [],
   );

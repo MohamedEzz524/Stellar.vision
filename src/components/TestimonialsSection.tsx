@@ -251,7 +251,11 @@ const TestimonialsSection = () => {
                   playsInline
                   preload="metadata"
                   muted
-                  onLoadedData={() => {
+                  onLoadedData={(e) => {
+                    const video = e.currentTarget as HTMLVideoElement;
+                    // force browser to paint first frame
+                    video.currentTime = 0.01;
+
                     videoLoadedRef.current[index] = true;
                     if (videoLoadedRef.current.every(Boolean)) {
                       setAllVideosLoaded(true);

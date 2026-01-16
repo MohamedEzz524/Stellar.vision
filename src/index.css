@@ -121,7 +121,9 @@ body.no-scroll {
   top: 0;
   left: 0;
 }
-
+.object-container {
+  opacity: 0;
+}
 /* Or if position: fixed causes issues, use this alternative: */
 body.no-scroll {
   overflow: hidden !important;

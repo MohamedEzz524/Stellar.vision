@@ -456,6 +456,17 @@ const ScrollTrigger3DSection = ({
 
           // Update object containers with top positioning (in pixels, relative to section)
           // Only update if 3D elements are loaded (use ref to avoid stale closure)
+          let rocksFadedIn = false; // outside useEffect
+
+          // inside onUpdate
+          if (!rocksFadedIn) {
+            rocksFadedIn = true;
+            objectContainerRefs.current.forEach((el) => {
+              if (el)
+                gsap.to(el, { opacity: 1, duration: 0.5, ease: 'power1.out' });
+            });
+          }
+
           if (objectContainerRefs.current[0]) {
             // Row 1 objects (indices 0 and 1)
             // Object 0: add static offset down by 200% of its height
@@ -585,7 +596,7 @@ const ScrollTrigger3DSection = ({
             ref={(el) => {
               objectContainerRefs.current[0] = el;
             }}
-            className="absolute left-0 z-[15] h-[150px] w-[120px] rotate-45 lg:h-[280px] lg:w-[250px] xl:-left-80"
+            className="object-container absolute left-0 z-[15] h-[150px] w-[120px] rotate-45 lg:h-[280px] lg:w-[250px] xl:-left-80"
           >
             <Canvas
               camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
@@ -610,7 +621,7 @@ const ScrollTrigger3DSection = ({
             ref={(el) => {
               objectContainerRefs.current[1] = el;
             }}
-            className="absolute -right-0 z-[15] h-[150px] w-[120px] lg:h-[180px] lg:w-[150px] xl:-right-30"
+            className="object-container absolute -right-0 z-[15] h-[150px] w-[120px] lg:h-[180px] lg:w-[150px] xl:-right-30"
           >
             <Canvas
               camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
@@ -636,7 +647,7 @@ const ScrollTrigger3DSection = ({
             ref={(el) => {
               objectContainerRefs.current[2] = el;
             }}
-            className="absolute -left-[20px] z-[5] h-[150px] w-[120px] lg:-left-[75px] lg:h-[180px] lg:w-[150px] xl:-left-40"
+            className="object-container absolute -left-[20px] z-[5] h-[150px] w-[120px] lg:-left-[75px] lg:h-[180px] lg:w-[150px] xl:-left-40"
           >
             <Canvas
               camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
@@ -662,7 +673,7 @@ const ScrollTrigger3DSection = ({
             ref={(el) => {
               objectContainerRefs.current[3] = el;
             }}
-            className="absolute -right-[30px] z-[5] h-[120px] w-[120px] lg:-right-[75px] lg:h-[500px] lg:w-[500px] xl:-right-40"
+            className="object-container absolute -right-[30px] z-[5] h-[120px] w-[120px] lg:-right-[75px] lg:h-[500px] lg:w-[500px] xl:-right-40"
           >
             <Canvas
               camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}

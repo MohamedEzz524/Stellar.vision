@@ -14,22 +14,31 @@ const CornerSVG = ({
   className?: string;
   style?: React.CSSProperties;
 }) => (
-
-  <svg 
-  className={`corner-svg ${className}`}
-  style={style}
-  xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
-  <g clip-path="url(#clip0_240_73)">
-  <path d="M40 20H46.3556V47.7343H20V40C20 40 27.2434 38.2101 33.0695 33.7639C38.8957 29.3176 40 20 40 20Z" fill="black"/>
-  <path 
-      className="corner-stroke-path"
-      d="M38.8867 -0.0556641V19.9997C38.8867 31.9909 28.5619 38.9206 20.002 38.9206H-0.101562" stroke="white"/>
-  </g>
-  <defs>
-  <clipPath id="clip0_240_73">
-  <rect width="40" height="40" fill="white"/>
-  </clipPath>
-  </defs>
+  <svg
+    className={`corner-svg ${className}`}
+    style={style}
+    xmlns="http://www.w3.org/2000/svg"
+    width="40"
+    height="40"
+    viewBox="0 0 40 40"
+    fill="none"
+  >
+    <g clipPath="url(#clip0_240_73)">
+      <path
+        d="M40 20H46.3556V47.7343H20V40C20 40 27.2434 38.2101 33.0695 33.7639C38.8957 29.3176 40 20 40 20Z"
+        fill="black"
+      />
+      <path
+        className="corner-stroke-path"
+        d="M38.8867 -0.0556641V19.9997C38.8867 31.9909 28.5619 38.9206 20.002 38.9206H-0.101562"
+        stroke="white"
+      />
+    </g>
+    <defs>
+      <clipPath id="clip0_240_73">
+        <rect width="40" height="40" fill="white" />
+      </clipPath>
+    </defs>
   </svg>
 );
 
