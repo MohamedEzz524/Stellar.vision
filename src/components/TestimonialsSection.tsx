@@ -254,7 +254,8 @@ const TestimonialsSection = () => {
                   onLoadedData={(e) => {
                     const video = e.currentTarget as HTMLVideoElement;
                     // force browser to paint first frame
-                    video.currentTime = 0.01;
+                    video.currentTime = 0.1;
+                    video.pause();
 
                     videoLoadedRef.current[index] = true;
                     if (videoLoadedRef.current.every(Boolean)) {
