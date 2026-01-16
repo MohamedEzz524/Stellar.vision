@@ -17,11 +17,6 @@ const TestimonialsSection = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [hasUserStarted, setHasUserStarted] = useState(false);
-  const [allVideosLoaded, setAllVideosLoaded] = useState(false);
-
-  const videoLoadedRef = useRef<boolean[]>(
-    new Array(TestimonialVideos.length).fill(false),
-  );
 
   /* ----------------------------- Dimensions ----------------------------- */
 
@@ -51,21 +46,6 @@ const TestimonialsSection = () => {
     return () => window.removeEventListener('resize', update);
   }, [getVideoWrapperDimensions]);
 
-  /* ----------------------------- Load all videos ----------------------------- */
-
-  const loadAllVideos = useCallback(() => {
-    videoRefs.current.forEach((video) => {
-      if (video) video.load();
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!hasUserStarted) return;
-
-    const allLoaded = videoLoadedRef.current.every(Boolean);
-    if (allLoaded) setAllVideosLoaded(true);
-  }, [hasUserStarted]);
-
   /* ----------------------------- Initial Play ----------------------------- */
 
   const handleInitialPlay = useCallback(() => {
@@ -74,14 +54,13 @@ const TestimonialsSection = () => {
     setHasUserStarted(true);
     isInViewRef.current = true;
 
-    loadAllVideos();
-
+    // Play first video
     const video = videoRefs.current[0];
     if (video) {
       video.muted = false;
       video.play().catch(() => {});
     }
-  }, [hasUserStarted, loadAllVideos]);
+  }, [hasUserStarted]);
 
   /* ----------------------------- Navigation ----------------------------- */
 
@@ -141,7 +120,7 @@ const TestimonialsSection = () => {
 
   const navigate = useCallback(
     (dir: 'next' | 'prev') => {
-      if (!hasUserStarted || !allVideosLoaded) return;
+      if (!hasUserStarted) return;
 
       const idx = currentIndexRef.current;
       const newIndex =
@@ -151,7 +130,7 @@ const TestimonialsSection = () => {
 
       animateTransition(dir, newIndex);
     },
-    [animateTransition, hasUserStarted, allVideosLoaded],
+    [animateTransition, hasUserStarted],
   );
 
   /* ----------------------------- Observer ----------------------------- */
@@ -183,8 +162,7 @@ const TestimonialsSection = () => {
 
   const navigationButtons = useMemo(
     () =>
-      hasUserStarted &&
-      allVideosLoaded && (
+      hasUserStarted && (
         <div className="testimonials-navigation-overlay">
           <div
             className="testimonials-nav-area testimonials-nav-left"
@@ -208,7 +186,7 @@ const TestimonialsSection = () => {
           </div>
         </div>
       ),
-    [navigate, hasUserStarted, allVideosLoaded],
+    [navigate, hasUserStarted],
   );
 
   /* ----------------------------- Render ----------------------------- */
@@ -249,18 +227,12 @@ const TestimonialsSection = () => {
                   src={item.video}
                   loop
                   playsInline
-                  preload="metadata"
+                  preload="auto"
                   muted
                   onLoadedData={(e) => {
                     const video = e.currentTarget as HTMLVideoElement;
-                    // force browser to paint first frame
-                    video.currentTime = 0.1;
+                    video.currentTime = 0.1; // show first frame
                     video.pause();
-
-                    videoLoadedRef.current[index] = true;
-                    if (videoLoadedRef.current.every(Boolean)) {
-                      setAllVideosLoaded(true);
-                    }
                   }}
                   style={{ zIndex: index === currentIndex ? 2 : 1 }}
                 />
