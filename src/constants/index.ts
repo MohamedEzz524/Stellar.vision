@@ -203,6 +203,11 @@ export interface TestimonialVideo {
 
 export const TestimonialVideos: TestimonialVideo[] = [
   {
+    id: 'testimonial-3',
+    video:
+      'https://res.cloudinary.com/deqfby6bi/video/upload/v1768511514/Sigma_Testimonial_1_k8uipf.mp4',
+  },
+  {
     id: 'testimonial-2',
     video:
       'https://res.cloudinary.com/deqfby6bi/video/upload/v1768511505/Helal_Testimonial_1_vbqjna.mp4',
@@ -211,11 +216,6 @@ export const TestimonialVideos: TestimonialVideo[] = [
     id: 'testimonial-1',
     video:
       'https://res.cloudinary.com/deqfby6bi/video/upload/v1768511508/Meana_Testimonial_1_dtsxch.mp4',
-  },
-  {
-    id: 'testimonial-3',
-    video:
-      'https://res.cloudinary.com/deqfby6bi/video/upload/v1768511514/Sigma_Testimonial_1_k8uipf.mp4',
   },
   {
     id: 'testimonial-4',
