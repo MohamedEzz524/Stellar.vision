@@ -573,7 +573,7 @@ const Preloader = () => {
             <div
               ref={firstPreloaderRef}
               data-v-a05bfe24=""
-              className="absolute inset-0 flex items-center justify-center gap-3"
+              className="absolute inset-0 flex items-center justify-center gap-4"
               style={{
                 opacity: state.firstPreloaderVisible ? 1 : 0,
                 visibility: state.firstPreloaderVisible ? 'visible' : 'hidden',

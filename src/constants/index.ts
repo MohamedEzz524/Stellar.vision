@@ -13,7 +13,6 @@ export const text3D = [
   'Marketing before design Strategy before visuals Conversion before aesthetics Results before opinions',
   'We study your audience We map user behavior We define clear actions We remove friction',
   'Every section has a goal Every headline has a purpose Every click leads somewhere Nothing is random ',
-  'Third multiline text that will scroll through Third multiline text that will scroll through',
   'Fast loading websites Clean scalable code SEO-ready structure Built to grow',
   'Designed for campaigns Optimized for ads Ready for funnels Made to convert',
   'Launch is not the end We test and refine We optimize performance We improve conversions',
@@ -96,9 +95,9 @@ export const Projects: Project[] = [
   },
   {
     id: 'project-13',
-    title: 'Steelixe: Ecommerce Website',
+    title: 'Steelixe',
     year: '2025',
-    tags: '3D Modeling',
+    tags: ' Ecommerce Website, 3D Modeling',
     image: steelixeImg,
     imageAlt: 'Steelixe ecommerce website with 3D modeling',
     href: 'https://steelixe.com',
@@ -115,7 +114,7 @@ export const Projects: Project[] = [
 
   {
     id: 'project-5',
-    title: 'Greennest Furniture:',
+    title: 'Greennest Furniture',
     year: '2025',
     tags: 'Ecommerce Website',
     image: furnitureImg,

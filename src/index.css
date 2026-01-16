@@ -495,7 +495,7 @@ html:active .custom-cursor {
   top: 0;
   left: 0;
   width: 3px;
-  height: 15px; /* Vertical part */
+  height: 14px; /* Vertical part */
 }
 
 .preloader-l-top-left::after {
@@ -503,7 +503,7 @@ html:active .custom-cursor {
   position: absolute;
   top: 0;
   left: 0;
-  width: 15px; /* Horizontal part */
+  width: 14px; /* Horizontal part */
   height: 3px;
   background: rgb(255, 255, 255);
 }
@@ -513,7 +513,7 @@ html:active .custom-cursor {
   bottom: 0;
   left: 0;
   width: 3px;
-  height: 15px; /* Vertical part */
+  height: 14px; /* Vertical part */
 }
 
 .preloader-l-bottom-left::after {
@@ -521,7 +521,7 @@ html:active .custom-cursor {
   position: absolute;
   bottom: 0;
   left: 0;
-  width: 15px; /* Horizontal part */
+  width: 14px; /* Horizontal part */
   height: 3px;
   background: rgb(255, 255, 255);
 }
@@ -531,7 +531,7 @@ html:active .custom-cursor {
   top: 0;
   right: 0;
   width: 3px;
-  height: 15px; /* Vertical part */
+  height: 14px; /* Vertical part */
 }
 
 .preloader-l-top-right::after {
@@ -539,7 +539,7 @@ html:active .custom-cursor {
   position: absolute;
   top: 0;
   right: 0;
-  width: 15px; /* Horizontal part */
+  width: 14px; /* Horizontal part */
   height: 3px;
   background: rgb(255, 255, 255);
 }
@@ -549,7 +549,7 @@ html:active .custom-cursor {
   bottom: 0;
   right: 0;
   width: 3px;
-  height: 15px; /* Vertical part */
+  height: 14px; /* Vertical part */
 }
 
 .preloader-l-bottom-right::after {
@@ -557,7 +557,7 @@ html:active .custom-cursor {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 15px; /* Horizontal part */
+  width: 14px; /* Horizontal part */
   height: 3px;
   background: rgb(255, 255, 255);
 }

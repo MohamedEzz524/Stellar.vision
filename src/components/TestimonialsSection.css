@@ -296,6 +296,7 @@
   .testimonials-nav-arrow {
     width: 30px;
     height: 30px;
+    opacity: 1;
   }
 
   .testimonials-projector-wrapper {
@@ -315,7 +316,7 @@
     width: 100%;
     bottom: 0;
     left: 50%;
-    transform: translate(-50%, 230px) rotate(90deg);
+    transform: translate(-50%, 210px) rotate(90deg);
   }
   .testimonials-video-container {
     width: 100%;

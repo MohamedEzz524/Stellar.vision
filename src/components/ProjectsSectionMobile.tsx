@@ -30,6 +30,9 @@ const ProjectsSectionMobile = ({
   const cardsMeshesRef = useRef<THREE.Mesh[]>([]);
   const cardsParticlesRef = useRef<THREE.Points[]>([]);
   const cardTexturesRef = useRef<THREE.Texture[]>([]);
+  // Add new state for info visibility
+  const [isInfoVisible, setIsInfoVisible] = useState(false);
+  const infoContainerRef = useRef<HTMLDivElement>(null);
   const cardParticlePositionsRef = useRef<
     Array<{
       positions: THREE.BufferAttribute;
@@ -71,7 +74,6 @@ const ProjectsSectionMobile = ({
       alpha: true,
     });
 
-
     cardsRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     cardsRenderer.setSize(window.innerWidth, window.innerHeight);
     cardsRenderer.setClearColor(0x000000, 0);
@@ -110,7 +112,6 @@ const ProjectsSectionMobile = ({
           (error) => reject(error),
         );
       });
-    
 
     // Load all project images
     const imagePromises = projects
@@ -305,6 +306,7 @@ const ProjectsSectionMobile = ({
 
         // Track which card is currently active (centered and clickable)
         let newActiveCardIndex: number | null = null;
+        let showInfo = false;
 
         // First pass: calculate each card's local progress
         const cardProgresses: number[] = [];
@@ -331,6 +333,10 @@ const ProjectsSectionMobile = ({
           if (!particleData || !points) return;
 
           const localProgress = cardProgresses[index];
+          // Show info when card reaches 30% of its move phase
+          if (localProgress > 0.3 && localProgress <= 1) {
+            showInfo = true;
+          }
           const positions = particleData.positions.array as Float32Array;
           const originalPositions = particleData.originalPositions;
           const scatterDirections = particleData.scatterDirections;
@@ -489,6 +495,18 @@ const ProjectsSectionMobile = ({
         if (activeCardIndexRef.current !== newActiveCardIndex) {
           activeCardIndexRef.current = newActiveCardIndex;
           setActiveCardIndex(newActiveCardIndex);
+
+          // Show/hide info based on whether there's an active card
+          if (newActiveCardIndex !== null && showInfo) {
+            setIsInfoVisible(true);
+          } else {
+            setIsInfoVisible(false);
+          }
+        } else if (activeCardIndexRef.current !== null && showInfo) {
+          // Keep info visible if we already have an active card
+          setIsInfoVisible(true);
+        } else if (!showInfo) {
+          setIsInfoVisible(false);
         }
       };
 
@@ -689,6 +707,25 @@ const ProjectsSectionMobile = ({
         >
           Skip to Next
         </button>
+      </div>
+      {/* Project Info Display */}
+      <div
+        ref={infoContainerRef}
+        className={`project-info-container ${isInfoVisible ? 'visible' : ''}`}
+      >
+        <div className="project-info-wrapper">
+          <div className="project-info-content">
+            {activeProject && (
+              <>
+                <div className="project-info-header">
+                  <div className="project-tags">{activeProject.tags}</div>
+                  <div className="project-year">{activeProject.year}</div>
+                </div>
+                <h3 className="project-title">{activeProject.title}</h3>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {activeProject && (
