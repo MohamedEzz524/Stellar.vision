@@ -112,6 +112,23 @@ body {
   background-color: #000;
   width: 100%;
 }
+/* Prevent all scrolling */
+body.no-scroll {
+  overflow: hidden !important;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+/* Or if position: fixed causes issues, use this alternative: */
+body.no-scroll {
+  overflow: hidden !important;
+  height: 100vh;
+  overscroll-behavior: none;
+  touch-action: none;
+}
 
 /* ===== CUSTOM CURSOR ===== */
 html,
@@ -199,22 +216,20 @@ html:active .custom-cursor {
 }
 .desktop-logo-corner path[stroke] {
   stroke-width: 1px;
-  stroke:#fff
+  stroke: #fff;
 }
 .corner-svg path[stroke] {
-  stroke:#fff;
+  stroke: #fff;
   stroke-width: 1.5px;
 }
 
-
-@media (min-width: 1024px) {  
+@media (min-width: 1024px) {
   .desktop-logo-corner path[stroke] {
     stroke-width: 3px;
   }
   .corner-svg path[stroke] {
     stroke-width: 2px;
   }
-  
 }
 /* Flickering animation */
 @keyframes flicker {

@@ -5,14 +5,12 @@ import * as THREE from 'three';
 import { FlakesTexture } from '../assets/js/FlakesTexture';
 import btnModelUrl from '../assets/models/last button.compressed.glb?url';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const Model = forwardRef<THREE.Group, any>((props, ref) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { scene: gltfScene } = useGLTF(btnModelUrl) as any;
+export const Model = forwardRef<THREE.Group>((props, ref) => {
+  const { scene: gltfScene } = useGLTF(btnModelUrl);
   const { scene } = useThree();
   const materialReadyRef = useRef(false);
 
-  // Generate flakes texture for material normal map (same as star)
+  // Generate flakes texture
   const flakesTexture = useMemo(() => {
     const canvas = new FlakesTexture(512, 512);
     const texture = new THREE.CanvasTexture(canvas);
@@ -24,12 +22,11 @@ export const Model = forwardRef<THREE.Group, any>((props, ref) => {
 
   const cubeMeshRef = useRef<THREE.Mesh | null>(null);
 
-  // Apply material to all meshes (works with HDR environment)
+  // Apply material to button with explicit render order
   useEffect(() => {
-    if (!materialReadyRef.current) {
+    if (!materialReadyRef.current && gltfScene) {
       gltfScene.traverse((child: THREE.Object3D) => {
         if (child instanceof THREE.Mesh) {
-          // Material optimized for HDR environment map
           const buttonMaterial = new THREE.MeshPhysicalMaterial({
             clearcoat: 1.0,
             clearcoatRoughness: 0.1,
@@ -39,21 +36,26 @@ export const Model = forwardRef<THREE.Group, any>((props, ref) => {
             normalMap: flakesTexture,
             normalScale: new THREE.Vector2(0.15, 0.15),
             envMap: scene.environment,
-            envMapIntensity: 8.0, // Higher value = reflections appear more prominent/"zoomed"
+            envMapIntensity: 8.0,
+            // Add depthTest to prevent z-fighting
+            depthTest: true,
+            depthWrite: true,
           });
 
-          // Explicitly set envMap after creation to ensure it's applied
           buttonMaterial.envMap = scene.environment;
-          buttonMaterial.envMapIntensity = 8.0; // Higher value = reflections appear more prominent/"zoomed"
+          buttonMaterial.envMapIntensity = 8.0;
           buttonMaterial.needsUpdate = true;
           child.material = buttonMaterial;
+
+          // Set button to render FIRST (lower number)
+          child.renderOrder = 0;
         }
       });
       materialReadyRef.current = true;
     }
   }, [gltfScene, flakesTexture, scene]);
 
-  // Calculate button bounding box and create cube to match its dimensions
+  // Calculate cube geometry
   const [cubeGeometry, setCubeGeometry] = useState<THREE.BoxGeometry | null>(
     null,
   );
@@ -63,54 +65,63 @@ export const Model = forwardRef<THREE.Group, any>((props, ref) => {
 
   useEffect(() => {
     if (gltfScene) {
-      // Calculate bounding box of the button model
       const box = new THREE.Box3().setFromObject(gltfScene);
       const size = new THREE.Vector3();
       const center = new THREE.Vector3();
       box.getSize(size);
       box.getCenter(center);
 
-      // Create cube geometry at 80% of button width and height
+      // Slightly smaller cube to ensure it sits INSIDE the button
       const geometry = new THREE.BoxGeometry(
         size.x * 0.86,
         size.y * 0.8,
-        size.z * .94,
+        size.z * 0.94,
       );
       setCubeGeometry(geometry);
-      setCubePosition([center.x, center.y, center.z]);
+      setCubePosition([center.x, center.y, center.z + 0.01]); // Slight offset in Z
     }
   }, [gltfScene]);
 
-  // white cube material
+  // Cube material for text display - make sure it's DIFFERENT from button material
   const cubeMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
         color: 0xffffff, // white
-        metalness: 0.0,
-        roughness: 0.8,
+        metalness: 0.3, // Slight metalness to match button
+        roughness: 0.4, // Slightly rougher than button
+        emissive: 0x000000, // No emission
+        emissiveIntensity: 0,
+        // Important: these settings control rendering order
+        transparent: false,
+        opacity: 1,
+        depthTest: true,
+        depthWrite: true,
       }),
     [],
   );
 
-  // Cleanup cube geometry and material on unmount
+  // Apply text to cube material if needed
   useEffect(() => {
-    return () => {
-      if (cubeGeometry) {
-        cubeGeometry.dispose();
-      }
-      cubeMaterial.dispose();
-    };
-  }, [cubeGeometry, cubeMaterial]);
+    // You can apply a texture or modify material for text here
+    if (cubeMeshRef.current && props.textTexture) {
+      cubeMeshRef.current.material.map = props.textTexture;
+      cubeMeshRef.current.material.needsUpdate = true;
+    }
+  }, [props.textTexture]);
 
   return (
     <group ref={ref} {...props}>
+      {/* Button renders FIRST (behind) */}
       <primitive object={gltfScene} dispose={null} />
+
+      {/* Cube with text renders SECOND (in front) */}
       {cubeGeometry && (
         <mesh
           ref={cubeMeshRef}
           geometry={cubeGeometry}
           material={cubeMaterial}
           position={cubePosition}
+          renderOrder={1} // Higher number = renders AFTER button
         />
       )}
     </group>
@@ -118,5 +129,4 @@ export const Model = forwardRef<THREE.Group, any>((props, ref) => {
 });
 
 Model.displayName = 'Model';
-
 useGLTF.preload(btnModelUrl);

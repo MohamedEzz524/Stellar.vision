@@ -64,6 +64,38 @@ const Preloader = () => {
     setState((prev) => ({ ...prev, ...updates }));
   }, []);
 
+  // Update your initial useEffect:
+  useEffect(() => {
+    // Add a CSS class to the body that prevents all scrolling
+    document.body.classList.add('no-scroll');
+
+    // Check if scrollbar is present and compensate for layout shift
+    const hasScrollbar =
+      window.innerWidth > document.documentElement.clientWidth;
+    if (hasScrollbar) {
+      const scrollbarWidth =
+        window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      document.body.classList.remove('no-scroll');
+      document.body.style.paddingRight = '';
+    };
+  }, []);
+
+  // Update the useEffect that handles overflow auto:
+  useEffect(() => {
+    if (state.isRevealing) {
+      const timer = setTimeout(() => {
+        document.body.classList.remove('no-scroll');
+        document.body.style.paddingRight = '';
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [state.isRevealing]);
+
   // Get left and right half divs from the first preloader and set initial position
   useEffect(() => {
     // Use a small delay to ensure refs are attached

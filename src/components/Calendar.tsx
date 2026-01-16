@@ -2148,7 +2148,7 @@ Website: ${website}
                       </button>
                     </div>
                   ) : (
-                    <form onSubmit={handleSubmit} className="w-full space-y-4">
+                    <form onSubmit={handleSubmit} className="w-full space-y-6">
                       <h3 className="font-grid text-xl font-bold uppercase lg:text-[2rem]">
                         Enter details
                       </h3>
@@ -2158,7 +2158,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="name"
-                          className="bg-bgPrimary mb-3.5 text-sm leading-[1.2]"
+                          className="bg-bgPrimary mb-2.5 block text-sm leading-[1.2] lg:text-base"
                         >
                           Full Name <span className="text-red-400">*</span>
                         </label>
@@ -2186,7 +2186,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="email"
-                          className="bg-bgPrimary mb-3.5 text-sm leading-[1.2]"
+                          className="bg-bgPrimary mb-2.5 block text-sm leading-[1.2] lg:text-base"
                         >
                           Email <span className="text-red-400">*</span>
                         </label>
@@ -2218,7 +2218,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="businessStage"
-                          className="bg-bgPrimary word-spacing-[-4px] mb-3.5 text-sm leading-[1.2]"
+                          className="bg-bgPrimary word-spacing-[-4px] mb-2.5 block text-sm leading-[1.2] lg:text-base"
                         >
                           Do you have a business or just starting out?{' '}
                           <span className="text-red-400">*</span>
@@ -2253,7 +2253,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="websiteNeed"
-                          className="bg-bgPrimary word-spacing-[-4px] mb-3.5 text-sm leading-[1.2]"
+                          className="bg-bgPrimary word-spacing-[-4px] mb-2.5 block text-sm leading-[1.2] lg:text-base"
                         >
                           Do you need to edit your website or create a new
                           website? <span className="text-red-400">*</span>
@@ -2288,7 +2288,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="salesConversion"
-                          className="bg-bgPrimary word-spacing-[-4px] mb-3.5 text-sm leading-[1.2]"
+                          className="bg-bgPrimary word-spacing-[-4px] mb-2.5 block text-sm leading-[1.2] lg:text-base"
                         >
                           What is your last month sales & conversion rate of the
                           website? <span className="text-red-400">*</span>
@@ -2307,7 +2307,7 @@ Website: ${website}
                           onBlur={handleFieldBlur}
                           required
                           pattern="^(0|[1-9]\d*)(\.\d+)?$"
-                          className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                          className={`w-full rounded-md border bg-transparent px-4 py-3 text-white placeholder:text-sm focus:ring-2 focus:ring-white focus:outline-none ${
                             fieldErrors.salesConversion
                               ? 'border-red-500'
                               : 'border-white'
@@ -2329,7 +2329,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="instagramId"
-                          className="bg-bgPrimary word-spacing-[-4px] mb-3.5 text-sm leading-[1.2]"
+                          className="bg-bgPrimary word-spacing-[-4px] mb-2.5 block text-sm leading-[1.2] lg:text-base"
                         >
                           Could you share the Instagram ID of the business page?{' '}
                           <span className="text-red-400">*</span>
@@ -2348,7 +2348,7 @@ Website: ${website}
                           onBlur={handleFieldBlur}
                           required
                           pattern="^@?[a-zA-Z0-9._]{1,30}$"
-                          className={`w-full rounded-md border bg-transparent px-4 py-3 text-white focus:ring-2 focus:ring-white focus:outline-none ${
+                          className={`w-full rounded-md border bg-transparent px-4 py-3 text-white placeholder:text-sm focus:ring-2 focus:ring-white focus:outline-none ${
                             fieldErrors.instagramId
                               ? 'border-red-500'
                               : 'border-white'
@@ -2366,7 +2366,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="decisionMaker"
-                          className="bg-bgPrimary word-spacing-[-4px] mb-3.5 text-sm leading-[1.2]"
+                          className="bg-bgPrimary word-spacing-[-4px] mb-2.5 block text-sm leading-[1.2] lg:text-base"
                         >
                           Are you the owner or the main decision maker in the
                           brand? <span className="text-red-400">*</span>
@@ -2401,7 +2401,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="phoneNumber"
-                          className="bg-bgPrimary word-spacing-[-4px] mb-3.5 text-sm leading-[1.2]"
+                          className="bg-bgPrimary word-spacing-[-4px] mb-2.5 block text-sm leading-[1.2] lg:text-base"
                         >
                           Phone Number (include the country code){' '}
                           <span className="text-red-400">*</span>
@@ -2441,7 +2441,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="website"
-                          className="bg-bgPrimary word-spacing-[-4px] mb-3.5 text-sm leading-[1.2]"
+                          className="bg-bgPrimary word-spacing-[-4px] mb-2.5 block text-sm leading-[1.2] lg:text-base"
                         >
                           Website (leave blank if you don't have)
                         </label>
