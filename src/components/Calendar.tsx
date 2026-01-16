@@ -412,21 +412,6 @@ const Calendar = () => {
     website?: string;
   }>({});
 
-  // Throttle function to limit how often a function can be called
-  const throttle = <T extends () => void>(
-    func: T,
-    limit: number,
-  ): (() => void) => {
-    let inThrottle: boolean;
-    return function () {
-      if (!inThrottle) {
-        func();
-        inThrottle = true;
-        setTimeout(() => (inThrottle = false), limit);
-      }
-    };
-  };
-
   // Cleanup GSAP animations on unmount
   useEffect(() => {
     return () => {
@@ -442,8 +427,6 @@ const Calendar = () => {
   const startButtonRef = useRef<HTMLDivElement>(null);
   const timeButtonsRef = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const gsapAnimationsRef = useRef<gsap.core.Tween[]>([]);
-  const savedScrollYRef = useRef<number>(0);
-  const scrollRafRef = useRef<number | null>(null);
 
   // localStorage key for successful submission token
   const SUBMISSION_TOKEN_KEY = 'calendar_booking_submitted';
@@ -997,104 +980,64 @@ const Calendar = () => {
     }
   }, [state.viewState]);
 
-  // Prevent body scroll when calendar is open
   useEffect(() => {
-    if (state.viewState !== 0) {
-      // Calendar is open - lock body scroll
-      savedScrollYRef.current = window.scrollY;
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${savedScrollYRef.current}px`;
-      document.body.style.overflow = 'hidden';
+    // Only set up observer when calendar is closed
+    if (state.viewState !== 0) return;
 
-      // Ensure calendar container can still receive scroll events
-      if (calendarRef.current) {
-        calendarRef.current.focus();
-      }
-    } else {
-      // Calendar is closed - restore body scroll
-      const scrollY = savedScrollYRef.current;
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.overflow = '';
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Only open if not recently closed manually
+            if (!isManualCloseRef.current) {
+              setOpenMethod('scroll');
+              dispatch({ type: 'START_CALENDAR' });
+            }
+          }
+        });
+      },
+      {
+        threshold: 0.1, // Trigger when 10% of the element is visible
+        rootMargin: '0px',
+      },
+    );
 
-      // Restore scroll position
-      if (scrollY !== undefined) {
-        window.scrollTo(0, scrollY);
-        savedScrollYRef.current = 0;
-      }
+    // Find the trigger element
+    const triggerElement = document.querySelector('#trigger-calendar');
+    if (triggerElement) {
+      observer.observe(triggerElement);
     }
 
-    // Cleanup: restore body when component unmounts
     return () => {
-      const scrollY = savedScrollYRef.current;
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.overflow = '';
-      if (scrollY !== undefined && scrollY > 0) {
-        window.scrollTo(0, scrollY);
+      if (triggerElement) {
+        observer.unobserve(triggerElement);
       }
-      savedScrollYRef.current = 0;
+      observer.disconnect();
     };
   }, [state.viewState]);
 
-  // Auto-open calendar when user scrolls to within 3% of the end
-  useEffect(() => {
-    const checkScrollPosition = () => {
-      const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
-      const scrollTop = window.scrollY || document.documentElement.scrollTop;
-
-      // Calculate scrollable distance
-      const scrollableHeight = documentHeight - windowHeight;
-      const currentScroll = Math.min(scrollTop, scrollableHeight);
-
-      // Calculate percentage (0-100)
-      const percentage =
-        scrollableHeight > 0 ? (currentScroll / scrollableHeight) * 100 : 0;
-
-      // If user is within 3% of the end (97% or more) and calendar is closed, open it
-      if (percentage >= 99 && state.viewState === 0) {
-        setOpenMethod('scroll'); // Track that it was opened by scroll
-        dispatch({ type: 'START_CALENDAR' });
-      }
-    };
-
-    // Throttled version using requestAnimationFrame for smooth updates
-    const handleScroll = throttle(() => {
-      if (scrollRafRef.current) {
-        cancelAnimationFrame(scrollRafRef.current);
-      }
-      scrollRafRef.current = requestAnimationFrame(checkScrollPosition);
-    }, 16); // ~60fps
-
-    // Only add scroll listener when calendar is closed
-    if (state.viewState === 0) {
-      // Initial check
-      checkScrollPosition();
-
-      // Add scroll listener
-      window.addEventListener('scroll', handleScroll, { passive: true });
-      window.addEventListener('resize', handleScroll, { passive: true });
-
-      return () => {
-        window.removeEventListener('scroll', handleScroll);
-        window.removeEventListener('resize', handleScroll);
-        if (scrollRafRef.current) {
-          cancelAnimationFrame(scrollRafRef.current);
-        }
-      };
-    }
-  }, [state.viewState]);
-
-  // Update the button click handler
+  const isManualCloseRef = useRef(false);
+  // Update handleStartCalendar:
   const handleStartCalendar = () => {
     if (state.viewState === 0) {
-      setOpenMethod('click'); // Track that it was opened by click
+      setOpenMethod('click');
+      isManualCloseRef.current = false; // Reset for new open
       dispatch({ type: 'START_CALENDAR' });
     } else {
+      isManualCloseRef.current = true; // Mark as manual close
       dispatch({ type: 'CLOSE_CALENDAR' });
     }
   };
+
+  useEffect(() => {
+    if (isManualCloseRef.current) {
+      const timer = setTimeout(() => {
+        isManualCloseRef.current = false;
+      }, 1000); // Reset after 1 second
+
+      return () => clearTimeout(timer);
+    }
+  }, [state.viewState]);
 
   // Calculate transition duration based on how it was opened
   const getTransitionDuration = () => {

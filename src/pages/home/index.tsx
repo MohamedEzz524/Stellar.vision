@@ -23,6 +23,7 @@ const Home = () => {
           row2: 120,
         }}
       />
+      <div id="trigger-calendar" className="h-10"></div>
     </div>
   );
 };
