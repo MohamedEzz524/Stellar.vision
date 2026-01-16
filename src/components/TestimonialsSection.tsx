@@ -5,7 +5,6 @@ import './TestimonialsSection.css';
 import { useMediaQuery } from 'react-responsive';
 import arrowRightIcon from '../assets/arrow-right.svg';
 import projectorImage from '../assets/images/projector.webp';
-import unmuteIcon from '../assets/volume-up.svg'; // Add a volume icon
 
 const TestimonialsSection = () => {
   const isLg = useMediaQuery({ minWidth: 1024 });
@@ -23,16 +22,8 @@ const TestimonialsSection = () => {
   const [videoLoadingStates, setVideoLoadingStates] = useState<boolean[]>(() =>
     new Array(TestimonialVideos.length).fill(false),
   );
-  // Add a ref to track if observer has triggered at least once
-  const observerTriggeredRef = useRef(false);
   // Add a ref to track if user has interacted
   const userInteractedRef = useRef(false);
-  // Add a ref to track if component is in viewport
-  const isInViewRef = useRef(false);
-  // Add state for muted status
-  const [isMuted, setIsMuted] = useState(true);
-  // Add state for showing unmute button
-  const [showUnmuteButton, setShowUnmuteButton] = useState(false);
 
   // Video wrapper dimensions
   const getVideoWrapperDimensions = useCallback(() => {
@@ -77,8 +68,13 @@ const TestimonialsSection = () => {
       // If video is already playing, no need to do anything
       if (!video.paused && !forcePlay) return true;
 
-      // Set muted state based on user interaction
-      video.muted = isMuted && !userInteractedRef.current && !isLg;
+      // On mobile, start muted for autoplay, then unmute
+      // On desktop, we can try unmuted directly
+      if (!isLg && !userInteractedRef.current) {
+        video.muted = true;
+      } else {
+        video.muted = false;
+      }
 
       // If video is loaded and ready
       if (
@@ -93,9 +89,17 @@ const TestimonialsSection = () => {
             .then(() => {
               console.log(`Video ${index} playing successfully`);
 
-              // If video is muted and we're on mobile, show unmute button
+              // If video is muted (on mobile without user interaction), try to unmute it
               if (video.muted && !isLg && !userInteractedRef.current) {
-                setShowUnmuteButton(true);
+                // Wait a small moment then try to unmute
+                setTimeout(() => {
+                  video.muted = false;
+
+                  // Some browsers require playing again after unmuting
+                  if (video.paused) {
+                    video.play().catch(() => {});
+                  }
+                }, 300);
               }
 
               return true;
@@ -103,14 +107,20 @@ const TestimonialsSection = () => {
             .catch((error) => {
               console.warn(`Video ${index} autoplay failed:`, error);
 
-              // If autoplay fails due to sound policy, try muted
-              if (error.name === 'NotAllowedError' && !isLg) {
+              // If autoplay fails, try with muted
+              if (error.name === 'NotAllowedError') {
                 console.log('Trying muted autoplay...');
                 video.muted = true;
                 return video
                   .play()
                   .then(() => {
-                    setShowUnmuteButton(true);
+                    // Try to unmute after successful muted playback
+                    setTimeout(() => {
+                      video.muted = false;
+                      if (video.paused) {
+                        video.play().catch(() => {});
+                      }
+                    }, 300);
                     return true;
                   })
                   .catch(() => false);
@@ -121,27 +131,8 @@ const TestimonialsSection = () => {
       }
       return false;
     },
-    [isMuted, isLg],
+    [isLg],
   );
-
-  // Toggle mute/unmute
-  const toggleMute = useCallback(() => {
-    setIsMuted((prev) => {
-      const newMuted = !prev;
-
-      // Update current video
-      const currentVideo = videoRefs.current[currentIndexRef.current];
-      if (currentVideo) {
-        currentVideo.muted = newMuted;
-      }
-
-      // Mark user interaction
-      userInteractedRef.current = true;
-      setShowUnmuteButton(false);
-
-      return newMuted;
-    });
-  }, []);
 
   // Pause all videos except current
   const pauseOtherVideos = useCallback((currentIndex: number) => {
@@ -165,37 +156,41 @@ const TestimonialsSection = () => {
         return newStates;
       });
 
-      // Set initial mute state
-      const video = videoRefs.current[index];
-      if (video) {
-        video.muted = isMuted && !userInteractedRef.current && !isLg;
-      }
-
-      // If this is the current video and we're in view, try to play it
-      if (index === currentIndexRef.current && isInViewRef.current) {
+      // If this is the current video, try to play it
+      if (index === currentIndexRef.current) {
         // Small delay to ensure DOM is ready
         setTimeout(() => {
           playActiveVideo(index, true);
         }, 100);
       }
     },
-    [playActiveVideo, isMuted, isLg],
+    [playActiveVideo],
   );
+
+  // Handle video play event - unmute when playing
+  const handleVideoPlay = useCallback((index: number) => {
+    const video = videoRefs.current[index];
+    if (video && video.muted) {
+      // Try to unmute when video starts playing
+      setTimeout(() => {
+        video.muted = false;
+      }, 100);
+    }
+  }, []);
 
   // Animation for switching videos
   const animateVideoTransition = useCallback(
     (direction: 'next' | 'prev', newIndex: number) => {
       if (isAnimating || !videoWrapperRef.current) return;
 
+      // Mark user interaction
+      userInteractedRef.current = true;
+
       setIsAnimating(true);
       const currentVideo = videoRefs.current[currentIndexRef.current];
       const nextVideo = videoRefs.current[newIndex];
 
       if (!currentVideo || !nextVideo) return;
-
-      // Mark user interaction
-      userInteractedRef.current = true;
-      setShowUnmuteButton(false);
 
       // Initial z-index setup
       currentVideo.style.zIndex = '2';
@@ -229,12 +224,9 @@ const TestimonialsSection = () => {
           currentVideo.style.zIndex = '1';
           nextVideo.style.zIndex = '2';
 
-          // Set mute state for new video
+          // Set unmuted for next video since user has interacted
           if (nextVideo) {
-            // If user has interacted, use their preference, otherwise default
-            nextVideo.muted = userInteractedRef.current
-              ? isMuted
-              : isMuted && !isLg;
+            nextVideo.muted = false;
           }
 
           // Play new video
@@ -263,14 +255,7 @@ const TestimonialsSection = () => {
         '-=0.5',
       ); // Overlap animations
     },
-    [
-      isAnimating,
-      loadVideoIfNeeded,
-      playActiveVideo,
-      pauseOtherVideos,
-      isMuted,
-      isLg,
-    ],
+    [isAnimating, loadVideoIfNeeded, playActiveVideo, pauseOtherVideos],
   );
 
   // Navigation handler
@@ -299,16 +284,33 @@ const TestimonialsSection = () => {
     loadVideoIfNeeded(0);
     currentIndexRef.current = 0;
 
-    // Add a fallback to play the first video after a short delay
-    const fallbackTimer = setTimeout(() => {
-      if (isInViewRef.current && videoRefs.current[0]?.paused) {
-        console.log('Fallback: attempting to play first video');
-        playActiveVideo(0, true);
-      }
-    }, 1000);
+    // Add click handler to mark user interaction
+    const handleUserInteraction = () => {
+      userInteractedRef.current = true;
 
-    return () => clearTimeout(fallbackTimer);
-  }, [loadVideoIfNeeded, playActiveVideo]);
+      // Try to play current video unmuted
+      const currentVideo = videoRefs.current[currentIndexRef.current];
+      if (currentVideo && currentVideo.paused) {
+        currentVideo.muted = false;
+        currentVideo.play().catch(() => {});
+      }
+    };
+
+    const section = document.querySelector('.testimonials-section');
+    if (section) {
+      section.addEventListener('click', handleUserInteraction);
+      section.addEventListener('touchstart', handleUserInteraction, {
+        passive: true,
+      });
+    }
+
+    return () => {
+      if (section) {
+        section.removeEventListener('click', handleUserInteraction);
+        section.removeEventListener('touchstart', handleUserInteraction);
+      }
+    };
+  }, [loadVideoIfNeeded]);
 
   // Handle video wrapper resize
   useEffect(() => {
@@ -327,14 +329,11 @@ const TestimonialsSection = () => {
     return () => window.removeEventListener('resize', updateVideoWrapper);
   }, [getVideoWrapperDimensions]);
 
-  // Intersection observer to pause video when out of view
+  // Intersection observer to pause/play video
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          isInViewRef.current = entry.isIntersecting;
-          observerTriggeredRef.current = true;
-
           if (!entry.isIntersecting) {
             // Pause when out of view
             const activeVideo = videoRefs.current[currentIndexRef.current];
@@ -342,18 +341,12 @@ const TestimonialsSection = () => {
               activeVideo.pause();
             }
           } else {
-            // Play when in view - with better timing
+            // Play when in view
             const activeIndex = currentIndexRef.current;
             const activeVideo = videoRefs.current[activeIndex];
 
             if (activeVideo && activeVideo.paused) {
-              // Small delay to ensure video is ready
-              setTimeout(() => {
-                // Double-check we're still in view
-                if (isInViewRef.current && activeVideo.paused) {
-                  playActiveVideo(activeIndex, true);
-                }
-              }, 200);
+              playActiveVideo(activeIndex, true);
             }
           }
         });
@@ -370,43 +363,6 @@ const TestimonialsSection = () => {
 
     return () => observer.disconnect();
   }, [playActiveVideo]);
-
-  // Add click handlers for user interaction
-  useEffect(() => {
-    const handleUserInteraction = () => {
-      userInteractedRef.current = true;
-      setShowUnmuteButton(false);
-
-      // Try to play current video unmuted
-      const currentVideo = videoRefs.current[currentIndexRef.current];
-      if (currentVideo && currentVideo.paused) {
-        currentVideo.muted = false;
-        currentVideo.play().catch((error) => {
-          // If unmuted play fails, try muted
-          if (error.name === 'NotAllowedError') {
-            currentVideo.muted = true;
-            currentVideo.play().catch(() => {});
-          }
-        });
-      }
-    };
-
-    const section = document.querySelector('.testimonials-section');
-    if (section) {
-      // Add multiple event types for better coverage
-      section.addEventListener('click', handleUserInteraction);
-      section.addEventListener('touchstart', handleUserInteraction, {
-        passive: true,
-      });
-    }
-
-    return () => {
-      if (section) {
-        section.removeEventListener('click', handleUserInteraction);
-        section.removeEventListener('touchstart', handleUserInteraction);
-      }
-    };
-  }, []);
 
   // Navigation buttons
   const navigationButtons = useMemo(
@@ -445,22 +401,6 @@ const TestimonialsSection = () => {
     [navigate],
   );
 
-  // Unmute button for mobile
-  const unmuteButton = useMemo(() => {
-    if (!showUnmuteButton || isLg) return null;
-
-    return (
-      <button
-        className="testimonials-unmute-button"
-        onClick={toggleMute}
-        aria-label={isMuted ? 'Unmute video' : 'Mute video'}
-      >
-        <img src={unmuteIcon} alt="Unmute" />
-        <span>Tap to unmute</span>
-      </button>
-    );
-  }, [showUnmuteButton, isMuted, isLg, toggleMute]);
-
   return (
     <section className="testimonials-section">
       <div className="testimonials-container container">
@@ -495,6 +435,7 @@ const TestimonialsSection = () => {
                     preload="none"
                     onLoadedData={() => handleVideoLoaded(index)}
                     onCanPlay={() => handleVideoLoaded(index)}
+                    onPlay={() => handleVideoPlay(index)}
                     onError={() => {
                       videoLoadedRef.current[index] = true;
                       videoLoadingRef.current[index] = false;
@@ -510,7 +451,6 @@ const TestimonialsSection = () => {
                   />
                 </div>
               ))}
-              {unmuteButton}
             </div>
           </div>
 
