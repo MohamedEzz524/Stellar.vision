@@ -243,7 +243,8 @@ const ScrollTrigger3DSection = ({
     // Track: top 0%, translateY(150vh)
     // Row 1: top 110%
     // Row 2: top 170%
-    gsap.set(textTrack, { top: '0%', y: `${START_OFFSET_VH}vh`, x: '0%' });
+    gsap.set(textTrack, { willChange: 'transform' });
+
     // Set initial positions for object containers (relative to section height)
     // Row 1: top 110% of section height
     // Row 2: top 170% of section height
@@ -698,7 +699,7 @@ const ScrollTrigger3DSection = ({
       {/* Text Wrapper Track */}
       <div
         ref={textTrackRef}
-        className="font-grid relative z-20 mx-auto max-w-[344px] px-1.5 will-change-transform sm:max-w-[600px] lg:max-w-[1000px] lg:px-0"
+        className="font-grid relative z-20 mx-auto max-w-[344px] translate-y-[50vh] px-1.5 will-change-transform sm:max-w-[600px] lg:max-w-[1000px] lg:px-0"
       >
         <div ref={textContainerRef} className="relative z-20">
           {texts.map((text, index) => (

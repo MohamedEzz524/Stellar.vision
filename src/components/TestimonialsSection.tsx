@@ -5,7 +5,6 @@ import './TestimonialsSection.css';
 import { useMediaQuery } from 'react-responsive';
 import arrowRightIcon from '../assets/arrow-right.svg';
 import projectorImage from '../assets/images/projector.webp';
-import firstFrameImage from '../assets/images/first_frame.webp'; // Add your first frame image
 
 const TestimonialsSection = () => {
   const isLg = useMediaQuery({ minWidth: 1024 });
@@ -18,6 +17,8 @@ const TestimonialsSection = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [hasUserStarted, setHasUserStarted] = useState(false);
+  const loadedCountRef = useRef(0);
+  const [allVideosLoaded, setAllVideosLoaded] = useState(false);
 
   /* ----------------------------- Dimensions ----------------------------- */
 
@@ -67,6 +68,13 @@ const TestimonialsSection = () => {
       });
     }
   }, [hasUserStarted]);
+
+  useEffect(() => {
+    if (!allVideosLoaded || hasUserStarted) return;
+
+    // Simulate user click behavior
+    handleInitialPlay();
+  }, [allVideosLoaded, hasUserStarted, handleInitialPlay]);
 
   /* ----------------------------- Navigation ----------------------------- */
 
@@ -211,26 +219,6 @@ const TestimonialsSection = () => {
 
           <div className="testimonials-video-container">
             <div ref={videoWrapperRef} className="testimonials-video-wrapper">
-              {/* First Frame Image - Shows before play */}
-              {!hasUserStarted && (
-                <>
-                  <img
-                    src={firstFrameImage}
-                    className="testimonial-first-frame"
-                    alt="Testimonial preview"
-                  />
-                  <div
-                    className="testimonials-play-overlay"
-                    onClick={handleInitialPlay}
-                  >
-                    <span
-                      className="testimonials-play-button"
-                      title="Play testimonials"
-                    ></span>
-                  </div>
-                </>
-              )}
-
               {/* Videos - Hidden until play starts */}
               {TestimonialVideos.map((item, index) => (
                 <video
@@ -246,10 +234,15 @@ const TestimonialsSection = () => {
                   muted={!hasUserStarted || index !== currentIndex} // Only unmute current video
                   onLoadedData={(e) => {
                     const video = e.currentTarget as HTMLVideoElement;
-                    video.currentTime = 0; // Show first frame
+                    video.currentTime = 0;
                     video.pause();
 
-                    // On iOS, ensure the video is ready
+                    loadedCountRef.current += 1;
+
+                    if (loadedCountRef.current === TestimonialVideos.length) {
+                      setAllVideosLoaded(true);
+                    }
+
                     if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
                       video.style.opacity = '1';
                     }
