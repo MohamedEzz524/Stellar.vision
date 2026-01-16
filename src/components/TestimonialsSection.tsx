@@ -24,6 +24,10 @@ const TestimonialsSection = () => {
   );
   // Add a ref to track if user has interacted
   const userInteractedRef = useRef(false);
+  // Add a ref to track intersection observer
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  // Add a ref to track if component is mounted
+  const isMountedRef = useRef(false);
 
   // Video wrapper dimensions
   const getVideoWrapperDimensions = useCallback(() => {
@@ -59,77 +63,36 @@ const TestimonialsSection = () => {
     video.load();
   }, []);
 
-  // Play active video - Enhanced version
+  // Play active video - Simplified version
   const playActiveVideo = useCallback(
-    (index: number, forcePlay = false) => {
+    (index: number) => {
       const video = videoRefs.current[index];
-      if (!video) return false;
+      if (!video) return;
 
       // If video is already playing, no need to do anything
-      if (!video.paused && !forcePlay) return true;
+      if (!video.paused) return;
 
-      // On mobile, start muted for autoplay, then unmute
-      // On desktop, we can try unmuted directly
+      // Set mute based on device and user interaction
       if (!isLg && !userInteractedRef.current) {
-        video.muted = true;
-      } else {
-        video.muted = false;
+        video.muted = true; // Start muted on mobile for autoplay
       }
 
-      // If video is loaded and ready
-      if (
-        videoLoadedRef.current[index] &&
-        video.readyState >= 2 &&
-        video.paused
-      ) {
+      // Check if video is loaded and ready
+      if (videoLoadedRef.current[index] && video.readyState >= 2) {
         const playPromise = video.play();
 
         if (playPromise !== undefined) {
-          return playPromise
-            .then(() => {
-              console.log(`Video ${index} playing successfully`);
+          playPromise.catch((error) => {
+            console.warn(`Video ${index} play failed:`, error);
 
-              // If video is muted (on mobile without user interaction), try to unmute it
-              if (video.muted && !isLg && !userInteractedRef.current) {
-                // Wait a small moment then try to unmute
-                setTimeout(() => {
-                  video.muted = false;
-
-                  // Some browsers require playing again after unmuting
-                  if (video.paused) {
-                    video.play().catch(() => {});
-                  }
-                }, 300);
-              }
-
-              return true;
-            })
-            .catch((error) => {
-              console.warn(`Video ${index} autoplay failed:`, error);
-
-              // If autoplay fails, try with muted
-              if (error.name === 'NotAllowedError') {
-                console.log('Trying muted autoplay...');
-                video.muted = true;
-                return video
-                  .play()
-                  .then(() => {
-                    // Try to unmute after successful muted playback
-                    setTimeout(() => {
-                      video.muted = false;
-                      if (video.paused) {
-                        video.play().catch(() => {});
-                      }
-                    }, 300);
-                    return true;
-                  })
-                  .catch(() => false);
-              }
-              return false;
-            });
+            // If unmuted play fails on mobile, try muted
+            if (error.name === 'NotAllowedError' && !video.muted) {
+              video.muted = true;
+              video.play().catch(() => {});
+            }
+          });
         }
       }
-      return false;
     },
     [isLg],
   );
@@ -156,27 +119,16 @@ const TestimonialsSection = () => {
         return newStates;
       });
 
-      // If this is the current video, try to play it
-      if (index === currentIndexRef.current) {
-        // Small delay to ensure DOM is ready
+      // If this is the current video and component is in view, play it
+      if (index === currentIndexRef.current && isMountedRef.current) {
+        // Use setTimeout to ensure DOM is ready
         setTimeout(() => {
-          playActiveVideo(index, true);
+          playActiveVideo(index);
         }, 100);
       }
     },
     [playActiveVideo],
   );
-
-  // Handle video play event - unmute when playing
-  const handleVideoPlay = useCallback((index: number) => {
-    const video = videoRefs.current[index];
-    if (video && video.muted) {
-      // Try to unmute when video starts playing
-      setTimeout(() => {
-        video.muted = false;
-      }, 100);
-    }
-  }, []);
 
   // Animation for switching videos
   const animateVideoTransition = useCallback(
@@ -224,13 +176,13 @@ const TestimonialsSection = () => {
           currentVideo.style.zIndex = '1';
           nextVideo.style.zIndex = '2';
 
-          // Set unmuted for next video since user has interacted
+          // Set unmuted since user has interacted
           if (nextVideo) {
             nextVideo.muted = false;
           }
 
           // Play new video
-          playActiveVideo(newIndex, true);
+          playActiveVideo(newIndex);
           pauseOtherVideos(newIndex);
 
           // Reset clipping
@@ -281,6 +233,7 @@ const TestimonialsSection = () => {
 
   // Initialize and load first video
   useEffect(() => {
+    isMountedRef.current = true;
     loadVideoIfNeeded(0);
     currentIndexRef.current = 0;
 
@@ -290,9 +243,11 @@ const TestimonialsSection = () => {
 
       // Try to play current video unmuted
       const currentVideo = videoRefs.current[currentIndexRef.current];
-      if (currentVideo && currentVideo.paused) {
+      if (currentVideo) {
         currentVideo.muted = false;
-        currentVideo.play().catch(() => {});
+        if (currentVideo.paused) {
+          currentVideo.play().catch(() => {});
+        }
       }
     };
 
@@ -304,13 +259,22 @@ const TestimonialsSection = () => {
       });
     }
 
+    // Initial play attempt after a short delay
+    const initialPlayTimer = setTimeout(() => {
+      if (isMountedRef.current && videoRefs.current[0]) {
+        playActiveVideo(0);
+      }
+    }, 500);
+
     return () => {
+      isMountedRef.current = false;
       if (section) {
         section.removeEventListener('click', handleUserInteraction);
         section.removeEventListener('touchstart', handleUserInteraction);
       }
+      clearTimeout(initialPlayTimer);
     };
-  }, [loadVideoIfNeeded]);
+  }, [loadVideoIfNeeded, playActiveVideo]);
 
   // Handle video wrapper resize
   useEffect(() => {
@@ -329,40 +293,96 @@ const TestimonialsSection = () => {
     return () => window.removeEventListener('resize', updateVideoWrapper);
   }, [getVideoWrapperDimensions]);
 
-  // Intersection observer to pause/play video
+  // Improved intersection observer with better mobile support
   useEffect(() => {
-    const observer = new IntersectionObserver(
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isMountedRef.current) {
+        // When page becomes visible again, try to play current video
+        const activeVideo = videoRefs.current[currentIndexRef.current];
+        if (activeVideo && activeVideo.paused) {
+          setTimeout(() => {
+            playActiveVideo(currentIndexRef.current);
+          }, 300);
+        }
+      }
+    };
+
+    // Create intersection observer with mobile-friendly settings
+    observerRef.current = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (!entry.isIntersecting) {
-            // Pause when out of view
-            const activeVideo = videoRefs.current[currentIndexRef.current];
-            if (activeVideo && !activeVideo.paused) {
-              activeVideo.pause();
-            }
-          } else {
-            // Play when in view
+          if (entry.isIntersecting) {
+            // Component is in view - play video
             const activeIndex = currentIndexRef.current;
             const activeVideo = videoRefs.current[activeIndex];
 
             if (activeVideo && activeVideo.paused) {
-              playActiveVideo(activeIndex, true);
+              // Add a small delay for mobile
+              setTimeout(
+                () => {
+                  if (isMountedRef.current && activeVideo.paused) {
+                    playActiveVideo(activeIndex);
+                  }
+                },
+                isLg ? 0 : 200,
+              ); // Longer delay on mobile
+            }
+          } else {
+            // Component is out of view - pause video
+            const activeVideo = videoRefs.current[currentIndexRef.current];
+            if (activeVideo && !activeVideo.paused) {
+              activeVideo.pause();
             }
           }
         });
       },
       {
-        threshold: 0.5,
-        rootMargin: '50px',
+        threshold: 0.3, // Lower threshold for better mobile detection
+        rootMargin: '100px 0px 100px 0px', // Larger margin on mobile
       },
     );
 
+    // Observe the video wrapper
     if (videoWrapperRef.current) {
-      observer.observe(videoWrapperRef.current);
+      observerRef.current.observe(videoWrapperRef.current);
     }
 
-    return () => observer.disconnect();
-  }, [playActiveVideo]);
+    // Add visibility change listener for mobile
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isLg, playActiveVideo]);
+
+  // Add a periodic check for mobile to ensure video plays
+  useEffect(() => {
+    if (isLg) return; // Only for mobile
+
+    const checkInterval = setInterval(() => {
+      if (isMountedRef.current) {
+        const activeVideo = videoRefs.current[currentIndexRef.current];
+        const wrapper = videoWrapperRef.current;
+
+        // Simple manual intersection check
+        if (wrapper && activeVideo && activeVideo.paused) {
+          const rect = wrapper.getBoundingClientRect();
+          const isInView =
+            rect.top < window.innerHeight * 0.8 &&
+            rect.bottom > window.innerHeight * 0.2;
+
+          if (isInView) {
+            playActiveVideo(currentIndexRef.current);
+          }
+        }
+      }
+    }, 1000); // Check every second
+
+    return () => clearInterval(checkInterval);
+  }, [isLg, playActiveVideo]);
 
   // Navigation buttons
   const navigationButtons = useMemo(
@@ -435,7 +455,6 @@ const TestimonialsSection = () => {
                     preload="none"
                     onLoadedData={() => handleVideoLoaded(index)}
                     onCanPlay={() => handleVideoLoaded(index)}
-                    onPlay={() => handleVideoPlay(index)}
                     onError={() => {
                       videoLoadedRef.current[index] = true;
                       videoLoadingRef.current[index] = false;
