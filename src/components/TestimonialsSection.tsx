@@ -19,6 +19,16 @@ const TestimonialsSection = () => {
   const [hasUserStarted, setHasUserStarted] = useState(false);
   const loadedCountRef = useRef(0);
   const [allVideosLoaded, setAllVideosLoaded] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+
+  const handleUnmute = useCallback(() => {
+    setIsMuted(false);
+
+    const video = videoRefs.current[currentIndexRef.current];
+    if (video) {
+      video.muted = false;
+    }
+  }, []);
 
   /* ----------------------------- Dimensions ----------------------------- */
 
@@ -59,7 +69,7 @@ const TestimonialsSection = () => {
     // Play first video
     const video = videoRefs.current[0];
     if (video) {
-      video.muted = false;
+      video.muted = true; // 👈 keep muted for autoplay
       video.play().catch((error) => {
         console.log('Video play failed:', error);
         // Fallback: try muted playback
@@ -104,7 +114,7 @@ const TestimonialsSection = () => {
           currentIndexRef.current = newIndex;
           setCurrentIndex(newIndex);
 
-          nextVideo.muted = false;
+          nextVideo.muted = isMuted;
           nextVideo.play().catch(() => {});
 
           currentVideo.style.zIndex = '1';
@@ -209,6 +219,29 @@ const TestimonialsSection = () => {
     <section className="testimonials-section">
       <div className="testimonials-container container">
         <div className="testimonials-projector-wrapper">
+          {hasUserStarted && isMuted && (
+            <button
+              onClick={handleUnmute}
+              aria-label="Unmute video"
+              className="absolute top-4 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur-md transition-all duration-300 ease-out hover:scale-105 hover:bg-black/80 active:scale-95"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-6 w-6"
+              >
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <path d="M15 9a5 5 0 0 1 0 6" />
+                <path d="M18 7a8 8 0 0 1 0 10" />
+              </svg>
+            </button>
+          )}
+
           <div className="testimonials-projector-side">
             <img
               src={projectorImage}
@@ -231,7 +264,7 @@ const TestimonialsSection = () => {
                   loop
                   playsInline
                   preload="auto"
-                  muted={!hasUserStarted || index !== currentIndex} // Only unmute current video
+                  muted={isMuted || index !== currentIndex}
                   onLoadedData={(e) => {
                     const video = e.currentTarget as HTMLVideoElement;
                     video.currentTime = 0;
