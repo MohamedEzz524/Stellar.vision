@@ -1,5 +1,5 @@
 import { useMediaQuery } from 'react-responsive';
-import logoImg from '../../assets/images/logo.png';
+import logoImg from '../../assets/images/logo.svg';
 import noiseImg from '../../assets/images/noise.webp';
 import globalImage from '../../assets/images/global.webp';
 import ScrollProgress from '../../components/ScrollProgress';
