@@ -3,8 +3,13 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import btnModelUrl from '../assets/models/last button.compressed.glb?url';
 
-export const Model = forwardRef<THREE.Group, any>((props, ref) => {
-  const { scene: gltfScene } = useGLTF(btnModelUrl) as any;
+export const Model = forwardRef<
+  THREE.Group,
+  React.ComponentPropsWithoutRef<'group'>
+>((props, ref) => {
+  const { scene: gltfScene } = useGLTF(btnModelUrl) as unknown as {
+    scene: THREE.Group;
+  };
 
   const buttonMeshRef = useRef<THREE.Mesh | null>(null);
   const cubeRef = useRef<THREE.Mesh | null>(null);
