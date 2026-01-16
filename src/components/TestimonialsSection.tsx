@@ -5,6 +5,7 @@ import './TestimonialsSection.css';
 import { useMediaQuery } from 'react-responsive';
 import arrowRightIcon from '../assets/arrow-right.svg';
 import projectorImage from '../assets/images/projector.webp';
+import firstFrameImage from '../assets/images/first_frame.webp'; // Add your first frame image
 
 const TestimonialsSection = () => {
   const isLg = useMediaQuery({ minWidth: 1024 });
@@ -54,26 +55,16 @@ const TestimonialsSection = () => {
     setHasUserStarted(true);
     isInViewRef.current = true;
 
-    // Play first video with better iOS handling
+    // Play first video
     const video = videoRefs.current[0];
     if (video) {
       video.muted = false;
-
-      // iOS requires explicit user gesture for unmuted play
-      const playPromise = video.play();
-
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // If autoplay fails, try muted playback
-          video.muted = true;
-          video.play().catch(() => {});
-
-          // Add a button to unmute
-          if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-            // You could add a fallback unmute button here
-          }
-        });
-      }
+      video.play().catch((error) => {
+        console.log('Video play failed:', error);
+        // Fallback: try muted playback
+        video.muted = true;
+        video.play().catch(() => {});
+      });
     }
   }, [hasUserStarted]);
 
@@ -186,7 +177,7 @@ const TestimonialsSection = () => {
             <img
               src={arrowRightIcon}
               className="testimonials-nav-arrow testimonials-nav-arrow-left"
-              alt=""
+              alt="Previous testimonial"
             />
           </div>
           <div
@@ -196,7 +187,7 @@ const TestimonialsSection = () => {
             <img
               src={arrowRightIcon}
               className="testimonials-nav-arrow testimonials-nav-arrow-right"
-              alt=""
+              alt="Next testimonial"
             />
           </div>
         </div>
@@ -220,18 +211,27 @@ const TestimonialsSection = () => {
 
           <div className="testimonials-video-container">
             <div ref={videoWrapperRef} className="testimonials-video-wrapper">
+              {/* First Frame Image - Shows before play */}
               {!hasUserStarted && (
-                <div
-                  className="testimonials-play-overlay"
-                  onClick={handleInitialPlay}
-                >
-                  <span
-                    className="testimonials-play-button"
-                    title="Play"
-                  ></span>
-                </div>
+                <>
+                  <img
+                    src={firstFrameImage}
+                    className="testimonial-first-frame"
+                    alt="Testimonial preview"
+                  />
+                  <div
+                    className="testimonials-play-overlay"
+                    onClick={handleInitialPlay}
+                  >
+                    <span
+                      className="testimonials-play-button"
+                      title="Play testimonials"
+                    ></span>
+                  </div>
+                </>
               )}
 
+              {/* Videos - Hidden until play starts */}
               {TestimonialVideos.map((item, index) => (
                 <video
                   key={item.id}
@@ -243,24 +243,21 @@ const TestimonialsSection = () => {
                   loop
                   playsInline
                   preload="auto"
-                  muted // Keep muted initially for iOS
-                  // Update the video element's onLoadedData handler
+                  muted={!hasUserStarted || index !== currentIndex} // Only unmute current video
                   onLoadedData={(e) => {
                     const video = e.currentTarget as HTMLVideoElement;
-
-                    // Use 0 instead of 0.1 for better iOS compatibility
-                    video.currentTime = 0;
+                    video.currentTime = 0; // Show first frame
                     video.pause();
 
-                    // Force a redraw on iOS
+                    // On iOS, ensure the video is ready
                     if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                      video.style.opacity = '0.99';
-                      setTimeout(() => {
-                        video.style.opacity = '1';
-                      }, 50);
+                      video.style.opacity = '1';
                     }
                   }}
-                  style={{ zIndex: index === currentIndex ? 2 : 1 }}
+                  style={{
+                    zIndex: index === currentIndex ? 2 : 1,
+                    opacity: hasUserStarted ? 1 : 0, // Hide videos until play starts
+                  }}
                 />
               ))}
             </div>
