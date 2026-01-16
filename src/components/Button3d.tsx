@@ -49,7 +49,7 @@ export const Model = forwardRef<THREE.Group, any>((props, ref) => {
     const mesh = new THREE.Mesh(geometry, material);
 
     // SHIFT CUBE BACK ALONG Z so it’s fully inside the button
-    mesh.position.set(0, 0, -size.z * 0.25);
+    mesh.position.set(0, size.y * 0.25, -size.z * 0.25);
     // Explanation: depth of cube is size.z * 0.5, so shifting by -0.25 keeps entire cube inside
 
     return mesh;
