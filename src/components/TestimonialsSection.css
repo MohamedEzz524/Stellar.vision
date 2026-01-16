@@ -112,6 +112,8 @@
   clip-path: inset(0% 0% 0% 0%);
   opacity: 1 !important; /* Force visibility */
   visibility: visible !important;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .testimonial-video-preloader {

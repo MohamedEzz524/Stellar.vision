@@ -54,11 +54,26 @@ const TestimonialsSection = () => {
     setHasUserStarted(true);
     isInViewRef.current = true;
 
-    // Play first video
+    // Play first video with better iOS handling
     const video = videoRefs.current[0];
     if (video) {
       video.muted = false;
-      video.play().catch(() => {});
+
+      // iOS requires explicit user gesture for unmuted play
+      const playPromise = video.play();
+
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // If autoplay fails, try muted playback
+          video.muted = true;
+          video.play().catch(() => {});
+
+          // Add a button to unmute
+          if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+            // You could add a fallback unmute button here
+          }
+        });
+      }
     }
   }, [hasUserStarted]);
 
@@ -228,7 +243,7 @@ const TestimonialsSection = () => {
                   loop
                   playsInline
                   preload="auto"
-                  muted
+                  muted // Keep muted initially for iOS
                   // Update the video element's onLoadedData handler
                   onLoadedData={(e) => {
                     const video = e.currentTarget as HTMLVideoElement;
