@@ -22,10 +22,14 @@ const TestimonialsSection = () => {
   const [videoLoadingStates, setVideoLoadingStates] = useState<boolean[]>(() =>
     new Array(TestimonialVideos.length).fill(false),
   );
-  // Track if user has interacted (swiped or clicked)
-  const hasUserInteractedRef = useRef(false);
-  // Track if first video has been handled
-  const firstVideoHandledRef = useRef(false);
+  // Add a ref to track if observer has triggered at least once
+  const observerTriggeredRef = useRef(false);
+  // Add a ref to track if auto-swipe has been performed
+  const autoSwipePerformedRef = useRef(false);
+  // Add a ref to track if component is in viewport
+  const isInViewRef = useRef(false);
+  // Add a ref to track unmuted state
+  const isUnmutedRef = useRef(false);
 
   // Video wrapper dimensions
   const getVideoWrapperDimensions = useCallback(() => {
@@ -61,68 +65,46 @@ const TestimonialsSection = () => {
     video.load();
   }, []);
 
-  // Play active video with special handling for first video on mobile
-  const playActiveVideo = useCallback(
-    (index: number) => {
-      const video = videoRefs.current[index];
-      if (!video) return false;
+  // Play active video - Enhanced version with unmuted support
+  const playActiveVideo = useCallback((index: number, forcePlay = false) => {
+    const video = videoRefs.current[index];
+    if (!video) return false;
 
-      // If video is already playing, no need to do anything
-      if (!video.paused) return true;
+    // If video is already playing, no need to do anything
+    if (!video.paused && !forcePlay) return true;
 
-      // On mobile: if it's the first video and user hasn't interacted yet
-      if (
-        !isLg &&
-        index === 0 &&
-        !hasUserInteractedRef.current &&
-        !firstVideoHandledRef.current
-      ) {
-        // Start muted for autoplay
-        video.muted = true;
-        firstVideoHandledRef.current = true;
+    // If video is loaded and ready
+    if (
+      videoLoadedRef.current[index] &&
+      video.readyState >= 2 &&
+      video.paused
+    ) {
+      const playPromise = video.play();
 
-        // Try to play muted first
-        if (videoLoadedRef.current[index] && video.readyState >= 2) {
-          video
-            .play()
-            .then(() => {
-              console.log('First video playing muted');
-              // After a short delay, try to unmute
-              setTimeout(() => {
-                video.muted = false;
-                // Some browsers need play() again after unmuting
-                if (video.paused) {
-                  video.play().catch(() => {});
-                }
-              }, 500);
-            })
-            .catch(() => {
-              // If muted play fails too, just wait for user interaction
-              console.log('First video autoplay blocked');
-            });
-        }
-        return false;
+      if (playPromise !== undefined) {
+        return playPromise
+          .then(() => {
+            console.log(`Video ${index} playing successfully`);
+            return true;
+          })
+          .catch((error) => {
+            console.warn(`Video ${index} autoplay failed:`, error);
+            return false;
+          });
       }
+    }
+    return false;
+  }, []);
 
-      // For all other cases (desktop or after user interaction)
-      if (!isLg && !hasUserInteractedRef.current) {
-        video.muted = true; // Start muted on mobile
-      } else {
-        video.muted = false; // Desktop or after interaction
+  // Unmute all videos (call this after user interaction)
+  const unmuteAllVideos = useCallback(() => {
+    videoRefs.current.forEach((video) => {
+      if (video) {
+        video.muted = false;
       }
-
-      // Play the video
-      if (videoLoadedRef.current[index] && video.readyState >= 2) {
-        return video
-          .play()
-          .then(() => true)
-          .catch(() => false);
-      }
-
-      return false;
-    },
-    [isLg],
-  );
+    });
+    isUnmutedRef.current = true;
+  }, []);
 
   // Pause all videos except current
   const pauseOtherVideos = useCallback((currentIndex: number) => {
@@ -136,26 +118,31 @@ const TestimonialsSection = () => {
   }, []);
 
   // Handle video loaded
-  const handleVideoLoaded = useCallback((index: number) => {
-    videoLoadedRef.current[index] = true;
-    videoLoadingRef.current[index] = false;
-    setVideoLoadingStates((prev) => {
-      const newStates = [...prev];
-      newStates[index] = false;
-      return newStates;
-    });
+  const handleVideoLoaded = useCallback(
+    (index: number) => {
+      videoLoadedRef.current[index] = true;
+      videoLoadingRef.current[index] = false;
+      setVideoLoadingStates((prev) => {
+        const newStates = [...prev];
+        newStates[index] = false;
+        return newStates;
+      });
 
-    // Don't auto-play first video on mobile in loaded handler
-    // Let the intersection observer handle it
-  }, []);
+      // If this is the current video and we're in view, try to play it
+      if (index === currentIndexRef.current && isInViewRef.current) {
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+          playActiveVideo(index, true);
+        }, 100);
+      }
+    },
+    [playActiveVideo],
+  );
 
   // Animation for switching videos
   const animateVideoTransition = useCallback(
-    (direction: 'next' | 'prev', newIndex: number) => {
+    (direction: 'next' | 'prev', newIndex: number, isAutoSwipe = false) => {
       if (isAnimating || !videoWrapperRef.current) return;
-
-      // Mark user interaction - this unlocks unmuted playback!
-      hasUserInteractedRef.current = true;
 
       setIsAnimating(true);
       const currentVideo = videoRefs.current[currentIndexRef.current];
@@ -170,9 +157,9 @@ const TestimonialsSection = () => {
       // Determine animation direction
       const fromTop = direction === 'next';
       const startClipPath = fromTop
-        ? 'inset(0% 0% 100% 0%)'
-        : 'inset(100% 0% 0% 0%)';
-      const endClipPath = 'inset(0% 0% 0% 0%)';
+        ? 'inset(0% 0% 100% 0%)' // Fully clipped from top
+        : 'inset(100% 0% 0% 0%)'; // Fully clipped from bottom
+      const endClipPath = 'inset(0% 0% 0% 0%)'; // Fully visible
 
       // Set initial state for next video
       gsap.set(nextVideo, {
@@ -195,13 +182,13 @@ const TestimonialsSection = () => {
           currentVideo.style.zIndex = '1';
           nextVideo.style.zIndex = '2';
 
-          // Set unmuted since user has interacted
-          if (nextVideo) {
-            nextVideo.muted = false;
+          // Unmute all videos if this is an auto-swipe
+          if (isAutoSwipe) {
+            unmuteAllVideos();
           }
 
           // Play new video
-          playActiveVideo(newIndex);
+          playActiveVideo(newIndex, true);
           pauseOtherVideos(newIndex);
 
           // Reset clipping
@@ -224,15 +211,91 @@ const TestimonialsSection = () => {
           ease: 'power2.inOut',
         },
         '-=0.5',
-      );
+      ); // Overlap animations
     },
-    [isAnimating, loadVideoIfNeeded, playActiveVideo, pauseOtherVideos],
+    [
+      isAnimating,
+      loadVideoIfNeeded,
+      playActiveVideo,
+      pauseOtherVideos,
+      unmuteAllVideos,
+    ],
   );
+
+  // Perform an automatic swipe to trigger user interaction
+  const performAutoSwipe = useCallback(() => {
+    if (autoSwipePerformedRef.current || isAnimating) return;
+
+    console.log('Performing auto-swipe to enable unmuted playback');
+    autoSwipePerformedRef.current = true;
+
+    // Trigger a small swipe animation that doesn't change the current video
+    // We'll animate to the same index but with the animation
+    if (!videoWrapperRef.current) return;
+
+    setIsAnimating(true);
+
+    // Create a temporary fake animation that simulates a swipe
+    // This will be enough to count as user interaction
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.width = '1px';
+    tempDiv.style.height = '1px';
+    tempDiv.style.opacity = '0';
+    videoWrapperRef.current.appendChild(tempDiv);
+
+    // Animate the temp div (this counts as user interaction for browsers)
+    gsap.to(tempDiv, {
+      x: 1,
+      duration: 0.1,
+      onComplete: () => {
+        // Now unmute all videos
+        unmuteAllVideos();
+
+        // Try to play the current video unmuted
+        const currentIdx = currentIndexRef.current;
+        const currentVideo = videoRefs.current[currentIdx];
+
+        if (currentVideo && currentVideo.paused) {
+          currentVideo
+            .play()
+            .then(() => {
+              console.log('Video playing unmuted after auto-swipe');
+            })
+            .catch((err) => {
+              console.warn('Failed to play unmuted after auto-swipe:', err);
+            });
+        }
+
+        // Clean up
+        if (
+          videoWrapperRef.current &&
+          videoWrapperRef.current.contains(tempDiv)
+        ) {
+          videoWrapperRef.current.removeChild(tempDiv);
+        }
+
+        setIsAnimating(false);
+
+        // Now perform an actual swipe to next video (optional)
+        // This gives visual feedback that something happened
+        setTimeout(() => {
+          const newIndex = (currentIdx + 1) % TestimonialVideos.length;
+          animateVideoTransition('next', newIndex, true);
+        }, 300);
+      },
+    });
+  }, [isAnimating, animateVideoTransition, unmuteAllVideos]);
 
   // Navigation handler
   const navigate = useCallback(
     (direction: 'prev' | 'next') => {
       if (isAnimating) return;
+
+      // Ensure videos are unmuted on first navigation
+      if (!isUnmutedRef.current) {
+        unmuteAllVideos();
+      }
 
       const currentIdx = currentIndexRef.current;
       let newIndex: number;
@@ -245,9 +308,9 @@ const TestimonialsSection = () => {
           TestimonialVideos.length;
       }
 
-      animateVideoTransition(direction, newIndex);
+      animateVideoTransition(direction, newIndex, false);
     },
-    [isAnimating, animateVideoTransition],
+    [isAnimating, animateVideoTransition, unmuteAllVideos],
   );
 
   // Initialize and load first video
@@ -255,30 +318,13 @@ const TestimonialsSection = () => {
     loadVideoIfNeeded(0);
     currentIndexRef.current = 0;
 
-    // Also add click handler to mark user interaction
-    const handleUserInteraction = () => {
-      hasUserInteractedRef.current = true;
-      // Try to play current video unmuted
-      const currentVideo = videoRefs.current[currentIndexRef.current];
-      if (currentVideo && currentVideo.paused) {
-        currentVideo.muted = false;
-        currentVideo.play().catch(() => {});
-      }
-    };
-
-    const section = document.querySelector('.testimonials-section');
-    if (section) {
-      section.addEventListener('click', handleUserInteraction);
-      section.addEventListener('touchstart', handleUserInteraction, {
-        passive: true,
-      });
-    }
-
     return () => {
-      if (section) {
-        section.removeEventListener('click', handleUserInteraction);
-        section.removeEventListener('touchstart', handleUserInteraction);
-      }
+      // Clean up videos
+      videoRefs.current.forEach((video) => {
+        if (video) {
+          video.pause();
+        }
+      });
     };
   }, [loadVideoIfNeeded]);
 
@@ -299,39 +345,42 @@ const TestimonialsSection = () => {
     return () => window.removeEventListener('resize', updateVideoWrapper);
   }, [getVideoWrapperDimensions]);
 
-  // Intersection observer - with special handling for first video
+  // Intersection observer to handle auto-swipe when in view
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            // Component is in view
-            const activeIndex = currentIndexRef.current;
-            const activeVideo = videoRefs.current[activeIndex];
+          isInViewRef.current = entry.isIntersecting;
+          observerTriggeredRef.current = true;
 
-            if (activeVideo && activeVideo.paused) {
-              // Special delay for mobile
-              setTimeout(
-                () => {
-                  if (activeVideo.paused) {
-                    playActiveVideo(activeIndex);
-                  }
-                },
-                isLg ? 100 : 300,
-              );
-            }
-          } else {
-            // Component is out of view
+          if (!entry.isIntersecting) {
+            // Pause when out of view
             const activeVideo = videoRefs.current[currentIndexRef.current];
             if (activeVideo && !activeVideo.paused) {
               activeVideo.pause();
+            }
+          } else {
+            // When coming into view, perform auto-swipe on mobile to enable unmuted playback
+            if (!isLg && !autoSwipePerformedRef.current) {
+              // Small delay to ensure everything is loaded
+              setTimeout(() => {
+                performAutoSwipe();
+              }, 500);
+            } else {
+              // Just try to play the current video
+              const activeIndex = currentIndexRef.current;
+              setTimeout(() => {
+                if (isInViewRef.current) {
+                  playActiveVideo(activeIndex, true);
+                }
+              }, 200);
             }
           }
         });
       },
       {
-        threshold: 0.3,
-        rootMargin: '100px 0px',
+        threshold: 0.5,
+        rootMargin: '100px', // Larger margin to trigger earlier
       },
     );
 
@@ -340,63 +389,42 @@ const TestimonialsSection = () => {
     }
 
     return () => observer.disconnect();
-  }, [isLg, playActiveVideo]);
+  }, [isLg, performAutoSwipe, playActiveVideo]);
 
-  // Special fix for first video on mobile
+  // Add touch event listener for manual swipes
   useEffect(() => {
-    if (isLg) return; // Desktop doesn't need this fix
+    if (!videoWrapperRef.current) return;
 
-    // Try a more aggressive approach for first video
-    const tryFirstVideoPlay = () => {
-      if (videoRefs.current[0] && videoRefs.current[0].paused) {
-        console.log('Trying first video play...');
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const minSwipeDistance = 50;
 
-        // First, try muted
-        videoRefs.current[0].muted = true;
-        videoRefs.current[0]
-          .play()
-          .then(() => {
-            console.log('First video playing muted');
-            // Try to unmute after 1 second
-            setTimeout(() => {
-              videoRefs.current[0].muted = false;
-              if (videoRefs.current[0].paused) {
-                videoRefs.current[0].play().catch(() => {});
-              }
-            }, 1000);
-          })
-          .catch(() => {
-            // If that fails, try one more time after 2 seconds
-            setTimeout(() => {
-              if (videoRefs.current[0] && videoRefs.current[0].paused) {
-                videoRefs.current[0].play().catch(() => {});
-              }
-            }, 2000);
-          });
-      }
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
     };
 
-    // Try after initial load
-    const initialTimer = setTimeout(tryFirstVideoPlay, 1000);
+    const handleTouchEnd = (e: TouchEvent) => {
+      touchEndX = e.changedTouches[0].clientX;
+      const swipeDistance = touchEndX - touchStartX;
 
-    // Also try when component comes into view (fallback for observer issues)
-    const scrollHandler = () => {
-      if (videoWrapperRef.current) {
-        const rect = videoWrapperRef.current.getBoundingClientRect();
-        const isInView = rect.top < window.innerHeight && rect.bottom > 0;
-        if (isInView && videoRefs.current[0]?.paused) {
-          tryFirstVideoPlay();
+      if (Math.abs(swipeDistance) > minSwipeDistance) {
+        if (swipeDistance > 0) {
+          navigate('prev');
+        } else {
+          navigate('next');
         }
       }
     };
 
-    window.addEventListener('scroll', scrollHandler);
+    const element = videoWrapperRef.current;
+    element.addEventListener('touchstart', handleTouchStart, { passive: true });
+    element.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     return () => {
-      clearTimeout(initialTimer);
-      window.removeEventListener('scroll', scrollHandler);
+      element.removeEventListener('touchstart', handleTouchStart);
+      element.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isLg]);
+  }, [navigate]);
 
   // Navigation buttons
   const navigationButtons = useMemo(
@@ -467,7 +495,7 @@ const TestimonialsSection = () => {
                     loop
                     playsInline
                     preload="none"
-                    // Don't use muted attribute here - we'll control it programmatically
+                    muted={!isLg} // Initially muted on mobile
                     onLoadedData={() => handleVideoLoaded(index)}
                     onCanPlay={() => handleVideoLoaded(index)}
                     onError={() => {
