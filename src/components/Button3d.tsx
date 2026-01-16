@@ -28,9 +28,9 @@ export const Model = forwardRef<THREE.Group, any>((props, ref) => {
     box.getSize(size);
 
     const geometry = new THREE.BoxGeometry(
-      size.x * 0.86,
-      size.y * 0.8,
-      size.z * 0.5,
+      size.x * 0.86, // width
+      size.y * 0.8, // height
+      size.z * 0.5, // depth (cube smaller than button depth)
     );
 
     const material = new THREE.MeshStandardMaterial({
@@ -38,7 +38,7 @@ export const Model = forwardRef<THREE.Group, any>((props, ref) => {
       metalness: 0.0,
       roughness: 0.8,
       transparent: true,
-      opacity: 0.8, // optional visual tweak
+      opacity: 0.8,
       depthTest: true,
       depthWrite: false,
       polygonOffset: true,
@@ -47,7 +47,11 @@ export const Model = forwardRef<THREE.Group, any>((props, ref) => {
     });
 
     const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(0, 0, 0); // center in button local space
+
+    // SHIFT CUBE BACK ALONG Z so it’s fully inside the button
+    mesh.position.set(0, 0, -size.z * 0.25);
+    // Explanation: depth of cube is size.z * 0.5, so shifting by -0.25 keeps entire cube inside
+
     return mesh;
   }, [buttonMeshRef.current]);
 
