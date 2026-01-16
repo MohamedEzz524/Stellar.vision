@@ -66,8 +66,8 @@
 }
 
 .project-year {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 10px;
+  font-weight: 400;
   letter-spacing: 1px;
   color: rgba(255, 255, 255, 0.7);
   opacity: 0;
