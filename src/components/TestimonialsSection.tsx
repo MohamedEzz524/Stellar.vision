@@ -13,22 +13,13 @@ const TestimonialsSection = () => {
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const currentIndexRef = useRef(0);
   const isInViewRef = useRef(false);
+  const hasMovedRef = useRef(false);
+  const loadedCountRef = useRef(0);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [hasUserStarted, setHasUserStarted] = useState(false);
-  const loadedCountRef = useRef(0);
   const [allVideosLoaded, setAllVideosLoaded] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-
-  const handleUnmute = useCallback(() => {
-    setIsMuted(false);
-
-    const video = videoRefs.current[currentIndexRef.current];
-    if (video) {
-      video.muted = false;
-    }
-  }, []);
 
   /* ----------------------------- Dimensions ----------------------------- */
 
@@ -66,25 +57,19 @@ const TestimonialsSection = () => {
     setHasUserStarted(true);
     isInViewRef.current = true;
 
-    // Play first video
     const video = videoRefs.current[0];
     if (video) {
-      video.muted = true; // 👈 keep muted for autoplay
-      video.play().catch((error) => {
-        console.log('Video play failed:', error);
-        // Fallback: try muted playback
-        video.muted = true;
-        video.play().catch(() => {});
-      });
+      video.muted = false;
+      video.play().catch(() => {});
     }
   }, [hasUserStarted]);
 
   useEffect(() => {
     if (!allVideosLoaded || hasUserStarted) return;
-
-    // Simulate user click behavior
     handleInitialPlay();
   }, [allVideosLoaded, hasUserStarted, handleInitialPlay]);
+
+  /* ----------------------------- Unmute ----------------------------- */
 
   /* ----------------------------- Navigation ----------------------------- */
 
@@ -97,6 +82,7 @@ const TestimonialsSection = () => {
       if (!currentVideo || !nextVideo) return;
 
       setIsAnimating(true);
+      hasMovedRef.current = true;
 
       currentVideo.style.zIndex = '2';
       nextVideo.style.zIndex = '3';
@@ -104,7 +90,11 @@ const TestimonialsSection = () => {
       const fromTop = direction === 'next';
 
       gsap.set(nextVideo, {
-        clipPath: fromTop ? 'inset(0% 0% 100% 0%)' : 'inset(100% 0% 0% 0%)',
+        clipPath: hasMovedRef.current
+          ? fromTop
+            ? 'inset(0% 0% 100% 0%)'
+            : 'inset(100% 0% 0% 0%)'
+          : 'inset(0% 0% 0% 0%)',
       });
 
       const tl = gsap.timeline({
@@ -114,30 +104,36 @@ const TestimonialsSection = () => {
           currentIndexRef.current = newIndex;
           setCurrentIndex(newIndex);
 
-          nextVideo.muted = isMuted;
+          nextVideo.muted = false;
           nextVideo.play().catch(() => {});
 
           currentVideo.style.zIndex = '1';
           nextVideo.style.zIndex = '2';
 
           gsap.set(currentVideo, { clipPath: 'inset(0% 0% 0% 0%)' });
+          gsap.set(nextVideo, { clipPath: 'inset(0% 0% 0% 0%)' });
+
           setIsAnimating(false);
         },
       });
 
-      tl.to(currentVideo, {
-        clipPath: fromTop ? 'inset(100% 0% 0% 0%)' : 'inset(0% 0% 100% 0%)',
-        duration: 0.5,
-        ease: 'power2.inOut',
-      }).to(
-        nextVideo,
-        {
-          clipPath: 'inset(0% 0% 0% 0%)',
+      if (hasMovedRef.current) {
+        tl.to(currentVideo, {
+          clipPath: fromTop ? 'inset(100% 0% 0% 0%)' : 'inset(0% 0% 100% 0%)',
           duration: 0.5,
           ease: 'power2.inOut',
-        },
-        '-=0.5',
-      );
+        });
+
+        tl.to(
+          nextVideo,
+          {
+            clipPath: 'inset(0% 0% 0% 0%)',
+            duration: 0.5,
+            ease: 'power2.inOut',
+          },
+          '-=0.5',
+        );
+      }
     },
     [isAnimating],
   );
@@ -169,16 +165,16 @@ const TestimonialsSection = () => {
         const video = videoRefs.current[currentIndexRef.current];
         if (!video) return;
 
-        if (!entry.isIntersecting) video.pause();
-        else video.play().catch(() => {});
+        if (entry.isIntersecting) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
       },
       { threshold: 0.5 },
     );
 
-    if (videoWrapperRef.current) {
-      observer.observe(videoWrapperRef.current);
-    }
-
+    if (videoWrapperRef.current) observer.observe(videoWrapperRef.current);
     return () => observer.disconnect();
   }, [hasUserStarted]);
 
@@ -195,7 +191,7 @@ const TestimonialsSection = () => {
             <img
               src={arrowRightIcon}
               className="testimonials-nav-arrow testimonials-nav-arrow-left"
-              alt="Previous testimonial"
+              alt="left"
             />
           </div>
           <div
@@ -205,7 +201,7 @@ const TestimonialsSection = () => {
             <img
               src={arrowRightIcon}
               className="testimonials-nav-arrow testimonials-nav-arrow-right"
-              alt="Next testimonial"
+              alt="right"
             />
           </div>
         </div>
@@ -219,83 +215,50 @@ const TestimonialsSection = () => {
     <section className="testimonials-section">
       <div className="testimonials-container container">
         <div className="testimonials-projector-wrapper">
-          {hasUserStarted && isMuted && (
-            <button
-              onClick={handleUnmute}
-              aria-label="Unmute video"
-              className="absolute top-4 right-4 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur-md transition-all duration-300 ease-out hover:scale-105 hover:bg-black/80 active:scale-95"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-6 w-6"
-              >
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                <path d="M15 9a5 5 0 0 1 0 6" />
-                <path d="M18 7a8 8 0 0 1 0 10" />
-              </svg>
-            </button>
-          )}
-
-          <div className="testimonials-projector-side">
-            <img
-              src={projectorImage}
-              className="testimonials-projector-img testimonials-projector-left"
-              alt=""
-            />
-          </div>
+          <img
+            src={projectorImage}
+            alt="pic"
+            className="testimonials-projector-img testimonials-projector-left"
+          />
 
           <div className="testimonials-video-container">
-            <div ref={videoWrapperRef} className="testimonials-video-wrapper">
-              {/* Videos - Hidden until play starts */}
+            <div
+              ref={videoWrapperRef}
+              className="testimonials-video-wrapper relative"
+            >
               {TestimonialVideos.map((item, index) => (
                 <video
                   key={item.id}
                   ref={(el) => {
-                    if (el) videoRefs.current[index] = el;
+                    videoRefs.current[index] = el;
+                    return;
                   }}
                   className="testimonial-video"
                   src={item.video}
                   loop
                   playsInline
                   preload="auto"
-                  muted={isMuted || index !== currentIndex}
-                  onLoadedData={(e) => {
-                    const video = e.currentTarget as HTMLVideoElement;
-                    video.currentTime = 0;
-                    video.pause();
-
+                  muted
+                  onLoadedData={() => {
                     loadedCountRef.current += 1;
-
                     if (loadedCountRef.current === TestimonialVideos.length) {
                       setAllVideosLoaded(true);
-                    }
-
-                    if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                      video.style.opacity = '1';
                     }
                   }}
                   style={{
                     zIndex: index === currentIndex ? 2 : 1,
-                    opacity: hasUserStarted ? 1 : 0, // Hide videos until play starts
+                    opacity: hasUserStarted ? 1 : 0,
                   }}
                 />
               ))}
             </div>
           </div>
 
-          <div className="testimonials-projector-side">
-            <img
-              src={projectorImage}
-              className="testimonials-projector-img testimonials-projector-right"
-              alt=""
-            />
-          </div>
+          <img
+            src={projectorImage}
+            className="testimonials-projector-img testimonials-projector-right"
+            alt="pic"
+          />
         </div>
 
         {navigationButtons}
