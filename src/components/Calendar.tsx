@@ -2259,7 +2259,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="businessStage"
-                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary word-spacing-[-4px] absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
                         >
                           Do you have a business or just starting out?{' '}
                           <span className="text-red-400">*</span>
@@ -2294,7 +2294,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="websiteNeed"
-                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary word-spacing-[-4px] absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
                         >
                           Do you need to edit your website or create a new
                           website? <span className="text-red-400">*</span>
@@ -2329,7 +2329,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="salesConversion"
-                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary word-spacing-[-4px] absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
                         >
                           What is your last month sales & conversion rate of the
                           website? <span className="text-red-400">*</span>
@@ -2370,7 +2370,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="instagramId"
-                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary word-spacing-[-4px] absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
                         >
                           Could you share the Instagram ID of the business page?{' '}
                           <span className="text-red-400">*</span>
@@ -2407,7 +2407,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="decisionMaker"
-                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary word-spacing-[-4px] absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
                         >
                           Are you the owner or the main decision maker in the
                           brand? <span className="text-red-400">*</span>
@@ -2442,7 +2442,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="phoneNumber"
-                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary word-spacing-[-4px] absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
                         >
                           Phone Number (include the country code){' '}
                           <span className="text-red-400">*</span>
@@ -2482,7 +2482,7 @@ Website: ${website}
                       <div className="relative">
                         <label
                           htmlFor="website"
-                          className="bg-bgPrimary absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
+                          className="bg-bgPrimary word-spacing-[-4px] absolute top-0 left-3 -translate-y-1/2 px-2 text-sm"
                         >
                           Website (leave blank if you don't have)
                         </label>
