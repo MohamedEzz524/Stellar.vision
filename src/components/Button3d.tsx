@@ -30,7 +30,7 @@ export const Model = forwardRef<THREE.Group, any>((props, ref) => {
     const geometry = new THREE.BoxGeometry(
       size.x * 0.86,
       size.y * 0.8,
-      size.z * 0.7,
+      size.z * 0.5,
     );
 
     const material = new THREE.MeshStandardMaterial({
