@@ -119,8 +119,6 @@ const ScrollTrigger3DSection = ({
   const textElementsRef = useRef<HTMLElement[]>([]);
   const lineElementsRef = useRef<HTMLElement[]>([]);
   const scrollTriggerRef = useRef<ScrollTrigger | null>(null);
-  const isLazyLoadedRef = useRef<boolean>(false);
-  const [isLazyLoaded, setIsLazyLoaded] = useState(false);
   const [sharedModelScene, setSharedModelScene] = useState<Object3D | null>(
     null,
   );
@@ -143,7 +141,7 @@ const ScrollTrigger3DSection = ({
 
   // Load model once and share across all instances
   useEffect(() => {
-    if (!isLazyLoaded || sharedModelScene) return;
+    if (sharedModelScene) return;
 
     const loader = new GLTFLoader();
     const dracoLoader = new DRACOLoader();
@@ -168,7 +166,7 @@ const ScrollTrigger3DSection = ({
         loaderRef.current = null;
       }
     };
-  }, [isLazyLoaded, sharedModelScene]);
+  }, [sharedModelScene]);
 
   // Cleanup shared scene on unmount
   useEffect(() => {
@@ -189,37 +187,6 @@ const ScrollTrigger3DSection = ({
       }
     };
   }, [sharedModelScene]);
-
-  // Lazy load: Intersection Observer to detect when section is approaching viewport
-  useEffect(() => {
-    if (!sectionRef.current || isLazyLoaded) return;
-
-    // Convert 200vh to pixels (2x viewport height = 200vh)
-    const rootMarginTop = window.innerHeight * 2;
-    const rootMargin = `${rootMarginTop}px 0px`;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting || entry.intersectionRatio > 0) {
-            isLazyLoadedRef.current = true;
-            setIsLazyLoaded(true);
-            observer.disconnect();
-          }
-        });
-      },
-      {
-        rootMargin, // Start loading 200vh (2 viewport heights) before section enters viewport
-        threshold: 0,
-      },
-    );
-
-    observer.observe(sectionRef.current);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [isLazyLoaded]);
 
   // Main effect: Setup ScrollTrigger immediately (text animation works without 3D)
   useEffect(() => {
@@ -489,7 +456,7 @@ const ScrollTrigger3DSection = ({
 
           // Update object containers with top positioning (in pixels, relative to section)
           // Only update if 3D elements are loaded (use ref to avoid stale closure)
-          if (isLazyLoadedRef.current) {
+          if (objectContainerRefs.current[0]) {
             // Row 1 objects (indices 0 and 1)
             // Object 0: add static offset down by 200% of its height
             if (objectContainerRefs.current[0]) {
@@ -608,115 +575,114 @@ const ScrollTrigger3DSection = ({
     >
       {/* 3D Objects Container - Outside text track, relative to section */}
       {/* Only render 3D elements when lazy loaded */}
-      {isLazyLoaded && (
-        <div className="pointer-events-none absolute inset-0 z-10">
-          {/* Container with same max-width as text track for alignment */}
-          <div className="relative mx-auto h-full max-w-[344px] lg:max-w-[1000px]">
-            {/* Top Row - Left and Right */}
-            {/* Left object - top row */}
-            <div
-              ref={(el) => {
-                objectContainerRefs.current[0] = el;
-              }}
-              className="absolute left-0 z-[15] h-[150px] w-[120px] rotate-45 lg:h-[280px] lg:w-[250px] xl:-left-80"
-            >
-              <Canvas
-                camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
-                gl={{ antialias: true, alpha: true }}
-                style={{ width: '100%', height: '100%' }}
-              >
-                <ambientLight intensity={1} />
-                <directionalLight position={[5, 5, 5]} intensity={2} />
-                <pointLight position={[-5, -5, -5]} intensity={1} />
-                <Model3D
-                  scene={sharedModelScene}
-                  position={[0, 0, 0]}
-                  rotation={[-Math.PI / 2, 0, 0]}
-                  scale={0.8}
-                  onModelReady={handleModelReady0}
-                />
-              </Canvas>
-            </div>
 
-            {/* Right object - top row (different Y translation) */}
-            <div
-              ref={(el) => {
-                objectContainerRefs.current[1] = el;
-              }}
-              className="absolute -right-0 z-[15] h-[150px] w-[120px] lg:h-[180px] lg:w-[150px] xl:-right-30"
+      <div className="pointer-events-none absolute inset-0 z-10">
+        {/* Container with same max-width as text track for alignment */}
+        <div className="relative mx-auto h-full max-w-[344px] lg:max-w-[1000px]">
+          {/* Top Row - Left and Right */}
+          {/* Left object - top row */}
+          <div
+            ref={(el) => {
+              objectContainerRefs.current[0] = el;
+            }}
+            className="absolute left-0 z-[15] h-[150px] w-[120px] rotate-45 lg:h-[280px] lg:w-[250px] xl:-left-80"
+          >
+            <Canvas
+              camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
+              gl={{ antialias: true, alpha: true }}
+              style={{ width: '100%', height: '100%' }}
             >
-              <Canvas
-                camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
-                gl={{ antialias: true, alpha: true }}
-                style={{ width: '100%', height: '100%' }}
-              >
-                <ambientLight intensity={1} />
-                <directionalLight position={[5, 5, 5]} intensity={2} />
-                <pointLight position={[-5, -5, -5]} intensity={1} />
-                <Model3D
-                  scene={sharedModelScene}
-                  position={[0, -2, 0]}
-                  rotation={[-Math.PI / 2, 0, 0]}
-                  scale={0.9}
-                  onModelReady={handleModelReady1}
-                />
-              </Canvas>
-            </div>
+              <ambientLight intensity={1} />
+              <directionalLight position={[5, 5, 5]} intensity={2} />
+              <pointLight position={[-5, -5, -5]} intensity={1} />
+              <Model3D
+                scene={sharedModelScene}
+                position={[0, 0, 0]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                scale={0.8}
+                onModelReady={handleModelReady0}
+              />
+            </Canvas>
+          </div>
 
-            {/* Bottom Row - Left and Right (30vh below top row) */}
-            {/* Left object - bottom row - shifted left, deeper z-axis */}
-            <div
-              ref={(el) => {
-                objectContainerRefs.current[2] = el;
-              }}
-              className="absolute -left-[20px] z-[5] h-[150px] w-[120px] lg:-left-[75px] lg:h-[180px] lg:w-[150px] xl:-left-40"
+          {/* Right object - top row (different Y translation) */}
+          <div
+            ref={(el) => {
+              objectContainerRefs.current[1] = el;
+            }}
+            className="absolute -right-0 z-[15] h-[150px] w-[120px] lg:h-[180px] lg:w-[150px] xl:-right-30"
+          >
+            <Canvas
+              camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
+              gl={{ antialias: true, alpha: true }}
+              style={{ width: '100%', height: '100%' }}
             >
-              <Canvas
-                camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
-                gl={{ antialias: true, alpha: true }}
-                style={{ width: '100%', height: '100%' }}
-              >
-                <ambientLight intensity={1} />
-                <directionalLight position={[5, 5, 5]} intensity={2} />
-                <pointLight position={[-5, -5, -5]} intensity={1} />
+              <ambientLight intensity={1} />
+              <directionalLight position={[5, 5, 5]} intensity={2} />
+              <pointLight position={[-5, -5, -5]} intensity={1} />
+              <Model3D
+                scene={sharedModelScene}
+                position={[0, -2, 0]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                scale={0.9}
+                onModelReady={handleModelReady1}
+              />
+            </Canvas>
+          </div>
 
-                <Model3D
-                  scene={sharedModelScene}
-                  position={[0, 0, 0]}
-                  rotation={[-Math.PI / 2, 0, 0]}
-                  scale={0.85}
-                  onModelReady={handleModelReady2}
-                />
-              </Canvas>
-            </div>
-
-            {/* Right object - bottom row - shifted right, deeper z-axis */}
-            <div
-              ref={(el) => {
-                objectContainerRefs.current[3] = el;
-              }}
-              className="absolute -right-[30px] z-[5] h-[120px] w-[120px] lg:-right-[75px] lg:h-[500px] lg:w-[500px] xl:-right-40"
+          {/* Bottom Row - Left and Right (30vh below top row) */}
+          {/* Left object - bottom row - shifted left, deeper z-axis */}
+          <div
+            ref={(el) => {
+              objectContainerRefs.current[2] = el;
+            }}
+            className="absolute -left-[20px] z-[5] h-[150px] w-[120px] lg:-left-[75px] lg:h-[180px] lg:w-[150px] xl:-left-40"
+          >
+            <Canvas
+              camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
+              gl={{ antialias: true, alpha: true }}
+              style={{ width: '100%', height: '100%' }}
             >
-              <Canvas
-                camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
-                gl={{ antialias: true, alpha: true }}
-                style={{ width: '100%', height: '100%' }}
-              >
-                <ambientLight intensity={1} />
-                <directionalLight position={[5, 5, 5]} intensity={2} />
-                <pointLight position={[-5, -5, -5]} intensity={1} />
-                <Model3D
-                  scene={sharedModelScene}
-                  position={[0, -2, 0]}
-                  rotation={[-Math.PI / 2, 0, 0]}
-                  scale={0.75}
-                  onModelReady={handleModelReady3}
-                />
-              </Canvas>
-            </div>
+              <ambientLight intensity={1} />
+              <directionalLight position={[5, 5, 5]} intensity={2} />
+              <pointLight position={[-5, -5, -5]} intensity={1} />
+
+              <Model3D
+                scene={sharedModelScene}
+                position={[0, 0, 0]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                scale={0.85}
+                onModelReady={handleModelReady2}
+              />
+            </Canvas>
+          </div>
+
+          {/* Right object - bottom row - shifted right, deeper z-axis */}
+          <div
+            ref={(el) => {
+              objectContainerRefs.current[3] = el;
+            }}
+            className="absolute -right-[30px] z-[5] h-[120px] w-[120px] lg:-right-[75px] lg:h-[500px] lg:w-[500px] xl:-right-40"
+          >
+            <Canvas
+              camera={{ position: [0, 0, 6], fov: 50, near: 0.1, far: 1000 }}
+              gl={{ antialias: true, alpha: true }}
+              style={{ width: '100%', height: '100%' }}
+            >
+              <ambientLight intensity={1} />
+              <directionalLight position={[5, 5, 5]} intensity={2} />
+              <pointLight position={[-5, -5, -5]} intensity={1} />
+              <Model3D
+                scene={sharedModelScene}
+                position={[0, -2, 0]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                scale={0.75}
+                onModelReady={handleModelReady3}
+              />
+            </Canvas>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Text Wrapper Track */}
       <div
