@@ -12,6 +12,7 @@ const TestimonialsSection = () => {
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [showUnmuteButton, setShowUnmuteButton] = useState(true);
   const currentIndexRef = useRef(0);
   const videoLoadedRef = useRef<boolean[]>(
     new Array(TestimonialVideos.length).fill(false),
@@ -24,12 +25,10 @@ const TestimonialsSection = () => {
   );
   // Add a ref to track if observer has triggered at least once
   const observerTriggeredRef = useRef(false);
-  // Add a ref to track if auto-swipe has been performed
-  const autoSwipePerformedRef = useRef(false);
   // Add a ref to track if component is in viewport
   const isInViewRef = useRef(false);
-  // Add a ref to track unmuted state
-  const isUnmutedRef = useRef(false);
+  // Add a ref to track user interaction
+  const userInteractedRef = useRef(false);
 
   // Video wrapper dimensions
   const getVideoWrapperDimensions = useCallback(() => {
@@ -65,7 +64,18 @@ const TestimonialsSection = () => {
     video.load();
   }, []);
 
-  // Play active video - Enhanced version with unmuted support
+  // Unmute all videos
+  const unmuteAllVideos = useCallback(() => {
+    videoRefs.current.forEach((video) => {
+      if (video) {
+        video.muted = false;
+      }
+    });
+    setShowUnmuteButton(false);
+    userInteractedRef.current = true;
+  }, []);
+
+  // Play active video
   const playActiveVideo = useCallback((index: number, forcePlay = false) => {
     const video = videoRefs.current[index];
     if (!video) return false;
@@ -94,16 +104,6 @@ const TestimonialsSection = () => {
       }
     }
     return false;
-  }, []);
-
-  // Unmute all videos (call this after user interaction)
-  const unmuteAllVideos = useCallback(() => {
-    videoRefs.current.forEach((video) => {
-      if (video) {
-        video.muted = false;
-      }
-    });
-    isUnmutedRef.current = true;
   }, []);
 
   // Pause all videos except current
@@ -141,7 +141,7 @@ const TestimonialsSection = () => {
 
   // Animation for switching videos
   const animateVideoTransition = useCallback(
-    (direction: 'next' | 'prev', newIndex: number, isAutoSwipe = false) => {
+    (direction: 'next' | 'prev', newIndex: number) => {
       if (isAnimating || !videoWrapperRef.current) return;
 
       setIsAnimating(true);
@@ -182,9 +182,10 @@ const TestimonialsSection = () => {
           currentVideo.style.zIndex = '1';
           nextVideo.style.zIndex = '2';
 
-          // Unmute all videos if this is an auto-swipe
-          if (isAutoSwipe) {
-            unmuteAllVideos();
+          // Hide unmute button if user has interacted
+          if (!userInteractedRef.current) {
+            userInteractedRef.current = true;
+            setShowUnmuteButton(false);
           }
 
           // Play new video
@@ -213,88 +214,18 @@ const TestimonialsSection = () => {
         '-=0.5',
       ); // Overlap animations
     },
-    [
-      isAnimating,
-      loadVideoIfNeeded,
-      playActiveVideo,
-      pauseOtherVideos,
-      unmuteAllVideos,
-    ],
+    [isAnimating, loadVideoIfNeeded, playActiveVideo, pauseOtherVideos],
   );
-
-  // Perform an automatic swipe to trigger user interaction
-  const performAutoSwipe = useCallback(() => {
-    if (autoSwipePerformedRef.current || isAnimating) return;
-
-    console.log('Performing auto-swipe to enable unmuted playback');
-    autoSwipePerformedRef.current = true;
-
-    // Trigger a small swipe animation that doesn't change the current video
-    // We'll animate to the same index but with the animation
-    if (!videoWrapperRef.current) return;
-
-    setIsAnimating(true);
-
-    // Create a temporary fake animation that simulates a swipe
-    // This will be enough to count as user interaction
-    const tempDiv = document.createElement('div');
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.width = '1px';
-    tempDiv.style.height = '1px';
-    tempDiv.style.opacity = '0';
-    videoWrapperRef.current.appendChild(tempDiv);
-
-    // Animate the temp div (this counts as user interaction for browsers)
-    gsap.to(tempDiv, {
-      x: 1,
-      duration: 0.1,
-      onComplete: () => {
-        // Now unmute all videos
-        unmuteAllVideos();
-
-        // Try to play the current video unmuted
-        const currentIdx = currentIndexRef.current;
-        const currentVideo = videoRefs.current[currentIdx];
-
-        if (currentVideo && currentVideo.paused) {
-          currentVideo
-            .play()
-            .then(() => {
-              console.log('Video playing unmuted after auto-swipe');
-            })
-            .catch((err) => {
-              console.warn('Failed to play unmuted after auto-swipe:', err);
-            });
-        }
-
-        // Clean up
-        if (
-          videoWrapperRef.current &&
-          videoWrapperRef.current.contains(tempDiv)
-        ) {
-          videoWrapperRef.current.removeChild(tempDiv);
-        }
-
-        setIsAnimating(false);
-
-        // Now perform an actual swipe to next video (optional)
-        // This gives visual feedback that something happened
-        setTimeout(() => {
-          const newIndex = (currentIdx + 1) % TestimonialVideos.length;
-          animateVideoTransition('next', newIndex, true);
-        }, 300);
-      },
-    });
-  }, [isAnimating, animateVideoTransition, unmuteAllVideos]);
 
   // Navigation handler
   const navigate = useCallback(
     (direction: 'prev' | 'next') => {
       if (isAnimating) return;
 
-      // Ensure videos are unmuted on first navigation
-      if (!isUnmutedRef.current) {
-        unmuteAllVideos();
+      // Mark user interaction and hide unmute button
+      if (!userInteractedRef.current) {
+        userInteractedRef.current = true;
+        setShowUnmuteButton(false);
       }
 
       const currentIdx = currentIndexRef.current;
@@ -308,15 +239,20 @@ const TestimonialsSection = () => {
           TestimonialVideos.length;
       }
 
-      animateVideoTransition(direction, newIndex, false);
+      animateVideoTransition(direction, newIndex);
     },
-    [isAnimating, animateVideoTransition, unmuteAllVideos],
+    [isAnimating, animateVideoTransition],
   );
 
   // Initialize and load first video
   useEffect(() => {
     loadVideoIfNeeded(0);
     currentIndexRef.current = 0;
+
+    // On mobile, show unmute button by default
+    if (!isLg) {
+      setShowUnmuteButton(true);
+    }
 
     return () => {
       // Clean up videos
@@ -326,7 +262,7 @@ const TestimonialsSection = () => {
         }
       });
     };
-  }, [loadVideoIfNeeded]);
+  }, [loadVideoIfNeeded, isLg]);
 
   // Handle video wrapper resize
   useEffect(() => {
@@ -345,7 +281,7 @@ const TestimonialsSection = () => {
     return () => window.removeEventListener('resize', updateVideoWrapper);
   }, [getVideoWrapperDimensions]);
 
-  // Intersection observer to handle auto-swipe when in view
+  // Intersection observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -360,27 +296,19 @@ const TestimonialsSection = () => {
               activeVideo.pause();
             }
           } else {
-            // When coming into view, perform auto-swipe on mobile to enable unmuted playback
-            if (!isLg && !autoSwipePerformedRef.current) {
-              // Small delay to ensure everything is loaded
-              setTimeout(() => {
-                performAutoSwipe();
-              }, 500);
-            } else {
-              // Just try to play the current video
-              const activeIndex = currentIndexRef.current;
-              setTimeout(() => {
-                if (isInViewRef.current) {
-                  playActiveVideo(activeIndex, true);
-                }
-              }, 200);
-            }
+            // Play when in view
+            const activeIndex = currentIndexRef.current;
+            setTimeout(() => {
+              if (isInViewRef.current) {
+                playActiveVideo(activeIndex, true);
+              }
+            }, 200);
           }
         });
       },
       {
         threshold: 0.5,
-        rootMargin: '100px', // Larger margin to trigger earlier
+        rootMargin: '50px',
       },
     );
 
@@ -389,9 +317,9 @@ const TestimonialsSection = () => {
     }
 
     return () => observer.disconnect();
-  }, [isLg, performAutoSwipe, playActiveVideo]);
+  }, [playActiveVideo]);
 
-  // Add touch event listener for manual swipes
+  // Add touch event listener for swipes
   useEffect(() => {
     if (!videoWrapperRef.current) return;
 
@@ -408,6 +336,12 @@ const TestimonialsSection = () => {
       const swipeDistance = touchEndX - touchStartX;
 
       if (Math.abs(swipeDistance) > minSwipeDistance) {
+        // Hide unmute button on swipe
+        if (!userInteractedRef.current) {
+          userInteractedRef.current = true;
+          setShowUnmuteButton(false);
+        }
+
         if (swipeDistance > 0) {
           navigate('prev');
         } else {
@@ -426,10 +360,34 @@ const TestimonialsSection = () => {
     };
   }, [navigate]);
 
+  // Unmute button component
+  const unmuteButton = useMemo(
+    () => (
+      <div
+        className="testimonials-unmute-button"
+        onClick={unmuteAllVideos}
+        title="Tap to unmute videos"
+      >
+        <svg
+          className="testimonials-unmute-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+        </svg>
+
+        <span className="testimonials-unmute-text">Tap to unmute</span>
+      </div>
+    ),
+    [unmuteAllVideos],
+  );
+
   // Navigation buttons
   const navigationButtons = useMemo(
     () => (
       <div className="testimonials-navigation-overlay">
+        {!isLg && showUnmuteButton && unmuteButton}
         <div
           className="testimonials-nav-area testimonials-nav-left"
           onClick={(e) => {
@@ -460,7 +418,7 @@ const TestimonialsSection = () => {
         </div>
       </div>
     ),
-    [navigate],
+    [navigate, isLg, showUnmuteButton, unmuteButton],
   );
 
   return (
